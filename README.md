@@ -10,7 +10,7 @@
 * **Join Requests:** Send requests to organizers to become part of their journey.
 
 ### 2. Collaborative Workspace (My Trips)
-* **Shared To-Do List:** Real-time collaboration where every member can create, edit, or delete trip tasks.
+* **Shared To-Do List:** Real-time collaboration where every member can comunication about create, edit, or delete trip tasks.
 * **Item-Level Discussion:** Integrated comment sections for each task to keep discussions organized.
 * **Team Management:** Trip owners can review applicant profiles and manage team members.
 
