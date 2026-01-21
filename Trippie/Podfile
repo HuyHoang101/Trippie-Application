@@ -1,0 +1,18 @@
+# Uncomment the next line to define a global platform for your project
+# platform :ios, '15.0'
+
+target 'Trippie' do
+  # Comment the next line if you don't want to use dynamic frameworks
+  use_frameworks!
+  # Firebase SDK 
+  pod 'Firebase/Auth'
+  pod 'Firebase/Firestore'
+  pod 'Firebase/Storage'
+  
+  # UI 
+  pod 'SnapKit'               # Code layout nhanh
+  pod 'IQKeyboardManagerSwift' # Tự động xử lý bàn phím che input
+  pod 'SDWebImage'            # Load ảnh từ mạng
+  pod 'lottie-ios'            # Chạy animation đẹp
+
+end

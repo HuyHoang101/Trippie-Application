@@ -6,8 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		FDAA6CE01A780CDCF0DB6A94 /* Pods_Trippie.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 43B0A716A8561B2E6B645301 /* Pods_Trippie.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
+		250902BBCBACEC819854D2FB /* Pods-Trippie.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Trippie.release.xcconfig"; path = "Target Support Files/Pods-Trippie/Pods-Trippie.release.xcconfig"; sourceTree = "<group>"; };
+		43B0A716A8561B2E6B645301 /* Pods_Trippie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Trippie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		9C7A81802F1E1C8F0071E105 /* Trippie.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Trippie.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E820386FAD52E80844F039C3 /* Pods-Trippie.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Trippie.debug.xcconfig"; path = "Target Support Files/Pods-Trippie/Pods-Trippie.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -36,17 +43,29 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FDAA6CE01A780CDCF0DB6A94 /* Pods_Trippie.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		25B438429C5A945087507DD8 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				E820386FAD52E80844F039C3 /* Pods-Trippie.debug.xcconfig */,
+				250902BBCBACEC819854D2FB /* Pods-Trippie.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
 		9C7A81772F1E1C8E0071E105 = {
 			isa = PBXGroup;
 			children = (
 				9C7A81822F1E1C8F0071E105 /* Trippie */,
 				9C7A81812F1E1C8F0071E105 /* Products */,
+				25B438429C5A945087507DD8 /* Pods */,
+				D732A4979B739CEF6709D4C6 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -58,6 +77,14 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		D732A4979B739CEF6709D4C6 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				43B0A716A8561B2E6B645301 /* Pods_Trippie.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -65,9 +92,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 9C7A81932F1E1C920071E105 /* Build configuration list for PBXNativeTarget "Trippie" */;
 			buildPhases = (
+				082B81FE6128060EF6AC5045 /* [CP] Check Pods Manifest.lock */,
 				9C7A817C2F1E1C8F0071E105 /* Sources */,
 				9C7A817D2F1E1C8F0071E105 /* Frameworks */,
 				9C7A817E2F1E1C8F0071E105 /* Resources */,
+				5AE359565446439DF78F4A47 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -77,8 +106,6 @@
 				9C7A81822F1E1C8F0071E105 /* Trippie */,
 			);
 			name = Trippie;
-			packageProductDependencies = (
-			);
 			productName = Trippie;
 			productReference = 9C7A81802F1E1C8F0071E105 /* Trippie.app */;
 			productType = "com.apple.product-type.application";
@@ -127,6 +154,52 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		082B81FE6128060EF6AC5045 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-Trippie-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		5AE359565446439DF78F4A47 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Trippie/Pods-Trippie-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			inputPaths = (
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-Trippie/Pods-Trippie-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-Trippie/Pods-Trippie-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		9C7A817C2F1E1C8F0071E105 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -140,12 +213,13 @@
 /* Begin XCBuildConfiguration section */
 		9C7A81942F1E1C920071E105 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = E820386FAD52E80844F039C3 /* Pods-Trippie.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = KK9T36C259;
+				DEVELOPMENT_TEAM = 33X755689T;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Trippie/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -158,7 +232,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = personal.Trippie;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hoangnguyenh101000.Trippie;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -172,12 +246,13 @@
 		};
 		9C7A81952F1E1C920071E105 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 250902BBCBACEC819854D2FB /* Pods-Trippie.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = KK9T36C259;
+				DEVELOPMENT_TEAM = 33X755689T;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Trippie/Info.plist;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -190,7 +265,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = personal.Trippie;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hoangnguyenh101000.Trippie;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -261,6 +336,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -318,6 +394,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
