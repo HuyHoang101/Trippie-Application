@@ -18,8 +18,8 @@ struct Participation: Codable {
 
 
 
-struct TripWithStatus: Identifiable {
-    var id: String { trip.id ?? UUID().uuidString } // using ForEach
+struct TripWithStatus: Identifiable, Codable {
+    var id: String { trip.id ?? participation.id ?? UUID().uuidString } // using ForEach
     var trip: Trip
     var participation: Participation
 }

@@ -8,17 +8,19 @@
 import Foundation
 import FirebaseFirestore
 
-struct Task: Codable {
+struct TaskOfTrip: Codable {
     @DocumentID var id: String?
     var title: String
     var description: String
+    var status: TaskStatus
     
+    var tripId: String
     var creatorId: String // ID người tạo ra task (để check quyền xoá)
     var userName: String
     var userAvatar: String
     var userRole: UserRole
     
-    var editBy: String    // Tên người sửa cuối cùng
+    var editBy: String?    // Tên người sửa cuối cùng
     
     var dayIndex: Int
     var time: String
