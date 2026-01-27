@@ -76,13 +76,13 @@ class TripViewModel {
     }
     
     // MARK: - 3. HANDLE SAVE (CREATE OR EDIT)
-    func handleSave(tripWithStatus: TripWithStatus) {
+    func handleSave(trip: Trip) {
         self.loading.send(true)
         Task {
             do {
                 if let _ = editingTrip.value {
                     // --- CASE: UPDATE ---
-                    let result = try await tripService.updateTrip(input: tripWithStatus)
+                    let result = try await tripService.updateTrip(trip: trip)
                     
                     // A. Cập nhật MyTrips (Nếu có thì thay thế)
                     var currentMyTrips = myTrips.value
@@ -101,7 +101,7 @@ class TripViewModel {
                     
                 } else {
                     // --- CASE: CREATE ---
-                    let result = try await tripService.createTrip(input: tripWithStatus)
+                    let result = try await tripService.createTrip(trip: trip)
                     
                     // A. Thêm vào đầu danh sách MyTrips
                     var currentMyTrips = myTrips.value

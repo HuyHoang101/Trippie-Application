@@ -46,7 +46,7 @@ class MainTabCoordinator {
     }
     
     func createProfileNav() -> UINavigationController {
-        let profileVC = MyTripViewController()
+        let profileVC = ProfileViewController()
         profileVC.tabBarItem = UITabBarItem(title: "Profile", image: UIImage(systemName: "person.circle"), tag: 2)
         let nav = UINavigationController(rootViewController: profileVC)
         return nav

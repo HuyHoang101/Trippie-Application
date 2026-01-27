@@ -15,6 +15,7 @@ struct Trip: Codable { // Thêm Codable
     var coverImage: String
     var title: String
     var description: String
+    var tripRule: String?
     var location: String
     var country: String
     
@@ -28,6 +29,7 @@ struct Trip: Codable { // Thêm Codable
     
     
     var startTime: Date
+    var dayIndex: Int
     
     @ServerTimestamp var createdAt: Date?
     @ServerTimestamp var updatedAt: Date?

@@ -7,48 +7,65 @@
 
 import Foundation
 import Combine
-import FirebaseAuth
 
 class LoginViewModel {
     
-    // MARK: - OUTPUT
+    // MARK: - INPUT (State)
+    @Published var email: String = ""
+    @Published var password: String = ""
     
+    // MARK: - OUTPUT (Inline Errors)
+    @Published var emailError: String? = nil
+    @Published var passwordError: String? = nil
+    
+    // Global State
     let loading = CurrentValueSubject<Bool, Never>(false)
-
-    let errorMessage = PassthroughSubject<String, Never>()
-
     let loginSuccess = PassthroughSubject<Void, Never>()
+    let logoutSuccess = PassthroughSubject<Void, Never>()
+    let generalErrorMessage = PassthroughSubject<String, Never>()
     
-    // Validate message
-    let emailvalidation = PassthroughSubject<String, Never>()
-    let passwordvalidation = PassthroughSubject<String, Never>()
-    
-    // MARK: - PROPERTIES
     private var cancellables = Set<AnyCancellable>()
     
+    // MARK: - INIT
+    init() {
+        setupAutoClearErrors()
+    }
+    
+    // MARK: - PIPE (Auto-Clear)
+    private func setupAutoClearErrors() {
+        $email
+            .dropFirst()
+            .removeDuplicates()
+            .sink { [weak self] _ in self?.emailError = nil }
+            .store(in: &cancellables)
+            
+        $password
+            .dropFirst()
+            .removeDuplicates()
+            .sink { [weak self] _ in self?.passwordError = nil }
+            .store(in: &cancellables)
+    }
+    
     // MARK: - ACTIONS
-    func login(email: String, pass: String) {
-        // 1. Validate cơ bản trước khi gọi Service
-        guard validateInput(email: email, pass: pass) else { return }
+    
+    // 1. LOGIN
+    func login() {
+        emailError = nil
+        passwordError = nil
         
-        // 2. Bắt đầu Loading
+        guard validateInput() else { return }
+        
         loading.send(true)
         
-        // 3. Gọi Service (Async/Await)
         Task {
             do {
-                // Giả lập delay 1 xíu để kịp nhìn thấy animation xe bus (tuỳ chọn)
-                // try await Task.sleep(nanoseconds: 1 * 1_000_000_000)
+                try await AuthService.shared.login(email: self.email, pass: self.password)
                 
-                try await AuthService.shared.login(email: email, pass: pass)
-                
-                // Thành công -> Báo về Main Thread
                 await MainActor.run {
                     self.loading.send(false)
                     self.loginSuccess.send()
                 }
             } catch {
-                // Thất bại -> Xử lý lỗi
                 await MainActor.run {
                     self.loading.send(false)
                     self.handleError(error)
@@ -57,28 +74,48 @@ class LoginViewModel {
         }
     }
     
+    // 2. LOGOUT
+    func logout() {
+        Task {
+            do {
+                try AuthService.shared.logout()
+                await MainActor.run {
+                    self.logoutSuccess.send()
+                }
+            } catch {
+                await MainActor.run {
+                    self.generalErrorMessage.send(error.localizedDescription)
+                }
+            }
+        }
+    }
+    
     // MARK: - HELPER
-    private func validateInput(email: String, pass: String) -> Bool {
-        if email.isEmpty {
-            emailvalidation.send("Please, enter your email.")
-            return false
+    private func validateInput() -> Bool {
+        var isValid = true
+        
+        if email.trimmingCharacters(in: .whitespaces).isEmpty {
+            emailError = "Please enter your email."
+            isValid = false
         }
-        if pass.isEmpty {
-            passwordvalidation.send("Please, enter your password.")
-            return false
+        
+        if password.isEmpty {
+            passwordError = "Please enter your password."
+            isValid = false
         }
-        // Có thể thêm check regex email ở đây nếu muốn kỹ hơn
-        return true
+        
+        return isValid
     }
     
     private func handleError(_ error: Error) {
-        // Dịch lỗi Firebase sang tiếng người dùng dễ hiểu
         let nsError = error as NSError
+        let message = nsError.localizedDescription
         
-        // Cậu có thể map các mã lỗi của Firebase Auth tại đây
-        // Ví dụ: AuthErrorCode.wrongPassword...
-        // Tạm thời hiển thị message gốc hoặc text chung
-        print("Login Error: \(nsError.localizedDescription)")
-        passwordvalidation.send("Login failed, check your account again.")
+        // Map lỗi
+        if message.contains("invalid-credential") || message.contains("wrong-password") {
+            passwordError = "Invalid email or password."
+        } else {
+            generalErrorMessage.send(message)
+        }
     }
 }

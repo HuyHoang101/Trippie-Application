@@ -7,6 +7,7 @@
 
 import UIKit
 import SDWebImage
+import PhoneNumberKit
 
 
 // MARK: - INPUT STACK VIEW
@@ -15,42 +16,133 @@ extension UITextField {
     
     static func createInput(placeholder: String,
                             keyboardType: UIKeyboardType = .default,
-                            accentColor: UIColor? = nil) -> UITextField {
+                            accentColor: UIColor? = nil,
+                            iconName: String? = nil) -> UITextField { // Thêm iconName
         
         let tf = UITextField()
         tf.placeholder = placeholder
         tf.keyboardType = keyboardType
         tf.translatesAutoresizingMaskIntoConstraints = false
         
-        // Setup Padding chung (cho cả 2 style đều đẹp)
-        let paddingView = UIView(frame: CGRect(x: 0, y: 0, width: 12, height: 1))
-        tf.leftView = paddingView
+        // --- XỬ LÝ ICON VÀ PADDING ---
+        if let name = iconName {
+            // Nếu có Icon: Tạo một Container để chứa Icon + Space
+            let container = UIView()
+            
+            let iconView = UIImageView(image: UIImage(systemName: name))
+            iconView.contentMode = .scaleAspectFit
+            // Màu icon: Nếu là Glassmorphism (có accent) thì màu trắng mờ, ngược lại dùng gray hệ thống
+            iconView.tintColor = accentColor != nil ? UIColor.white.withAlphaComponent(0.6) : .systemGray
+            iconView.translatesAutoresizingMaskIntoConstraints = false
+            
+            container.addSubview(iconView)
+            
+            // Setup Constraint cho Icon nằm thụt vào một chút (ví dụ 12pt từ lề trái)
+            NSLayoutConstraint.activate([
+                iconView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
+                iconView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                iconView.widthAnchor.constraint(equalToConstant: 20),
+                iconView.heightAnchor.constraint(equalToConstant: 20),
+                // Quan trọng: Container phải có chiều rộng đủ cho icon + khoảng cách đến text (ví dụ thêm 8pt bên phải icon)
+                container.trailingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 8)
+            ])
+            
+            tf.leftView = container
+        } else {
+            // Nếu không có Icon: Giữ nguyên padding 12pt cũ của cậu
+            let paddingView = UIView(frame: CGRect(x: 0, y: 0, width: 12, height: 1))
+            tf.leftView = paddingView
+        }
+        
         tf.leftViewMode = .always
         
-        // --- CHECK STYLE ---
+        // --- PHẦN STYLE (GIỮ NGUYÊN CODE CŨ CỦA CẬU) ---
         if let accent = accentColor {
-            // CASE 1: CÓ MÀU -> GLASSMORPHISM (Dùng cho Login/Dark BG)
             tf.backgroundColor = accent.withAlphaComponent(0.3)
             tf.layer.borderColor = accent.cgColor
             tf.layer.borderWidth = 1.0
             tf.layer.cornerRadius = 12
             tf.textColor = .white
-            tf.borderStyle = .none // Tắt border mặc định để dùng border layer
+            tf.borderStyle = .none
             
-            // Placeholder màu trắng mờ
             tf.attributedPlaceholder = NSAttributedString(
                 string: placeholder,
                 attributes: [NSAttributedString.Key.foregroundColor: UIColor.white.withAlphaComponent(0.6)]
             )
         } else {
-            // CASE 2: KHÔNG MÀU -> DEFAULT SYSTEM (Dùng cho màn hình trắng)
             tf.borderStyle = .roundedRect
-            tf.backgroundColor = .systemBackground // Tự động trắng/đen theo theme
+            tf.backgroundColor = .systemBackground
             tf.textColor = .label
-            // Placeholder tự động màu xám của hệ thống, không cần chỉnh
         }
         
         return tf
+    }
+    
+    func enablePasswordToggle() {
+        let configSymbol = UIImage.SymbolConfiguration(pointSize: 12, weight: .medium)
+        let eyeImage = UIImage(systemName: "eye.slash", withConfiguration: configSymbol)
+        
+        let button = UIButton(type: .custom)
+        
+        // Dùng Configuration
+        var config = UIButton.Configuration.plain()
+        config.image = eyeImage
+        config.baseForegroundColor = .systemGray2
+        
+        // Thay cho imageEdgeInsets: Dùng padding để đẩy icon vào trong một chút
+        config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 10)
+        
+        button.configuration = config
+        
+        // Update hình ảnh khi trạng thái thay đổi
+        let action = UIAction { [weak self, weak button] _ in
+            guard let self = self, let button = button else { return }
+            self.isSecureTextEntry.toggle()
+            
+            // Cập nhật lại icon theo trạng thái
+            let imageName = self.isSecureTextEntry ? "eye.slash" : "eye"
+            button.configuration?.image = UIImage(systemName: imageName, withConfiguration: configSymbol)
+            
+            
+            // Fix lỗi nhảy font/cursor khi toggle
+            let text = self.text
+            self.text = nil
+            self.text = text
+        }
+        
+        button.addAction(action, for: .touchUpInside)
+        
+        self.rightView = button
+        self.rightViewMode = .always
+    }
+    
+    func setupDatePicker() {
+        let datePicker = UIDatePicker()
+        datePicker.datePickerMode = .date
+        datePicker.preferredDatePickerStyle = .wheels // Hoặc .inline nếu muốn hiện lịch to
+        
+        // Gán picker vào inputView (Thay thế bàn phím)
+        self.inputView = datePicker
+        
+        // Thêm thanh Toolbar có nút "Done" để đóng lịch
+        let toolbar = UIToolbar()
+        toolbar.sizeToFit()
+        let doneBtn = UIBarButtonItem(title: "Done", style: .plain, target: self, action: #selector(donePressed))
+        toolbar.setItems([UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil), doneBtn], animated: true)
+        self.inputAccessoryView = toolbar
+        
+        // Lắng nghe sự kiện đổi ngày
+        let action = UIAction { [weak self] _ in
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            formatter.dateFormat = "dd/MM/yyyy"
+            self?.text = formatter.string(from: datePicker.date)
+        }
+        datePicker.addAction(action, for: .valueChanged)
+    }
+    
+    @objc private func donePressed() {
+        self.resignFirstResponder()
     }
 }
 
@@ -129,6 +221,19 @@ extension UIStackView {
         }
     }
     
+    func listenToChanges(completion: @escaping (String) -> Void) {
+        guard arrangedSubviews.count > 1 else { return }
+        let inputField = arrangedSubviews[1]
+        
+        if let tf = inputField as? UITextField {
+            // Dùng UIAction
+            let action = UIAction { [weak tf] _ in
+                completion(tf?.text ?? "")
+            }
+            tf.addAction(action, for: .editingChanged)
+        }
+    }
+    
     // Hàm helper tạo Input Group (Label + Input)
     static func createInputGroup(labelName: String,
                                  labelFont: UIFont = .systemFont(ofSize: 16, weight: .semibold), // Default font
@@ -136,8 +241,12 @@ extension UIStackView {
                                  inputAccentColor: UIColor? = nil, // Default không style
                                  placeholder: String,
                                  isTextView: Bool = false,
+                                 style: InputStyle = .text, // Default text
                                  keyboardType: UIKeyboardType = .default,
-                                 delegate: Any? = nil) -> UIStackView {
+                                 inputHeight: CGFloat? = nil,
+                                 delegate: Any? = nil,
+                                 errorFontSize: CGFloat = 11
+    ) -> UIStackView {
             
         let stack = UIStackView()
         stack.axis = .vertical
@@ -162,17 +271,108 @@ extension UIStackView {
             tv.returnKeyType = .done
             stack.addArrangedSubview(tv)
         } else {
-            let tf = UITextField.createInput(placeholder: placeholder,
+            let tf: UITextField
+                
+            if style == .phoneNumber {
+                let phoneTF = PhoneNumberTextField()
+                
+                // 1. Cấu hình cơ bản
+                phoneTF.withFlag = true
+                phoneTF.withPrefix = true
+                phoneTF.withExamplePlaceholder = true
+                
+                // 2. Bật chức năng chọn quốc gia (QUAN TRỌNG)
+                // Thuộc tính này tự động bật action: Nhấn vào cờ -> Hiện danh sách
+                phoneTF.withDefaultPickerUI = true
+                phoneTF.modalPresentationStyle = .pageSheet // Dạng popup hiện đại
+                
+                // 3. Cấu hình mặc định
+                phoneTF.partialFormatter.defaultRegion = "VN"
+                
+                // 4. FIX PADDING LÁ CỜ (Chuẩn iOS 15+)
+                // Thay vì dùng imageEdgeInsets, ta dùng Configuration
+                var config = UIButton.Configuration.plain()
+                // leading: 10 -> Cách mép trái | trailing: 8 -> Cách số điện thoại
+                config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 10, bottom: 0, trailing: 8)
+                phoneTF.flagButton.configuration = config
+                
+                // 5. UI Style (Border, Màu nền)
+                phoneTF.backgroundColor = inputAccentColor?.withAlphaComponent(0.3)
+                phoneTF.layer.cornerRadius = 6
+                phoneTF.layer.borderWidth = 1
+                phoneTF.layer.borderColor = inputAccentColor?.cgColor ?? UIColor.systemGray5.cgColor
+                
+                // Style text bên trong
+                phoneTF.textColor = .label
+                phoneTF.font = .systemFont(ofSize: 16, weight: .regular)
+                
+                tf = phoneTF
+            } else {
+                
+                tf = UITextField.createInput(placeholder: placeholder,
                                              keyboardType: keyboardType,
                                              accentColor: inputAccentColor)
+            }
+            
             if let tfDelegate = delegate as? UITextFieldDelegate {
                 tf.delegate = tfDelegate
+            }
+            
+            // Logic cho từng Style
+            switch style {
+            case .email:
+                tf.keyboardType = .emailAddress
+                tf.autocapitalizationType = .none
+            case .password:
+                tf.isSecureTextEntry = true
+                tf.enablePasswordToggle() // Helper inextension
+            case .text:
+                tf.keyboardType = keyboardType
+            case .date:
+                tf.setupDatePicker()
+            case .phoneNumber:
+                tf.keyboardType = .numberPad
+            }
+            
+            if let height = inputHeight {
+                tf.heightAnchor.constraint(equalToConstant: height).isActive = true
             }
             tf.returnKeyType = .done
             stack.addArrangedSubview(tf)
         }
         
+        let errorLabel = UILabel()
+        errorLabel.textColor = .systemRed
+        errorLabel.font = AppTheme.Font.mainRegular(size: errorFontSize)
+        errorLabel.numberOfLines = 0 // Để lỗi dài tự xuống dòng
+        errorLabel.isHidden = true   // Mặc định ẩn đi để không chiếm chỗ
+        errorLabel.tag = 666         // Đánh dấu (Tag) để sau này tìm lại được nó
+        
+        stack.addArrangedSubview(errorLabel)
+        
         return stack
+    }
+    
+    // Hàm gọi lỗi: Truyền String vào thì hiện, truyền nil thì ẩn
+    func showError(_ message: String?) {
+        // 1. Tìm cái label lỗi bằng cái Tag 666
+        guard let errorLabel = self.viewWithTag(666) as? UILabel else { return }
+        
+        // 2. Animation
+        UIView.animate(withDuration: 0.25) {
+            if let msg = message, !msg.isEmpty {
+                // Có lỗi -> Hiện
+                errorLabel.text = msg
+                errorLabel.isHidden = false
+            } else {
+                // Không có lỗi (nil hoặc rỗng) -> Ẩn
+                errorLabel.text = nil
+                errorLabel.isHidden = true
+            }
+            
+            // Lệnh này bắt buộc để StackView tính toán lại layout ngay trong animation
+            self.layoutIfNeeded()
+        }
     }
     
     static func customStack(xPadding: CGFloat? = nil,
@@ -196,17 +396,16 @@ extension UIStackView {
         stack.spacing = stackSpacing
         stack.translatesAutoresizingMaskIntoConstraints = false
         
-        // 1. XỬ LÝ PADDING (Quan trọng)
+        // 1. XỬ LÝ PADDING
         // UIStackView dùng 'layoutMargins' để làm padding
         if xPadding != nil || yPadding != nil {
             let x = xPadding ?? 0
             let y = yPadding ?? 0
-            stack.isLayoutMarginsRelativeArrangement = true // Bắt buộc phải bật cái này
+            stack.isLayoutMarginsRelativeArrangement = true
             stack.layoutMargins = UIEdgeInsets(top: y, left: x, bottom: y, right: x)
         }
         
         // 2. XỬ LÝ BACKGROUND
-        // Từ iOS 14, UIStackView đã hiển thị được background color
         stack.backgroundColor = background
         
         // 3. XỬ LÝ BORDER
@@ -272,40 +471,97 @@ extension UILabel {
 // MARK: - BUTTON
 extension UIButton {
     
-    // CASE A: NÚT TEXT (VUÔNG BO GÓC)
+    // CASE A: NÚT TEXT + ICON (VUÔNG BO GÓC)
     static func customButton(text: String,
                              font: UIFont = .systemFont(ofSize: 16, weight: .bold),
                              backgroundColor: UIColor,
-                             textColor: UIColor = .white) -> UIButton {
+                             textColor: UIColor = .white,
+                             isPadding: Bool = true,
+                             isCircle: Bool = true,
+                             imageName: String? = nil,
+                             isSystemImage: Bool = true,
+                             imageSize: CGFloat = 20, // size ảnh
+                             isBorder: Bool = false,
+                             borderColor: UIColor = .clear
+    ) -> UIButton {
         
         let button = AnimatedButton(type: .custom)
         
-        // config of button
+        // Config
         var config = UIButton.Configuration.filled()
         config.baseBackgroundColor = backgroundColor
         config.baseForegroundColor = textColor
         
-        config.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20)
-        
+        if isPadding {
+            config.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20)
+        } else {
+            config.contentInsets = .zero
+        }
+        // Setup Title
         var container = AttributeContainer()
         container.font = font
         config.attributedTitle = AttributedString(text, attributes: container)
         
-        config.cornerStyle = .fixed
-        config.background.cornerRadius = 12
+        // Setup Image
+        if let imgName = imageName {
+            if isSystemImage {
+                // SF Symbol: Dùng Configuration để chỉnh size
+                let symbolConfig = UIImage.SymbolConfiguration(pointSize: imageSize, weight: .semibold)
+                config.image = UIImage(systemName: imgName, withConfiguration: symbolConfig)?.withRenderingMode(.alwaysTemplate)
+            } else {
+                // Assets Image: Resize bằng Renderer
+                if let assetImage = UIImage(named: imgName) {
+                    let scalable = CGSize(width: imageSize, height: imageSize)
+                    let renderer = UIGraphicsImageRenderer(size: scalable)
+                    let resizeImage = renderer.image { _ in
+                        assetImage.draw(in: CGRect(origin: .zero, size: scalable))
+                    }
+                    // .alwaysTemplate để ăn theo màu textColor,
+                    // .alwaysOriginal nếu muốn giữ màu gốc (như logo Google)
+                    config.image = resizeImage.withRenderingMode(.alwaysOriginal)
+                }
+            }
+            config.imagePlacement = .leading
+            config.imagePadding = 8
+        }
+        
+        // Setup Corner Radius
+        if isCircle {
+            config.cornerStyle = .capsule
+        } else {
+            config.cornerStyle = .fixed
+            config.background.cornerRadius = 12
+        }
+        
+        // 2. FIX BORDER (Dùng chuẩn Configuration)
+        if isBorder {
+            config.background.strokeColor = borderColor
+            config.background.strokeWidth = 0.7
+        }
+        
+        config.titleLineBreakMode = .byClipping
+        config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in
+            var outgoing = incoming
+            outgoing.font = font
+            return outgoing
+        }
         
         button.configuration = config
-        button.isCircle = false
         button.translatesAutoresizingMaskIntoConstraints = false
+        button.setContentCompressionResistancePriority(.required, for: .horizontal)
+        button.setContentHuggingPriority(.required, for: .horizontal)
         
         return button
     }
     
-    // CASE B: NÚT ẢNH (TRÒN)
+    // CASE B: NÚT ẢNH (Có tuỳ chọn tròn hoặc vuông)
     static func customButton(image: UIImage?,
                              backgroundColor: UIColor,
-                             tintColor: UIColor = .white) -> UIButton {
-        
+                             tintColor: UIColor = .white,
+                             isCircle: Bool = true,
+                             padding: CGFloat = 8
+    ) -> UIButton {
+    
         let button = AnimatedButton(type: .custom)
         
         var config = UIButton.Configuration.filled()
@@ -313,35 +569,21 @@ extension UIButton {
         config.baseForegroundColor = tintColor
         config.image = image
         
-        config.contentInsets = NSDirectionalEdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
+        // LOGIC BO TRÒN NẰM Ở ĐÂY
+        if isCircle {
+            // Capsule: Tự động bo tròn 2 đầu
+            // Nếu width = height -> Nó thành hình tròn
+            config.cornerStyle = .capsule
+        } else {
+            // Nếu không tròn thì bo góc nhẹ
+            config.cornerStyle = .fixed
+            config.background.cornerRadius = 12
+        }
         
+        // Padding bên trong nút
+        config.contentInsets = NSDirectionalEdgeInsets(top: padding, leading: padding, bottom: padding, trailing: padding)
         button.configuration = config
         button.translatesAutoresizingMaskIntoConstraints = false
-        button.isCircle = true
-        
-        return button
-    }
-    
-    static func textButton(text: String,
-                           font: UIFont = AppTheme.Font.mainBold(size: 14),
-                           color: UIColor = .systemBlue) -> UIButton {
-        
-        let button = AnimatedButton(type: .system) // Dùng .system để có hiệu ứng mờ khi chạm
-        
-        var config = UIButton.Configuration.plain() // Plain = Không nền
-        config.baseForegroundColor = color
-        
-        var container = AttributeContainer()
-        container.font = font
-        config.attributedTitle = AttributedString(text, attributes: container)
-        
-        // Loại bỏ khoảng cách thừa để sát lề
-        config.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0)
-        
-        button.configuration = config
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.isCircle = false
-        
         return button
     }
 }
@@ -383,4 +625,106 @@ extension UIViewController {
             }
         }
     }
+    
+    func showToast(message: String, isSuccess: Bool, seconds: Double = 2.0) {
+        guard let window = view.window else { return }
+        
+        // 1. Tạo Container View (NỀN TRẮNG)
+        let toastContainer = UIStackView()
+        toastContainer.axis = .horizontal
+        toastContainer.spacing = 12 // Tăng khoảng cách ra chút cho thoáng
+        toastContainer.alignment = .center
+        toastContainer.distribution = .fill
+        toastContainer.backgroundColor = .white
+        toastContainer.layer.cornerRadius = 12
+        toastContainer.clipsToBounds = false    // QUAN TRỌNG: Phải false mới hiện được bóng đổ
+        toastContainer.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Padding
+        toastContainer.isLayoutMarginsRelativeArrangement = true
+        toastContainer.layoutMargins = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
+        
+        // --- THÊM ĐỔ BÓNG (SHADOW) ---
+        toastContainer.layer.shadowColor = UIColor.black.cgColor
+        toastContainer.layer.shadowOpacity = 0.15 // Độ đậm của bóng (0.0 - 1.0)
+        toastContainer.layer.shadowOffset = CGSize(width: 0, height: 4) // Bóng đổ xuống dưới
+        toastContainer.layer.shadowRadius = 8 // Độ nhoè của bóng
+        
+        
+        // 2. Tạo Wrapper cho Icon (CÁI VÒNG TRÒN MÀU)
+        let iconWrapper = UIView()
+        iconWrapper.backgroundColor = isSuccess ? .systemGreen : .systemRed
+        
+        iconWrapper.translatesAutoresizingMaskIntoConstraints = false
+        iconWrapper.layer.cornerRadius = 16 // Bằng 1/2 chiều cao (32/2)
+        iconWrapper.heightAnchor.constraint(equalToConstant: 32).isActive = true
+        iconWrapper.widthAnchor.constraint(equalToConstant: 32).isActive = true
+        
+        // 3. Tạo Icon bên trong
+        let iconImageView = UIImageView()
+        let iconName = isSuccess ? "checkmark" : "xmark" // Dùng icon mảnh sẽ đẹp hơn fill
+        let config = UIImage.SymbolConfiguration(weight: .black)
+        iconImageView.image = UIImage(systemName: iconName, withConfiguration: config)
+        
+        // Màu icon: Nếu nền wrapper đậm thì icon trắng, nếu nền wrapper nhạt thì icon đậm
+        iconImageView.tintColor = .white
+        // Nếu wrapper dùng .systemGreen/.systemRed thì ở đây tintColor = .white
+        
+        iconImageView.contentMode = .scaleAspectFit
+        iconImageView.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Add Icon vào Wrapper và căn giữa
+        iconWrapper.addSubview(iconImageView)
+        NSLayoutConstraint.activate([
+            iconImageView.centerXAnchor.constraint(equalTo: iconWrapper.centerXAnchor),
+            iconImageView.centerYAnchor.constraint(equalTo: iconWrapper.centerYAnchor),
+            iconImageView.widthAnchor.constraint(equalToConstant: 16), // Icon nhỏ hơn wrapper
+            iconImageView.heightAnchor.constraint(equalToConstant: 16)
+        ])
+        
+        
+        // 4. Tạo Message Label (MÀU CHỮ ĐEN)
+        let messageLabel = UILabel()
+        messageLabel.text = message
+        messageLabel.textColor = .black 
+        messageLabel.font = .systemFont(ofSize: 14, weight: .medium)
+        messageLabel.numberOfLines = 0
+        
+        
+        // 5. Add vào Stack
+        toastContainer.addArrangedSubview(iconWrapper)
+        toastContainer.addArrangedSubview(messageLabel)
+        
+        
+        // 6. Add vào Window
+        window.addSubview(toastContainer)
+        
+        // Constraints
+        NSLayoutConstraint.activate([
+            toastContainer.topAnchor.constraint(equalTo: window.safeAreaLayoutGuide.topAnchor, constant: 10),
+            toastContainer.leadingAnchor.constraint(greaterThanOrEqualTo: window.leadingAnchor, constant: 20),
+            toastContainer.trailingAnchor.constraint(lessThanOrEqualTo: window.trailingAnchor, constant: -20),
+            toastContainer.centerXAnchor.constraint(equalTo: window.centerXAnchor)
+        ])
+        
+        // Animation (Giữ nguyên)
+        toastContainer.alpha = 0
+        toastContainer.transform = CGAffineTransform(translationX: 0, y: -20) // Hiệu ứng trượt từ trên xuống
+        
+        UIView.animate(withDuration: 0.5, delay: 0, usingSpringWithDamping: 0.7, initialSpringVelocity: 1, options: .curveEaseOut) {
+            toastContainer.alpha = 1
+            toastContainer.transform = .identity
+        } completion: { _ in
+            UIView.animate(withDuration: 0.5, delay: seconds, options: .curveEaseIn) {
+                toastContainer.alpha = 0
+                toastContainer.transform = CGAffineTransform(translationX: 0, y: -20)
+            } completion: { _ in
+                toastContainer.removeFromSuperview()
+            }
+        }
+    }
+}
+
+extension Notification.Name {
+    static let showGlobalToast = Notification.Name("showGlobalToast")
 }

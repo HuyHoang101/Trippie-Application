@@ -1,5 +1,6 @@
 # Uncomment the next line to define a global platform for your project
-# platform :ios, '15.0'
+platform :ios, '15.0'
+inhibit_all_warnings!
 
 target 'Trippie' do
   # Comment the next line if you don't want to use dynamic frameworks
@@ -14,5 +15,34 @@ target 'Trippie' do
   pod 'IQKeyboardManagerSwift' # Tự động xử lý bàn phím che input
   pod 'SDWebImage'            # Load ảnh từ mạng
   pod 'lottie-ios'            # Chạy animation đẹp
+  pod 'PhoneNumberKit', '~> 3.7'
 
+end
+
+post_install do |installer|
+  # Fix cho cả project chính và các project con
+  (installer.try(:generated_projects) || []).each do |project|
+    project.targets.each do |target|
+      target.build_configurations.each do |config|
+        
+        # 1. Ép lên iOS 15 để xoá warning cũ
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+        
+        # 2. THUỐC GIẢI CHO LEVELDB (Sửa lỗi 'cstdint' not found)
+        # Ép dùng chuẩn C++ 14 và thư viện libc++ chuẩn của Apple
+        config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++14'
+        config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
+        
+      end
+    end
+  end
+  
+  # Phòng hờ trường hợp installer cũ dùng cấu trúc pods_project
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+      config.build_settings['CLANG_CXX_LANGUAGE_STANDARD'] = 'gnu++14'
+      config.build_settings['CLANG_CXX_LIBRARY'] = 'libc++'
+    end
+  end
 end

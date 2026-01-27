@@ -15,11 +15,6 @@ class AuthBaseViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupBackground()
-        
-        // Đăng ký theo dõi sự thay đổi của userInterfaceStyle (Light/Dark mode)
-        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: Self, previousTraitCollection: UITraitCollection) in
-            self.setupBackground()
-        }
     }
     
     override func viewDidLayoutSubviews() {
@@ -28,6 +23,15 @@ class AuthBaseViewController: UIViewController {
         // Cập nhật frame cho gradient layer
         if let gradient = self.view.layer.sublayers?.first as? CAGradientLayer {
             gradient.frame = self.view.bounds
+        }
+    }
+    
+    override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {
+        super.traitCollectionDidChange(previousTraitCollection)
+        
+        // Kiểm tra xem giao diện có thực sự thay đổi màu không
+        if self.traitCollection.hasDifferentColorAppearance(comparedTo: previousTraitCollection) {
+            setupBackground()
         }
     }
     

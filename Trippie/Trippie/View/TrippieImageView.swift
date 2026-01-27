@@ -4,28 +4,32 @@
 //
 //  Created by hoang.nguyenh on 1/23/26.
 //
+
 import UIKit
-import SDWebImage
+
+// 1. Tạo cache toàn cục (nằm ngoài class) để dùng chung cho mọi ảnh
+private let globalImageCache = NSCache<NSString, UIImage>()
 
 class TrippieImageView: UIView {
     
     // MARK: - SUBVIEW
-    // Đây là cái ảnh thật sự
     private let imageView: UIImageView = {
         let iv = UIImageView()
-        iv.contentMode = .scaleAspectFill // Luôn fill đầy khung
-        iv.clipsToBounds = true // Cắt những phần thừa ra ngoài bo góc
+        iv.contentMode = .scaleAspectFill // Mặc định fill đầy
+        iv.clipsToBounds = true
         iv.translatesAutoresizingMaskIntoConstraints = false
+        // Màu mặc định cho icon placeholder (màu xám nhạt cho tinh tế)
+        iv.tintColor = .systemGray4
         return iv
     }()
     
     // MARK: - PROPERTIES
     private var style: TrippieImageStyle = .circle
     
-    
+    // Biến lưu task tải ảnh hiện tại (để có thể cancel)
+    private var currentTask: URLSessionDataTask?
     
     // MARK: - INIT
-    // Init mặc định (dùng trong code)
     init(style: TrippieImageStyle, isShadow: Bool = false, borderColor: UIColor? = nil) {
         self.style = style
         super.init(frame: .zero)
@@ -33,7 +37,6 @@ class TrippieImageView: UIView {
         configureStyle(isShadow: isShadow, borderColor: borderColor)
     }
     
-    // Init bắt buộc (nếu dùng storyboard - ít dùng)
     required init?(coder: NSCoder) {
         super.init(coder: coder)
         setupLayout()
@@ -56,17 +59,16 @@ class TrippieImageView: UIView {
     }
     
     private func configureStyle(isShadow: Bool, borderColor: UIColor?) {
-        // 1. Setup Border (Gắn vào imageView bên trong)
+        // 1. Setup Border
         if let border = borderColor {
-            imageView.layer.borderWidth = 1.5 // Độ dày viền
+            imageView.layer.borderWidth = 1.5
             imageView.layer.borderColor = border.cgColor
         }
         
-        // 2. Setup Shadow (Gắn vào Container bên ngoài - SELF)
-        // Lưu ý: Container phải clipsToBounds = false thì mới thấy bóng
+        // 2. Setup Shadow
         if isShadow {
             self.layer.shadowColor = UIColor.black.cgColor
-            self.layer.shadowOpacity = 0.2 // Độ đậm bóng
+            self.layer.shadowOpacity = 0.2
             self.layer.shadowOffset = CGSize(width: 0, height: 4)
             self.layer.shadowRadius = 6
             self.clipsToBounds = false
@@ -77,46 +79,86 @@ class TrippieImageView: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         
-        // Tính toán bo góc mỗi khi layout thay đổi kích thước
         switch style {
         case .circle:
-            // Lấy cạnh ngắn nhất chia đôi để đảm bảo luôn tròn
             let radius = min(bounds.width, bounds.height) / 2
             imageView.layer.cornerRadius = radius
-            
-            // Nếu có bóng, update shadow path để bóng cũng tròn theo
             if layer.shadowOpacity > 0 {
                 layer.shadowPath = UIBezierPath(ovalIn: bounds).cgPath
             }
             
         case .rounded(let radius, let corners):
             imageView.layer.cornerRadius = radius
-            
-            // Nếu có chỉ định góc cụ thể (ví dụ chỉ bo 2 góc trên)
             if let specificCorners = corners {
                 imageView.layer.maskedCorners = specificCorners
             }
-            
-            // Update shadow path hình chữ nhật bo góc
             if layer.shadowOpacity > 0 {
                 layer.shadowPath = UIBezierPath(roundedRect: bounds, cornerRadius: radius).cgPath
             }
         }
     }
     
-    // MARK: - PUBLIC METHOD (LOAD ẢNH)
-    func setImage(url: String?, placeholder: String = "placeholder_img") {
-        guard let urlString = url, let validUrl = URL(string: urlString) else {
-            imageView.image = UIImage(named: placeholder)
+    // MARK: - PUBLIC METHOD (LOAD ẢNH NATIVE)
+    
+    func setImage(url: String?, placeholderSystemName: String = "photo.on.rectangle.angled") {
+        // 1. Hủy task cũ đang chạy (nếu có) để tránh nhảy ảnh lung tung
+        currentTask?.cancel()
+        
+        // 2. Setup Placeholder (System Icon)
+        let config = UIImage.SymbolConfiguration(pointSize: 30, weight: .light)
+        let placeholder = UIImage(systemName: placeholderSystemName, withConfiguration: config)
+        
+        self.imageView.image = placeholder
+        self.imageView.contentMode = .center // Icon để giữa cho đẹp
+        
+        // 3. Kiểm tra URL hợp lệ
+        guard let urlString = url, let validUrl = URL(string: urlString) else { return }
+        
+        // 4. KIỂM TRA CACHE: Nếu có ảnh rồi thì lấy ra dùng luôn
+        if let cachedImage = globalImageCache.object(forKey: urlString as NSString) {
+            self.imageView.image = cachedImage
+            self.imageView.contentMode = .scaleAspectFill
             return
         }
         
-        // Dùng SDWebImage load ảnh
-        imageView.sd_setImage(with: validUrl, placeholderImage: UIImage(named: placeholder), options: [.scaleDownLargeImages])
+        // 5. TẢI ẢNH (Background Thread)
+        currentTask = URLSession.shared.dataTask(with: validUrl) { [weak self] data, response, error in
+            
+            // Nếu lỗi hoặc bị cancel thì dừng
+            if let error = error {
+                // print("❌ Lỗi tải: \(error.localizedDescription)")
+                return
+            }
+            
+            guard let data = data, let downloadedImage = UIImage(data: data) else { return }
+            
+            // Lưu vào Cache để lần sau dùng lại
+            globalImageCache.setObject(downloadedImage, forKey: urlString as NSString)
+            
+            // 6. Cập nhật UI (Main Thread)
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                
+                // Chuyển mode về fill để ảnh đẹp
+                self.imageView.contentMode = .scaleAspectFill
+                
+                // Hiệu ứng hiện ảnh mượt mà (Fade in)
+                UIView.transition(with: self.imageView,
+                                  duration: 0.3,
+                                  options: .transitionCrossDissolve,
+                                  animations: {
+                    self.imageView.image = downloadedImage
+                }, completion: nil)
+            }
+        }
+        
+        // Bắt đầu tải
+        currentTask?.resume()
     }
     
-    // Hàm set ảnh thường (nếu có dùng local)
+    // Hàm set ảnh local
     func setLocalImage(name: String) {
         imageView.image = UIImage(named: name)
+        imageView.contentMode = .scaleAspectFill
     }
 }
