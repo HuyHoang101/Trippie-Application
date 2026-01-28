@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "520237967996",
+    "project_id": "trippie-998ba",
+    "storage_bucket": "trippie-998ba.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:520237967996:android:fca13abae6ff6b895877f9",
+        "android_client_info": {
+          "package_name": "com.hoangnguyen1010001.trippie"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "520237967996-3vjoi81q69o13k29maqsvkm9kkj0s5jb.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6IdOExwMxYCxSX6nWNGzfhogM7yq81BI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "520237967996-3vjoi81q69o13k29maqsvkm9kkj0s5jb.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "520237967996-k1evtdeggo5hcser6oujj2gcil5ffect.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.hoangnguyenh101000.Trippie"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

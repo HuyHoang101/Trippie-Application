@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>520237967996-q5mtdp60kkk1s1v2q8ihfspd2u5k4uc8.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.520237967996-q5mtdp60kkk1s1v2q8ihfspd2u5k4uc8</string>
+	<key>API_KEY</key>
+	<string>AIzaSyDBt27zonr3b0T1-F9AQCQjYdeq_lfZGjc</string>
+	<key>GCM_SENDER_ID</key>
+	<string>520237967996</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.hoangnguyen1010001.trippie</string>
+	<key>PROJECT_ID</key>
+	<string>trippie-998ba</string>
+	<key>STORAGE_BUCKET</key>
+	<string>trippie-998ba.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:520237967996:ios:dc9e77250af037a05877f9</string>
+</dict>
+</plist>
