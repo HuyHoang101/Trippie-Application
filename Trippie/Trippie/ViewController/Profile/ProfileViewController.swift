@@ -13,8 +13,13 @@ class ProfileViewController: FadeBaseViewController {
     private let viewModel = LoginViewModel()
     private var cancellable = Set<AnyCancellable>()
     
+    
     //MARK: - UI COMPONENT
     private let logout = UIButton.customButton(image: UIImage(systemName: "rectangle.portrait.and.arrow.right"), backgroundColor: (UIColor(named: "AuthBackground2") ?? UIColor.systemBlue), tintColor: .label, padding: 12)
+    private let mainScroll = UIScrollView()
+    private let maincontent = UIView()
+    
+    private let decorateUI = UIView()
     
     
     //MARK: - LIFE CYCLE

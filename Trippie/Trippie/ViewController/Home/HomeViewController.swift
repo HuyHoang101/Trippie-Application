@@ -20,7 +20,7 @@ class HomeViewController: FadeBaseViewController {
     
     private let searchBar = UITextField.createInput(placeholder: "Searching...", iconName: "magnifyingglass")
     
-    private let filterButton = UIButton.customButton(image: UIImage(systemName: "slider.horizontal.3"), backgroundColor: UIColor(named: "AuthBackground1") ?? UIColor.purple, tintColor: .white, isCircle: false, padding: 15)
+    private let filterButton = UIButton.customButton(image: UIImage(systemName: "slider.horizontal.3"), backgroundColor: UIColor(named: "AuthBackground1") ?? UIColor.purple, tintColor: .white, isCircle: false, padding: 13)
     
     private let Newest = UIButton.customButton(text: "Newest", font: UIFont.systemFont(ofSize: 13, weight: .regular), backgroundColor: UIColor(named: "AuthBackground1") ?? UIColor.purple, isCircle: false, isBorder: true)
     
@@ -40,7 +40,7 @@ class HomeViewController: FadeBaseViewController {
     
     private let hstack2 = UIStackView.customStack(xPadding: 12, yPadding: 8, axis: .horizontal, alignment: .center, distribution: .fill, stackSpacing: 6)
     
-    private let titleLabel1 = UILabel.customLabel(text: "Newest place", font: AppTheme.Font.mainBold(size: 22), textColor: .label)
+    private let titleLabel1 = UILabel.customLabel(text: "Earliest place", font: AppTheme.Font.mainBold(size: 22), textColor: .label)
     
     private let viewAllButton = UIButton.customButton(text: "View all", font: UIFont.systemFont(ofSize: 15), backgroundColor: .clear, textColor: .secondaryLabel, isPadding: false)
     
@@ -73,12 +73,15 @@ class HomeViewController: FadeBaseViewController {
     //MARK: - SET UP UI
     func setupUI() {
         setupBackground()
-        viewModel.fetchMyTrips()
         viewModel.fetchTripForFeedTable()
-        searchBar.clipsToBounds = true
-        searchBar.layer.shadowColor = UIColor.black.withAlphaComponent(0.3).cgColor
-        searchBar.layer.shadowRadius = 2
+        viewModel.titleFilter.send("Earliest")
+        searchBar.clipsToBounds = false
+        searchBar.layer.shadowColor = UIColor.black.cgColor
+        searchBar.layer.shadowRadius = 3
+        searchBar.layer.shadowOffset = CGSize(width: 0, height: 0)
+        searchBar.layer.shadowOpacity = 0.15
         
+        mainScroll.delegate = self
         mainScroll.alwaysBounceVertical = true
         mainScroll.showsVerticalScrollIndicator = false
         subScroll.showsHorizontalScrollIndicator = false
@@ -172,32 +175,76 @@ class HomeViewController: FadeBaseViewController {
             vstack2.leadingAnchor.constraint(equalTo: mainview.leadingAnchor, constant: 12),
             vstack2.bottomAnchor.constraint(equalTo: mainview.bottomAnchor, constant: -20),
             
-            searchBar.heightAnchor.constraint(equalToConstant: 50)
+            searchBar.heightAnchor.constraint(equalToConstant: 50),
+            filterButton.widthAnchor.constraint(equalTo: filterButton.heightAnchor)
         ])
     }
     
-    private func renderTrips(){
-        let trip = Array(viewModel.trips.value.prefix(6))
-        let trip2 = Array(viewModel.trips.value.shuffled().prefix(6))
+    private func renderTrips(forList: Bool = true){
+        let trip = Array(viewModel.tripForFilter.prefix(5))
         hstack3.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        trip.forEach { t in
-            let card = FeedCard(trip: t)
-            hstack3.addArrangedSubview(card)
-            card.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([
-                card.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.6),
-                card.heightAnchor.constraint(equalTo: card.widthAnchor, multiplier: 0.8)
-            ])
+        if trip.count == 0 {
+            let emptyCard = UIView()
+            hstack3.addArrangedSubview(emptyCard)
+            emptyCard.layer.cornerRadius = 12
+            emptyCard.clipsToBounds = true
+            emptyCard.translatesAutoresizingMaskIntoConstraints = false
+            emptyCard.widthAnchor.constraint(equalTo: view.widthAnchor, constant: -25).isActive = true
+            emptyCard.heightAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.48).isActive = true
+            
+            let emptylabel = UILabel.customLabel(text: "Empty content, disconection, or server error", font: AppTheme.Font.mainMedium(size: 16), textColor: .secondaryLabel, textAligment: .center)
+            emptylabel.numberOfLines = 0
+            emptyCard.addSubview(emptylabel)
+            emptylabel.centerYAnchor.constraint(equalTo: emptyCard.centerYAnchor).isActive = true
+            emptylabel.leadingAnchor.constraint(equalTo: emptyCard.leadingAnchor, constant: 40).isActive = true
+            emptylabel.trailingAnchor.constraint(equalTo: emptyCard.trailingAnchor, constant: -40).isActive = true
+            
+            self.view.layoutIfNeeded()
+            emptyCard.addDashedBorder()
+        } else {
+            trip.forEach { t in
+                let card = FeedCard(trip: t)
+                hstack3.addArrangedSubview(card)
+                card.translatesAutoresizingMaskIntoConstraints = false
+                NSLayoutConstraint.activate([
+                    card.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.6),
+                    card.heightAnchor.constraint(equalTo: card.widthAnchor, multiplier: 0.8)
+                ])
+            }
         }
-        vstack2.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        trip2.forEach { t in
-            let row = UniversalTripCard()
-            row.configure(trip: t, isListMode: true)
-            vstack2.addArrangedSubview(row)
-            row.translatesAutoresizingMaskIntoConstraints = false
-            NSLayoutConstraint.activate([
-                row.widthAnchor.constraint(equalTo: vstack2.widthAnchor)
-            ])
+        if forList {
+            let trip2 = Array(viewModel.randomTrips.value.prefix(5))
+            vstack2.arrangedSubviews.forEach { $0.removeFromSuperview() }
+            if trip2.count == 0 {
+                let emptyCard = UIView()
+                vstack2.addArrangedSubview(emptyCard)
+                emptyCard.layer.cornerRadius = 12
+                emptyCard.clipsToBounds = true
+                emptyCard.translatesAutoresizingMaskIntoConstraints = false
+                emptyCard.widthAnchor.constraint(equalTo: view.widthAnchor, constant: -25).isActive = true
+                emptyCard.heightAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.48).isActive = true
+                
+                let emptylabel = UILabel.customLabel(text: "Empty content, disconection, or server error", font: AppTheme.Font.mainMedium(size: 16), textColor: .secondaryLabel, textAligment: .center)
+                emptylabel.numberOfLines = 0
+                emptyCard.addSubview(emptylabel)
+                emptylabel.centerYAnchor.constraint(equalTo: emptyCard.centerYAnchor).isActive = true
+                emptylabel.leadingAnchor.constraint(equalTo: emptyCard.leadingAnchor, constant: 40).isActive = true
+                emptylabel.trailingAnchor.constraint(equalTo: emptyCard.trailingAnchor, constant: -40).isActive = true
+                
+                self.view.layoutIfNeeded()
+                emptyCard.addDashedBorder()
+            } else {
+                trip2.forEach { t in
+                    let row = UniversalTripCard()
+                    let tripWithStatus = TripWithStatus(trip: t, participation: Participation(userId: "", tripId: "", personalStatus: .upcoming, role: .member))
+                    row.configure(trip: tripWithStatus, isListMode: false, isFullTitle: true)
+                    vstack2.addArrangedSubview(row)
+                    row.translatesAutoresizingMaskIntoConstraints = false
+                    NSLayoutConstraint.activate([
+                        row.widthAnchor.constraint(equalTo: vstack2.widthAnchor)
+                    ])
+                }
+            }
         }
     }
     
@@ -206,6 +253,7 @@ class HomeViewController: FadeBaseViewController {
         Newest.addTarget(self, action: #selector(handleFilterTap), for: .touchUpInside)
         Vietnam.addTarget(self, action: #selector(handleFilterTap), for: .touchUpInside)
         Recommend.addTarget(self, action: #selector(handleFilterTap), for: .touchUpInside)
+        viewAllButton.addTarget(self, action: #selector(pushToLish), for: .touchUpInside)
     }
     
     @objc private func multiplechoice(_ string: String) {
@@ -236,17 +284,23 @@ class HomeViewController: FadeBaseViewController {
             selectedUpdate(Newest)
             deselectedUpdate(Vietnam)
             deselectedUpdate(Recommend)
-            titleLabel1.text = "Newest place"
+            titleLabel1.text = "Earliest trips"
+            viewModel.titleFilter.send("Earliest")
+            
         case "Vietnam":
             deselectedUpdate(Newest)
             selectedUpdate(Vietnam)
             deselectedUpdate(Recommend)
             titleLabel1.text = "Vietnam popular place"
+            viewModel.titleFilter.send("Vietnam")
+            
         case "Recommend":
             deselectedUpdate(Newest)
             deselectedUpdate(Vietnam)
             selectedUpdate(Recommend)
             titleLabel1.text = "Recommend for you"
+            viewModel.titleFilter.send("Recommend")
+            
         default:
             break
         }
@@ -259,6 +313,20 @@ class HomeViewController: FadeBaseViewController {
         }
     }
     
+    @objc private func pushToLish(_ sender: UIButton) {
+        let listVC = ListViewController()
+
+        switch sender {
+        case viewAllButton:
+            listVC.navigationTitle = titleLabel1.text
+            listVC.trip = viewModel.tripForFilter
+        default:
+            listVC.navigationTitle = "All Trips"
+            listVC.trip = viewModel.trips.value
+        }
+        navigationController?.pushViewController(listVC, animated: true)
+    }
+    
     //MARK: -BINDING
     private func binding() {
         viewModel.trips
@@ -268,5 +336,38 @@ class HomeViewController: FadeBaseViewController {
                 self?.renderTrips()
             }
             .store(in: &cancellable)
+        viewModel.titleFilter
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink{ [weak self] _ in
+                self?.renderTrips(forList: false)
+            }
+            .store(in: &cancellable)
+        viewModel.randomTrips
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink{ [weak self] _ in
+                self?.renderTrips(forList: false)
+            }
+            .store(in: &cancellable)
+    }
+}
+
+
+extension HomeViewController: UIScrollViewDelegate {
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        // Kiểm tra nếu là mainScroll và người dùng kéo xuống một khoảng (ví dụ -100)
+        let offset = scrollView.contentOffset.y
+        if offset < -100 {
+            handleRefreshData()
+        }
+    }
+    
+    private func handleRefreshData() {
+
+        viewModel.fetchTripForFeedTable()
+        // Gợi ý: cảm giác "haptic" khi kéo đủ lực
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
     }
 }

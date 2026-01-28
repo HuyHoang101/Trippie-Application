@@ -25,11 +25,16 @@ class UniversalTripCard: UIView {
     
     // 4. Footer Components (List Mode)
     private let footerStack = UIStackView.customStack(axis: .horizontal, alignment: .center, distribution: .fill)
+    private let footerStackforMyTrip = UIStackView.customStack(axis: .horizontal, alignment: .center, distribution: .fill)
     private let dateLabel = UILabel.customLabel(text: "", font: .systemFont(ofSize: 12), textColor: .gray)
+    private let dateLabelCopy = UILabel.customLabel(text: "", font: .systemFont(ofSize: 12), textColor: .gray)
     
     // Status Box
     private let statusContainer = UIView()
     private let statusLabel = UILabel()
+    
+    // Personal Status Box
+    private let personalStatus = TripStatusBadge()
     
     // MARK: - INIT
     override init(frame: CGRect) {
@@ -83,13 +88,18 @@ class UniversalTripCard: UIView {
             statusLabel.trailingAnchor.constraint(equalTo: statusContainer.trailingAnchor, constant: -8)
         ])
         
-        footerStack.addArrangedSubview(dateLabel)
+        footerStack.addArrangedSubview(dateLabelCopy)
         let spacer = UIView() // Spacer đẩy status về cuối
         footerStack.addArrangedSubview(spacer)
         footerStack.addArrangedSubview(statusContainer)
         
+        footerStackforMyTrip.addArrangedSubview(dateLabel)
+        let spacer2 = UIView() // Spacer đẩy status về cuối
+        footerStackforMyTrip.addArrangedSubview(spacer2)
+        footerStackforMyTrip.addArrangedSubview(personalStatus)
+        
         // 4. Main Stack (Gom tất cả vào đây)
-        let infoStack = UIStackView(arrangedSubviews: [titleLabel, middleStack, plannerLabel, footerStack])
+        let infoStack = UIStackView(arrangedSubviews: [titleLabel, middleStack, plannerLabel, footerStack, footerStackforMyTrip])
         infoStack.axis = .vertical
         infoStack.spacing = 6
         infoStack.alignment = .fill
@@ -114,21 +124,26 @@ class UniversalTripCard: UIView {
             infoStack.bottomAnchor.constraint(lessThanOrEqualTo: bottomAnchor, constant: -10)
         ])
         
-        titleLabel.numberOfLines = 1
         locationLabel.lineBreakMode = .byTruncatingTail
     }
     
     // MARK: - CONFIGURATION
-    func configure(trip: Trip, isListMode: Bool = false) {
+    func configure(trip: TripWithStatus, isListMode: Bool = false, isFullTitle: Bool = false) {
         // 1. Data
-        titleLabel.text = trip.title
-        locationLabel.text = "\(trip.location), \(trip.country)"
-        plannerLabel.text = "Planer: \(trip.ownerName)"
-        dayIndexLabel.text = "\(trip.dayIndex) Days"
-        imgView.setImage(url: trip.coverImage)
+        titleLabel.text = trip.trip.title
+        locationLabel.text = "\(trip.trip.location), \(trip.trip.country)"
+        plannerLabel.text = "Planer: \(trip.trip.ownerName)"
+        dayIndexLabel.text = "\(trip.trip.dayIndex) Days"
+        imgView.setImage(url: trip.trip.coverImage)
         
         // 2. Logic ẩn hiện
         footerStack.isHidden = !isListMode
+        
+        if isFullTitle {
+            titleLabel.numberOfLines = 2
+        } else {
+            titleLabel.numberOfLines = 1
+        }
         
         if isListMode {
             // Hiển thị đầy đủ cho màn hình List
@@ -136,18 +151,28 @@ class UniversalTripCard: UIView {
             // Format Date
             let formatter = DateFormatter()
             formatter.dateFormat = "dd/MM/yyyy"
-            dateLabel.text = formatter.string(from: trip.startTime)
+            dateLabel.text = formatter.string(from: trip.trip.startTime)
+            dateLabelCopy.text = formatter.string(from: trip.trip.startTime)
             
             // Status Logic
             // Lưu ý: trip.status trả về String hoặc Enum
             // Đây là ví dụ xử lý String, cậu sửa logic màu tùy ý nhé
-            let statusText = trip.status.rawValue.capitalized
+            let statusText = trip.trip.status.rawValue.capitalized
             let isFull = statusText.lowercased() == "full"
             
             statusContainer.backgroundColor = isFull ? UIColor.systemRed.withAlphaComponent(0.1) : UIColor.systemGreen.withAlphaComponent(0.1)
             statusLabel.text = statusText
             statusLabel.textColor = isFull ? .systemRed : .systemGreen
             statusLabel.font = .systemFont(ofSize: 11, weight: .bold)
+        }
+        
+        if let id = trip.participation.id, !id.isEmpty {
+            footerStackforMyTrip.isHidden = false
+            footerStack.isHidden = true
+            personalStatus.configure(status: trip.participation.personalStatus)
+        } else {
+            footerStackforMyTrip.isHidden = true
+            footerStack.isHidden = false
         }
     }
 }

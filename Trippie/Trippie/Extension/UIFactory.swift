@@ -728,3 +728,31 @@ extension UIViewController {
 extension Notification.Name {
     static let showGlobalToast = Notification.Name("showGlobalToast")
 }
+
+
+
+extension UIView {
+    func addDashedBorder(
+        color: UIColor = .secondaryLabel,
+        lineWidth: CGFloat = 1,
+        dashPattern: [NSNumber] = [6, 4],
+        cornerRadius: CGFloat = 12
+    ) {
+        // 1. Xoá layer nét đứt cũ nếu đã tồn tại để tránh trùng lặp
+        self.layer.sublayers?.filter { $0.name == "DashedBorderLayer" }.forEach { $0.removeFromSuperlayer() }
+        
+        // 2. Tạo CAShapeLayer
+        let shapeLayer = CAShapeLayer()
+        shapeLayer.name = "DashedBorderLayer"
+        shapeLayer.strokeColor = color.cgColor
+        shapeLayer.lineWidth = lineWidth
+        shapeLayer.lineDashPattern = dashPattern
+        shapeLayer.fillColor = nil // Quan trọng: Phải để nil nếu không nó sẽ đè mất nội dung card
+        
+        // 3. Tạo Path theo bounds hiện tại
+        shapeLayer.path = UIBezierPath(roundedRect: self.bounds, cornerRadius: cornerRadius).cgPath
+        shapeLayer.frame = self.bounds
+        
+        self.layer.addSublayer(shapeLayer)
+    }
+}
