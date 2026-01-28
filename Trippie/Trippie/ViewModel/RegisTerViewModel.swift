@@ -21,6 +21,7 @@ class RegisterViewModel {
     // Dùng String? -> Nếu nil là không lỗi, nếu có text là hiện lỗi đỏ
     @Published var nameError: String? = nil
     @Published var emailError: String? = nil
+    @Published var phone: String? = nil
     @Published var passwordError: String? = nil
     @Published var confirmError: String? = nil
     
@@ -38,6 +39,8 @@ class RegisterViewModel {
         setupAutoClearErrors()
     }
     
+    
+    // MARK: - PIPE
     private func setupAutoClearErrors() {
         // CƠ CHẾ: Lắng nghe Input thay đổi -> Reset Error về nil ngay lập tức
         
@@ -72,7 +75,9 @@ class RegisterViewModel {
         clearAllErrors()
         
         // 1. Validate toàn bộ form
-        guard validateInput() else { return }
+        guard validateInput() else {
+            return
+        }
         
         // 2. Bắt đầu gọi API
         loading.send(true)
@@ -82,7 +87,8 @@ class RegisterViewModel {
                 let _ = try await AuthService.shared.register(
                     email: self.email,
                     pass: self.password,
-                    name: self.name
+                    name: self.name,
+                    phone: self.phone
                 )
                 
                 await MainActor.run {
@@ -174,7 +180,7 @@ class RegisterViewModel {
             passwordError = "The password is invalid."
         } else {
             // Lỗi không xác định thì hiện popup chung
-            generalErrorMessage.send("Lỗi: \(nsError.localizedDescription)")
+            generalErrorMessage.send("\(nsError.localizedDescription)")
         }
     }
 }

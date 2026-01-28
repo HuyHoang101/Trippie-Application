@@ -114,59 +114,72 @@ class TripService {
     
     
     
-    // MARK: - 1. CREATE TRIP (Input: TripWithStatus -> Output: TripWithStatus)
-    func createTrip(input: TripWithStatus) async throws -> TripWithStatus {
-        // 1. Tách Trip từ input ra để xử lý
-        var newTrip = input.trip
+    // MARK: - 1. CREATE TRIP (Input: Trip -> Output: TripWithStatus)
+    func createTrip(trip: Trip) async throws -> TripWithStatus {
+        // 1. Copy trip đầu vào ra biến mới để sửa đổi (vì struct là value type)
+        var newTrip = trip
         
-        // 2. Tạo ID mới
+        // 2. Tạo Reference và ID mới cho Trip
         let newTripRef = db.collection("trips").document()
-        let newId = newTripRef.documentID
+        let newTripId = newTripRef.documentID
         
-        // 3. Gán ID và ngày tạo
-        newTrip.id = newId
-        newTrip.createdAt = Date() // Set giờ server (local)
+        // 3. Gán các thông tin hệ thống (ID, Time)
+        newTrip.id = newTripId
+        newTrip.createdAt = Date() // Gán giờ local để UI hiện ngay lập tức
+        newTrip.updatedAt = Date()
         
-        // 4. Lưu Trip
+        // 4. Lưu Trip lên Firestore
         try newTripRef.setData(from: newTrip)
         
-        // 5. Xử lý Participation (Owner)
-        var ownerPart = Participation(
-            id: nil,
+        // 5. Tự động tạo Participation cho người tạo (Owner)
+        var ownerParticipation = Participation(
+            id: nil, // ID sẽ được gán ở bước sau
             userId: newTrip.ownerId,
-            tripId: newId, // Link với ID vừa tạo
-            personalStatus: .upcoming,
-            role: .owner
+            tripId: newTripId, // Link với ID trip vừa tạo
+            personalStatus: .upcoming, // Mặc định là sắp diễn ra
+            role: .owner // Vai trò chắc chắn là Owner
         )
         
-        // 6. Lưu Participation và lấy ID của nó (để trả về chuẩn nhất)
+        // 6. Lưu Participation lên Firestore
         let partRef = db.collection("participations").document()
-        ownerPart.id = partRef.documentID // Gán ID cho participation luôn
-        try partRef.setData(from: ownerPart)
+        ownerParticipation.id = partRef.documentID // Gán ID để trả về object đầy đủ
+        try partRef.setData(from: ownerParticipation)
         
-        // 7. Trả về cục data hoàn chỉnh đã có ID
-        return TripWithStatus(trip: newTrip, participation: ownerPart)
+        // 7. Gói lại thành TripWithStatus để trả về cho UI dùng luôn
+        return TripWithStatus(trip: newTrip, participation: ownerParticipation)
     }
     
     
-    // MARK: - 2. UPDATE TRIP (Input: TripWithStatus -> Output: TripWithStatus)
-    func updateTrip(input: TripWithStatus) async throws -> TripWithStatus {
-        // 1. Check ID
-        let trip = input.trip
+    // MARK: - 2. UPDATE TRIP (Input: Trip -> Output: TripWithStatus)
+    func updateTrip(trip: Trip) async throws -> TripWithStatus {
+        // 1. Kiểm tra ID chuyến đi (Bắt buộc phải có để update)
         guard let tripId = trip.id else {
             throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Trip ID not found"])
         }
         
-        // 2. Cập nhật Trip
+        // 2. Cập nhật thời gian sửa đổi
         var updatedTrip = trip
         updatedTrip.updatedAt = Date()
         
-        // 3. Ghi đè lên Server
+        // 3. Ghi đè dữ liệu mới lên Server (Merge = true để chỉ update trường thay đổi nếu cần)
         try db.collection("trips").document(tripId).setData(from: updatedTrip, merge: true)
         
-        // 4. Trả về cục data đã update
-        // Lưu ý: Participation thường không đổi khi edit thông tin chuyến đi, nên giữ nguyên từ input
-        return TripWithStatus(trip: updatedTrip, participation: input.participation)
+        // 4. LẤY PARTICIPATION CỦA OWNER (Bước quan trọng)
+        
+        let snapshot = try await db.collection("participations")
+            .whereField("tripId", isEqualTo: tripId)
+            .whereField("userId", isEqualTo: updatedTrip.ownerId)
+            .limit(to: 1) // Chỉ lấy 1 cái duy nhất
+            .getDocuments()
+        
+        guard let participationDoc = snapshot.documents.first,
+              let ownerParticipation = try? participationDoc.data(as: Participation.self) else {
+            // Trường hợp hiếm: Trip tồn tại mà không tìm thấy Owner Participation -> Báo lỗi
+            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Owner Participation not found"])
+        }
+        
+        // 5. Ghép lại và trả về
+        return TripWithStatus(trip: updatedTrip, participation: ownerParticipation)
     }
     
     
@@ -376,5 +389,83 @@ class TripService {
         try docRef.setData(from: trip, merge: true)
         
         return trip
+    }
+    
+    // MARK: - SEED DATA GENERATOR
+    func seedTrips() async {
+        guard let ownerId = AuthService.shared.currentUserId else {
+            print("❌ Lỗi: Chưa đăng nhập, không lấy được OwnerId")
+            return
+        }
+        
+        // 1. Bộ dữ liệu chuẩn (Location - Country - Image đi kèm nhau)
+        let destinations: [(loc: String, country: String, img: String)] = [
+            ("Ha Long Bay", "Vietnam", "https://images.vietnamtourism.gov.vn/en/images/2023/cnn5.jpg"),
+            ("Kyoto", "Japan", "https://www.pelago.com/img/destinations/kyoto/1129-0642_kyoto-xlarge.webp"),
+            ("Paris", "France", "https://res.klook.com/image/upload/fl_lossy.progressive,q_60/Mobile/City/swox6wjsl5ndvkv5jvum.jpg"),
+            ("Bali", "Indonesia", "https://trieuhaotravel.vn/Uploads/images/Ulun_Danu.jpg"),
+            ("Santorini", "Greece", "https://sothebysrealty.gr/wp-content/uploads/2016/11/Santorini-sunset-at-dawn-Greece-Sothebys-International-Realty.jpg"),
+            ("New York", "USA", "https://i.natgeofe.com/k/5b396b5e-59e7-43a6-9448-708125549aa1/new-york-statue-of-liberty.jpg"),
+            ("Rome", "Italy", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTwWyq_eKnfHFkKRUUDfUE5AVSS-kYfHAg1Tg&s"),
+            ("Seoul", "South Korea", "https://www.agoda.com/wp-content/uploads/2024/08/Namsan-Tower-during-autumn-in-Seoul-South-Korea-1244x700.jpg"),
+            ("Phuket", "Thailand", "https://www.aleenta.com/wp-content/uploads/Phi-Phi-Islands-Day-Trip.jpg"),
+            ("Sydney", "Australia", "https://cdn.sydneycitytour.com.au/wp-content/uploads/2024/10/Sydney-Opera-House.png")
+        ]
+        
+        let tripRules = [
+            "Respect one another and avoid spamming in the group chat.",
+            "Be punctual for all scheduled group activities.",
+            "Share and track all expenses transparently through the app.",
+            "Complete assigned tasks on time to keep the trip on track.",
+            "Positive vibes only—let's support each other and have fun!"
+        ]
+        
+        let titles = ["Backpacking Adventure", "Food Tour", "Photography Expedition", "Relaxing Getaway", "Cultural Discovery"]
+        let descriptions = ["Join me for an amazing trip!", "Looking for buddies to explore.", "Can't wait to see this place.", "A budget-friendly journey.", "Experience local life together."]
+        let tripTypes: [TripType] = [.buddy, .localHost, .seekingLocal]
+        let maxMembers = [2, 4, 6, 8, 10]
+        
+        print("🚀 Bắt đầu tạo 30 trips giả lập...")
+        
+        // 2. Vòng lặp tạo 30 cái
+        for i in 1...30 {
+            // Random dữ liệu
+            let dest = destinations.randomElement()!
+            let randomDays = Int.random(in: 1...60) // Ngày bắt đầu từ mai đến 2 tháng sau
+            let startDate = Calendar.current.date(byAdding: .day, value: randomDays, to: Date())!
+            let dayIndex = Int.random(in: 4...10)
+            
+            let newTrip = Trip(
+                id: nil, // createTrip sẽ tự sinh ID
+                ownerId: ownerId,
+                ownerName: "Alex Nguyen",
+                coverImage: dest.img,
+                title: "\(titles.randomElement()!) to \(dest.loc) #\(i)",
+                description: descriptions.randomElement()!,
+                tripRule: tripRules.randomElement()!,
+                location: dest.loc,
+                country: dest.country,
+                tripType: tripTypes.randomElement()!,
+                status: .recruiting,
+                members: [],
+                pendingRequests: [],
+                maxMember: maxMembers.randomElement()!,
+                currentMember: 1,
+                startTime: startDate,
+                dayIndex: dayIndex,
+                createdAt: nil, // Server lo
+                updatedAt: nil
+            )
+            
+            do {
+                // Gọi hàm createTrip xịn xò mình vừa viết lúc nãy
+                _ = try await createTrip(trip: newTrip)
+                print("✅ Đã tạo trip số \(i): \(dest.loc)")
+            } catch {
+                print("❌ Lỗi tạo trip \(i): \(error.localizedDescription)")
+            }
+        }
+        
+        print("🎉 HOÀN TẤT! Đã seed xong dữ liệu.")
     }
 }

@@ -46,12 +46,12 @@ class TrippieLoadingView: UIView {
     
     //MARK: - SETUP UI
     private func setupUI() {
-        self.backgroundColor = UIColor.black.withAlphaComponent(0.05)
+        self.backgroundColor = UIColor.black.withAlphaComponent(0.2)
         self.isUserInteractionEnabled = true
         
         let text = "Loading"
         
-        let font = AppTheme.Font.mainBold(size: 22)
+        let font = AppTheme.Font.mainBold(size: 16)
         
         for char in text {
             let label = UILabel.customLabel(text: String(char), font: font, textColor: .white)
@@ -62,9 +62,9 @@ class TrippieLoadingView: UIView {
         for _ in 0...2 {
             let dot = UIView()
             dot.backgroundColor = .white
-            dot.layer.cornerRadius = 3
+            dot.layer.cornerRadius = 2
             dot.translatesAutoresizingMaskIntoConstraints = false
-            dot.widthAnchor.constraint(equalToConstant: 6).isActive = true
+            dot.widthAnchor.constraint(equalToConstant: 4).isActive = true
             dot.heightAnchor.constraint(equalTo: dot.widthAnchor).isActive = true
             dotStack.addArrangedSubview(dot)
             dotViews.append(dot)
@@ -85,7 +85,7 @@ class TrippieLoadingView: UIView {
             mainStack.centerYAnchor.constraint(equalTo: centerYAnchor),
                         
             // Xe bus rộng 1/4 màn hình
-            busAnimationView.widthAnchor.constraint(equalTo: self.widthAnchor, multiplier: 0.33),
+            busAnimationView.widthAnchor.constraint(equalTo: self.widthAnchor, multiplier: 0.25),
             busAnimationView.heightAnchor.constraint(equalTo: busAnimationView.widthAnchor)
         ])
     }

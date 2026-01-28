@@ -17,7 +17,7 @@ class AuthService {
     private let userDefaultsKey = "cached_user_id"
     
     // --- 1. REGISTER ---
-    func register(email: String, pass: String, name: String) async throws -> User {
+    func register(email: String, pass: String, name: String, phone: String? = nil) async throws -> User {
         let authResult = try await Auth.auth().createUser(withEmail: email, password: pass)
         let uid = authResult.user.uid
         
@@ -26,7 +26,7 @@ class AuthService {
             avatarUrl: "",
             name: name,
             email: email,
-            phone: "",
+            phone: phone ?? "",
             address: "",
             aboutMe: "New member of Trippie",
             rating: 0.0,
