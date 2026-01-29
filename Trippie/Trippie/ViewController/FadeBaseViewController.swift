@@ -27,9 +27,11 @@ class FadeBaseViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         
-        // Cập nhật frame cho gradient layer
-        if let gradient = self.view.layer.sublayers?.first as? CAGradientLayer {
-            gradient.frame = self.view.bounds
+        // Cập nhật lại frame cho tất cả gradient layers để khít màn hình
+        self.view.layer.sublayers?.forEach { layer in
+            if let gradient = layer as? CAGradientLayer {
+                gradient.frame = self.view.bounds
+            }
         }
     }
     
@@ -44,6 +46,11 @@ class FadeBaseViewController: UIViewController {
     }
     
     func setupBackground() {
+
+        self.view.backgroundColor = .systemBackground
+
+        self.view.layer.sublayers?.filter { $0 is CAGradientLayer }.forEach { $0.removeFromSuperlayer() }
+
         AppTheme.applyFadeBackground(to: self.view)
     }
     

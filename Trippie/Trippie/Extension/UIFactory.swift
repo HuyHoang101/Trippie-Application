@@ -439,16 +439,20 @@ extension UIStackView {
 extension UILabel {
     
     static func boxStyle(text: String, font: UIFont, background:UIColor, textColor: UIColor) -> UILabel {
-        let label = UILabel()
+        let label = PaddingLabel()
+        label.topInset = 3.5
+        label.bottomInset = 3.5
+        label.leftInset = 7
+        label.rightInset = 7
         label.text = text
         label.font = font
         label.textColor = textColor
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.backgroundColor = background.withAlphaComponent(0.3)
+        label.backgroundColor = background
         label.layer.borderWidth = 1.0
-        label.layer.borderColor = background.cgColor
-        label.clipsToBounds = false
+        label.layer.borderColor = background.withAlphaComponent(0.3).cgColor
+        label.clipsToBounds = true
         label.layer.shadowColor = UIColor.black.cgColor
         label.layer.shadowOffset = CGSize(width: -2, height: 2)
         label.layer.shadowOpacity = 0.2
@@ -721,6 +725,21 @@ extension UIViewController {
             } completion: { _ in
                 toastContainer.removeFromSuperview()
             }
+        }
+    }
+    
+    
+    @MainActor
+    func confirmAlert(type: ConfirmActionType, title: String) async -> Bool {
+        return await withCheckedContinuation { continuation in
+            guard let window = view.window else {
+                continuation.resume(returning: false)
+                return
+            }
+            let alert = CustomConfirmAlertView(type: type, title: title) { result in
+                continuation.resume(returning: result)
+            }
+            window.addSubview(alert)
         }
     }
 }
