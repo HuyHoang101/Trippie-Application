@@ -7,7 +7,7 @@
 
 import UIKit
 
-class ListViewController: UIViewController { // Kế thừa FadeBase để có background
+class ListViewController: FadeBaseViewController {
     
     // MARK: - DATA
     var trip: [Trip]?
@@ -28,12 +28,12 @@ class ListViewController: UIViewController { // Kế thừa FadeBase để có b
         } ?? []
     }
     
-    private let backBtn = UIButton.customButton(image: UIImage(systemName: "arrow.left"), backgroundColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.7) ?? .systemGray.withAlphaComponent(0.7))
+    private let backBtn = UIButton.customButton(image: UIImage(systemName: "arrow.left"), backgroundColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.5) ?? .systemGray.withAlphaComponent(0.5))
     
     // MARK: - LIFECYCLE
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .background
+        setupBackground()
         setupTableView()
         setupNavBar()
     }
@@ -102,5 +102,19 @@ extension ListViewController: UITableViewDataSource, UITableViewDelegate {
         cell.selectionStyle = .none
         
         return cell
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let selectedTrip = displayData[indexPath.row]
+        let detailVC = DetailViewController()
+        detailVC.id = selectedTrip.trip.id
+        detailVC.navigationTitle = "Detail: \(navigationTitle ?? selectedTrip.trip.location)"
+        if let partId = selectedTrip.participation.id, !partId.isEmpty {
+            detailVC.isFeedBoard = false
+        } else {
+            detailVC.isFeedBoard = true
+        }
+        self.navigationController?.pushViewController(detailVC, animated: true)
+        
     }
 }

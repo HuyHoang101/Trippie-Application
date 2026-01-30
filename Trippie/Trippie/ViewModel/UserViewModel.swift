@@ -20,7 +20,7 @@ class UserViewModel {
     let profiles = CurrentValueSubject<[User], Never>([])
     
     // Profile của chính mình (Current User)
-    let myProfiles = CurrentValueSubject<User?, Never>(nil)
+    let myProfile = CurrentValueSubject<User?, Never>(nil)
     
     let loading = CurrentValueSubject<Bool, Never>(false)
     let errorMessage = PassthroughSubject<String, Never>()
@@ -38,7 +38,7 @@ class UserViewModel {
     // Hàm check xem user này có phải bạn mình không
     func isMyFriend(userId: String) -> Bool {
         // 1. Nếu chưa load được profile của mình -> Mặc định false
-        guard let me = myProfiles.value else {
+        guard let me = myProfile.value else {
             return false
         }
         
@@ -55,7 +55,7 @@ class UserViewModel {
         Task {
             do {
                 let user = try await userService.fetchUserById(id: uid)
-                self.myProfiles.send(user) // Update data của mình
+                self.myProfile.send(user) // Update data của mình
                 self.loading.send(false)
             } catch {
                 self.loading.send(false)
@@ -87,7 +87,7 @@ class UserViewModel {
     func toggleFriendship(targetUser: User) {
         guard let myId = authService.currentUserId,
               let targetId = targetUser.id,
-              var myUser = myProfiles.value else { return }
+              var myUser = myProfile.value else { return }
         
         self.loading.send(true)
         
@@ -107,7 +107,7 @@ class UserViewModel {
                 } else {
                     myUser.friendIds.removeAll { $0 == targetId }
                 }
-                self.myProfiles.send(myUser)
+                self.myProfile.send(myUser)
                 
                 // --- Cập nhật TARGET USER (trong list profiles) ---
                 var currentProfiles = profiles.value
@@ -197,8 +197,8 @@ class UserViewModel {
         }
         
         // 3. (Optional) Nếu user đó trùng với MyProfile (trường hợp tự sướng?) thì update luôn
-        if let myId = myProfiles.value?.id, myId == userId {
-            self.myProfiles.send(updatedUser)
+        if let myId = myProfile.value?.id, myId == userId {
+            self.myProfile.send(updatedUser)
         }
     }
 }

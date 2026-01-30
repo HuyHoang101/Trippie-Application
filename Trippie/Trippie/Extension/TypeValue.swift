@@ -14,3 +14,13 @@ extension Array {
         }
     }
 }
+
+extension String {
+    func toSentenceCase() -> String {
+        // 1. Thay thế "_" bằng " "
+        let spacedString = self.replacingOccurrences(of: "_", with: " ")
+        
+        // 2. Viết hoa chữ cái đầu tiên và giữ nguyên phần còn lại
+        return spacedString.prefix(1).capitalized + spacedString.dropFirst().lowercased()
+    }
+}
