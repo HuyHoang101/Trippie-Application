@@ -16,6 +16,7 @@ target 'Trippie' do
   pod 'SDWebImage'            # Load ảnh từ mạng
   pod 'lottie-ios'            # Chạy animation đẹp
   pod 'PhoneNumberKit', '~> 3.7'
+  pod 'CountryPickerView'
 
 end
 

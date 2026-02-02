@@ -12,15 +12,10 @@ class UniversalTripCard: UIView {
     // MARK: - UI COMPONENTS
     private let imgView = TrippieImageView(style: .rounded(radius: 8, corners: nil))
     
-    // 1. Title
-    private let titleLabel = UILabel.customLabel(text: "Trip Title", font: .systemFont(ofSize: 16, weight: .bold), textColor: .label)
-    
-    // 2. Middle Row Components
-    private let locationLabel = UILabel.customLabel(text: "Location, Country", font: .systemFont(ofSize: 13, weight: .regular), textColor: .secondaryLabel)
+    private let locationLabel = UILabel.customLabel(text: "Location, Country", font: .systemFont(ofSize: 16, weight: .bold), textColor: .secondaryLabel)
     
     private let dayIndexLabel = UILabel.customLabel(text: "3 Days", font: .systemFont(ofSize: 12, weight: .bold), textColor: UIColor(named: "AuthBackground1") ?? UIColor.purple)
     
-    // 3. Planner
     private let plannerLabel = UILabel.customLabel(text: "Plan by: Owner", font: .systemFont(ofSize: 12, weight: .medium), textColor: .darkGray)
     
     // 4. Footer Components (List Mode)
@@ -70,6 +65,7 @@ class UniversalTripCard: UIView {
         // Cấu hình độ ưu tiên để Location tự co ngắn lại nếu hết chỗ, Day Index luôn hiển thị
         locationLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         locationLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        locationLabel.numberOfLines = 0
         
         dayIndexLabel.setContentHuggingPriority(.required, for: .horizontal)
         dayIndexLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
@@ -99,7 +95,7 @@ class UniversalTripCard: UIView {
         footerStackforMyTrip.addArrangedSubview(personalStatus)
         
         // 4. Main Stack (Gom tất cả vào đây)
-        let infoStack = UIStackView(arrangedSubviews: [titleLabel, middleStack, plannerLabel, footerStack, footerStackforMyTrip])
+        let infoStack = UIStackView(arrangedSubviews: [middleStack, plannerLabel, footerStack, footerStackforMyTrip])
         infoStack.axis = .vertical
         infoStack.spacing = 6
         infoStack.alignment = .fill
@@ -128,9 +124,8 @@ class UniversalTripCard: UIView {
     }
     
     // MARK: - CONFIGURATION
-    func configure(trip: TripWithStatus, isListMode: Bool = false, isFullTitle: Bool = false) {
+    func configure(trip: TripWithStatus, isListMode: Bool = false) {
         // 1. Data
-        titleLabel.text = trip.trip.title
         locationLabel.text = "\(trip.trip.location), \(trip.trip.country)"
         plannerLabel.text = "Planer: \(trip.trip.ownerName)"
         dayIndexLabel.text = "\(trip.trip.dayIndex) Days"
@@ -139,11 +134,6 @@ class UniversalTripCard: UIView {
         // 2. Logic ẩn hiện
         footerStack.isHidden = !isListMode
         
-        if isFullTitle {
-            titleLabel.numberOfLines = 2
-        } else {
-            titleLabel.numberOfLines = 1
-        }
         
         if isListMode {
             // Hiển thị đầy đủ cho màn hình List
@@ -170,6 +160,11 @@ class UniversalTripCard: UIView {
             footerStackforMyTrip.isHidden = false
             footerStack.isHidden = true
             personalStatus.configure(status: trip.participation.personalStatus)
+            if trip.participation.role == .owner && trip.trip.status != .completed {
+                personalStatus.isHidden = true
+            } else {
+                personalStatus.isHidden = false
+            }
         } else {
             footerStackforMyTrip.isHidden = true
             footerStack.isHidden = false

@@ -300,7 +300,7 @@ class TripViewModel {
               
             } catch {
                 self.loading.send(false)
-                self.errorMessage.send("Huỷ yêu cầu thất bại: \(error.localizedDescription)")
+                self.errorMessage.send("Cancel request failed: \(error.localizedDescription)")
             }
         }
     }
@@ -317,8 +317,13 @@ class TripViewModel {
                 }
                 .store(in: &cancellable)
 
-            // Luồng 2: Filter Local
+            // Filter Local
             Publishers.CombineLatest(randomTrips, titleFilter)
+                .removeDuplicates { prev, current in
+                    let isArraySame = prev.0.map { $0.id } == current.0.map { $0.id }
+                    let isStringSame = prev.1 == current.1
+                    return isArraySame && isStringSame
+                }
                 .map { (allTrips, filter) -> [Trip] in
                    
                     switch filter {

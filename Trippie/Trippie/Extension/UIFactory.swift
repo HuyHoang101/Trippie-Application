@@ -245,6 +245,7 @@ extension UIStackView {
                                  keyboardType: UIKeyboardType = .default,
                                  inputHeight: CGFloat? = nil,
                                  delegate: Any? = nil,
+                                 onCountryTap: (() -> Void)? = nil,
                                  errorFontSize: CGFloat = 11
     ) -> UIStackView {
             
@@ -312,6 +313,39 @@ extension UIStackView {
                 tf = UITextField.createInput(placeholder: placeholder,
                                              keyboardType: keyboardType,
                                              accentColor: inputAccentColor)
+                if style == .country {
+                    // 1. Không hiện bàn phím khi nhấn vào
+                    tf.inputView = UIView()
+                    tf.tintColor = .clear // Giấu con trỏ soạn thảo
+                    
+                    // 2. Thêm icon mũi tên (Có padding)
+                    let arrow = UIImageView(image: UIImage(systemName: "chevron.down"))
+                    arrow.tintColor = .systemGray3
+                    arrow.contentMode = .scaleAspectFit
+
+                    // Tạo một cái "vỏ" bọc bên ngoài để tạo khoảng trống
+                    // Width = 30 (trong đó 20 là của icon, 10 là khoảng cách với viền phải)
+                    let containerView = UIView(frame: CGRect(x: 0, y: 0, width: 30, height: 20))
+                    arrow.frame = CGRect(x: 0, y: 0, width: 20, height: 20) // Icon thực tế
+                    containerView.addSubview(arrow)
+                    containerView.isUserInteractionEnabled = false
+
+                    // Căn chỉnh cho icon nằm bên trái của Container để tạo khoảng trống bên phải
+                    arrow.center = containerView.center
+                    arrow.frame.origin.x = 0 // Đẩy icon sang trái của container, bên phải sẽ thừa ra 10px
+
+                    tf.rightView = containerView
+                    tf.rightViewMode = .always
+                    
+                    // 3. Quan trọng: Khi nhấn vào thì thực hiện callback
+                    let tapAction = UIAction { [weak tf] _ in
+                        print("DEBUG: Da chạm vào ô Country thông qua Event!")
+                        onCountryTap?()
+                        // Quan trọng: Kết thúc edit ngay lập tức để lần sau chạm vào nó lại nổ event "Begin"
+                        tf?.resignFirstResponder()
+                    }
+                    tf.addAction(tapAction, for: .editingDidBegin) // .touchDown để nhạy hơn
+                }
             }
             
             if let tfDelegate = delegate as? UITextFieldDelegate {
@@ -332,6 +366,8 @@ extension UIStackView {
                 tf.setupDatePicker()
             case .phoneNumber:
                 tf.keyboardType = .numberPad
+            case .country:
+                tf.placeholder = placeholder
             }
             
             if let height = inputHeight {
@@ -431,6 +467,47 @@ extension UIStackView {
         }
         return stack
     }
+    
+    
+    
+    static func createChoiceGroup(labelName: String, options: [String], spacing: CGFloat = 10) -> (stack: UIStackView, buttons: [UIButton]) {
+        let label = UILabel.customLabel(text: labelName, font: .systemFont(ofSize: 16, weight: .semibold), textColor: .label)
+            
+            // Stack chứa các nút
+            let optionsStack = UIStackView.customStack(axis: .horizontal, alignment: .fill, distribution: .fillProportionally, stackSpacing: spacing)
+            
+            var buttons: [UIButton] = []
+            
+            options.forEach { option in
+                // 1. Khởi tạo Configuration
+                var config = UIButton.Configuration.filled()
+                
+                // 2. Setup Font và Màu chữ qua AttributeContainer
+                var container = AttributeContainer()
+                container.font = .systemFont(ofSize: 12, weight: .semibold)
+                container.foregroundColor = .darkGray // Màu chữ khi chưa chọn
+                
+                config.attributedTitle = AttributedString(option.toSentenceCase(), attributes: container)
+                
+                // 3. Setup Background và Padding
+                config.background.backgroundColor = .systemGray6
+                config.background.cornerRadius = 8
+                config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12)
+                
+                // 4. Tạo nút với config
+                let btn = UIButton(configuration: config)
+                
+                buttons.append(btn)
+                optionsStack.addArrangedSubview(btn)
+            }
+            
+            // Stack tổng bao gồm Label và hàng Options
+            let mainStack = UIStackView.customStack(axis: .vertical, alignment: .fill, distribution: .fill, stackSpacing: 8)
+            mainStack.addArrangedSubview(label)
+            mainStack.addArrangedSubview(optionsStack)
+            
+            return (mainStack, buttons)
+        }
 }
 
 

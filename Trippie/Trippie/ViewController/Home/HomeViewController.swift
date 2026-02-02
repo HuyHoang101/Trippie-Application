@@ -237,7 +237,7 @@ class HomeViewController: FadeBaseViewController {
                 trip2.forEach { t in
                     let row = UniversalTripCard()
                     let tripWithStatus = TripWithStatus(trip: t, participation: Participation(userId: "", tripId: "", personalStatus: .upcoming, role: .member))
-                    row.configure(trip: tripWithStatus, isListMode: false, isFullTitle: true)
+                    row.configure(trip: tripWithStatus, isListMode: false)
                     vstack2.addArrangedSubview(row)
                     row.translatesAutoresizingMaskIntoConstraints = false
                     NSLayoutConstraint.activate([

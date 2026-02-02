@@ -16,10 +16,12 @@ class MyTripViewController: FadeBaseViewController {
     //MARK: - UI COMPONENT
     private let mainscroll = UIScrollView()
     
+    private let subscroll = UIScrollView()
     private let subscroll1 = UIScrollView()
     private let subscroll2 = UIScrollView()
     private let subscroll3 = UIScrollView()
     
+    private let hstack = UIStackView.customStack(xPadding: 12, yPadding: 10, axis: .horizontal, alignment: .center, distribution: .fill, stackSpacing: 12)
     private let hstack1 = UIStackView.customStack(xPadding: 12, yPadding: 10, axis: .horizontal, alignment: .center, distribution: .fill, stackSpacing: 12)
     private let hstack2 = UIStackView.customStack(xPadding: 12, yPadding: 10, axis: .horizontal, alignment: .center, distribution: .fill, stackSpacing: 12)
     private let hstack3 = UIStackView.customStack(xPadding: 12, yPadding: 10, axis: .horizontal, alignment: .center, distribution: .fill, stackSpacing: 12)
@@ -32,6 +34,7 @@ class MyTripViewController: FadeBaseViewController {
     
     private let filterStack = UIStackView.customStack(xPadding: 12, yPadding: 20, axis: .horizontal, alignment: .center, distribution: .fill, stackSpacing: 12)
     
+    private let label4 = UILabel.customLabel(text: "Your Trips on Feed board", font: AppTheme.Font.mainMedium(size: 18), textColor: .secondaryLabel)
     private let label1 = UILabel.customLabel(text: "Current Trips", font: AppTheme.Font.mainMedium(size: 18), textColor: .secondaryLabel)
     private let label2 = UILabel.customLabel(text: "My Trips", font: AppTheme.Font.mainMedium(size: 18), textColor: .secondaryLabel)
     private let label3 = UILabel.customLabel(text: "Joined Trips", font: AppTheme.Font.mainMedium(size: 18), textColor: .secondaryLabel)
@@ -39,10 +42,12 @@ class MyTripViewController: FadeBaseViewController {
     private let viewAllButton1 = UIButton.customButton(text: "View all", font: UIFont.systemFont(ofSize: 15), backgroundColor: .clear, textColor: .secondaryLabel, isPadding: false)
     private let viewAllButton2 = UIButton.customButton(text: "View all", font: UIFont.systemFont(ofSize: 15), backgroundColor: .clear, textColor: .secondaryLabel, isPadding: false)
     private let viewAllButton3 = UIButton.customButton(text: "View all", font: UIFont.systemFont(ofSize: 15), backgroundColor: .clear, textColor: .secondaryLabel, isPadding: false)
+    private let viewAllButton4 = UIButton.customButton(text: "View all", font: UIFont.systemFont(ofSize: 15), backgroundColor: .clear, textColor: .secondaryLabel, isPadding: false)
     
     private let hstack4 = UIStackView.customStack(xPadding: 12, yPadding: 10, axis: .horizontal, alignment: .center, distribution: .fill)
     private let hstack5 = UIStackView.customStack(xPadding: 12, yPadding: 10, axis: .horizontal, alignment: .center, distribution: .fill)
     private let hstack6 = UIStackView.customStack(xPadding: 12, yPadding: 10, axis: .horizontal, alignment: .center, distribution: .fill)
+    private let hstack7 = UIStackView.customStack(xPadding: 12, yPadding: 10, axis: .horizontal, alignment: .center, distribution: .fill)
     
     private let label = UILabel.customLabel(text: "Travel Experience", font: AppTheme.Font.mainBold(size: 24), textColor: .label)
     
@@ -53,16 +58,6 @@ class MyTripViewController: FadeBaseViewController {
         setupUI()
         setupAction()
         binding()
-    }
-    
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        self.navigationController?.setNavigationBarHidden(true, animated: true)
-    }
-    
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        self.navigationController?.setNavigationBarHidden(false, animated: true)
     }
     
     //MARK: - SETUP UI
@@ -90,6 +85,8 @@ class MyTripViewController: FadeBaseViewController {
 
         
         maincontent.addArrangedSubview(filterStack)
+        maincontent.addArrangedSubview(hstack7)
+        maincontent.addArrangedSubview(subscroll)
         maincontent.addArrangedSubview(hstack4)
         maincontent.addArrangedSubview(subscroll1)
         maincontent.addArrangedSubview(container)
@@ -110,16 +107,22 @@ class MyTripViewController: FadeBaseViewController {
         hstack6.addArrangedSubview(label3)
         hstack6.addArrangedSubview(viewAllButton3)
         
+        hstack7.addArrangedSubview(label4)
+        hstack7.addArrangedSubview(viewAllButton4)
+        
+        subscroll.addSubview(hstack)
         subscroll1.addSubview(hstack1)
         subscroll2.addSubview(hstack2)
         subscroll3.addSubview(hstack3)
         
         mainscroll.translatesAutoresizingMaskIntoConstraints = false
+        subscroll.translatesAutoresizingMaskIntoConstraints = false
         subscroll1.translatesAutoresizingMaskIntoConstraints = false
         subscroll2.translatesAutoresizingMaskIntoConstraints = false
         subscroll3.translatesAutoresizingMaskIntoConstraints = false
         
         mainscroll.showsVerticalScrollIndicator = false
+        subscroll.showsHorizontalScrollIndicator = false
         subscroll1.showsHorizontalScrollIndicator = false
         subscroll2.showsHorizontalScrollIndicator = false
         subscroll3.showsHorizontalScrollIndicator = false
@@ -136,6 +139,12 @@ class MyTripViewController: FadeBaseViewController {
             maincontent.bottomAnchor.constraint(equalTo: mainscroll.contentLayoutGuide.bottomAnchor, constant: -20),
             
             maincontent.widthAnchor.constraint(equalTo: mainscroll.widthAnchor),
+            
+            hstack.topAnchor.constraint(equalTo: subscroll.contentLayoutGuide.topAnchor),
+            hstack.leadingAnchor.constraint(equalTo: subscroll.contentLayoutGuide.leadingAnchor),
+            hstack.trailingAnchor.constraint(equalTo: subscroll.contentLayoutGuide.trailingAnchor),
+            hstack.bottomAnchor.constraint(equalTo: subscroll.contentLayoutGuide.bottomAnchor),
+            hstack.heightAnchor.constraint(equalTo: subscroll.heightAnchor),
             
             hstack1.topAnchor.constraint(equalTo: subscroll1.contentLayoutGuide.topAnchor),
             hstack1.leadingAnchor.constraint(equalTo: subscroll1.contentLayoutGuide.leadingAnchor),
@@ -160,18 +169,27 @@ class MyTripViewController: FadeBaseViewController {
         ])
         
         render()
-
+        setupNavBar()
     }
     
     func render() {
+        let tripOnFeedBoard = Array(viewModel.myTrips.value.filter {
+            $0.trip.status != .completed &&
+            $0.participation.role == .owner
+        })
         let currentTrips = Array(viewModel.myTrips.value.filter {
-            $0.participation.personalStatus != PersonalStatus.cancel &&
-            $0.participation.personalStatus != PersonalStatus.completed
+            let isActive = $0.participation.personalStatus != .cancel &&
+                           $0.participation.personalStatus != .completed
+            let role = $0.participation.role
+            let isRoleMatch = (role == .owner && $0.trip.status == .completed) || (role == .member)
+            
+            return isActive && isRoleMatch
         })
         let myTrips = Array(viewModel.myTrips.value.filter {
             $0.participation.personalStatus == PersonalStatus.cancel &&
             $0.participation.personalStatus == PersonalStatus.completed &&
-            $0.participation.role == UserRole.owner
+            $0.participation.role == UserRole.owner &&
+            $0.trip.status == .completed
         })
         let joinTrips = Array(viewModel.myTrips.value.filter {
             $0.participation.personalStatus == PersonalStatus.cancel &&
@@ -179,9 +197,31 @@ class MyTripViewController: FadeBaseViewController {
             $0.participation.role == UserRole.member
         })
         
+        hstack.arrangedSubviews.forEach{ $0.removeFromSuperview() }
         hstack1.arrangedSubviews.forEach{ $0.removeFromSuperview() }
         hstack2.arrangedSubviews.forEach{ $0.removeFromSuperview() }
         hstack3.arrangedSubviews.forEach{ $0.removeFromSuperview() }
+        
+        if tripOnFeedBoard.count == 0 {
+            hstack7.isHidden = true
+            hstack.isHidden = true
+        } else {
+            hstack7.isHidden = false
+            hstack.isHidden = false
+            let trip = tripOnFeedBoard.prefix(5)
+            trip.forEach { t in
+                let card = TripCardView()
+                card.configure(mytrip: t)
+                hstack.addArrangedSubview(card)
+                card.translatesAutoresizingMaskIntoConstraints = false
+                card.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.6).isActive = true
+                card.heightAnchor.constraint(equalTo: card.widthAnchor, multiplier: 0.8).isActive = true
+                
+                card.didTapCard = { [weak self] in
+                    self?.pushToDetail(tripId: t.id)
+                }
+            }
+        }
         
         if currentTrips.count == 0 {
             viewAllButton1.isHidden = true
@@ -212,6 +252,10 @@ class MyTripViewController: FadeBaseViewController {
                 card.translatesAutoresizingMaskIntoConstraints = false
                 card.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.6).isActive = true
                 card.heightAnchor.constraint(equalTo: card.widthAnchor, multiplier: 0.8).isActive = true
+                
+                card.didTapCard = { [weak self] in
+                    self?.pushToDetail(tripId: t.id)
+                }
             }
         }
         
@@ -244,6 +288,10 @@ class MyTripViewController: FadeBaseViewController {
                 card.translatesAutoresizingMaskIntoConstraints = false
                 card.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.6).isActive = true
                 card.heightAnchor.constraint(equalTo: card.widthAnchor, multiplier: 0.8).isActive = true
+                
+                card.didTapCard = { [weak self] in
+                    self?.pushToDetail(tripId: t.id)
+                }
             }
         }
         
@@ -276,8 +324,38 @@ class MyTripViewController: FadeBaseViewController {
                 card.translatesAutoresizingMaskIntoConstraints = false
                 card.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.6).isActive = true
                 card.heightAnchor.constraint(equalTo: card.widthAnchor, multiplier: 0.8).isActive = true
+                
+                card.didTapCard = { [weak self] in
+                    self?.pushToDetail(tripId: t.id)
+                }
             }
         }
+    }
+    
+    private func setupNavBar() {
+        self.title = "My trips"
+        
+        let config = UIImage.SymbolConfiguration(weight: .semibold)
+
+        let plusImage = UIImage(systemName: "plus", withConfiguration: config)
+
+        let addButton = UIBarButtonItem(
+            image: plusImage,
+            style: .plain,
+            target: self,
+            action: #selector(handleAdd)
+        )
+
+        addButton.tintColor = .button
+        self.navigationItem.rightBarButtonItem = addButton
+        
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = .systemBackground
+        appearance.shadowColor = .clear
+        
+        navigationController?.navigationBar.standardAppearance = appearance
+        navigationController?.navigationBar.scrollEdgeAppearance = appearance
     }
     
     //MARK: - SETUP ACTION
@@ -285,6 +363,7 @@ class MyTripViewController: FadeBaseViewController {
         viewAllButton1.addTarget(self, action: #selector(pushToLish), for: .touchUpInside)
         viewAllButton2.addTarget(self, action: #selector(pushToLish), for: .touchUpInside)
         viewAllButton3.addTarget(self, action: #selector(pushToLish), for: .touchUpInside)
+        viewAllButton4.addTarget(self, action: #selector(pushToLish), for: .touchUpInside)
     }
     
     @objc func pushToLish(_ render: UIButton) {
@@ -294,15 +373,20 @@ class MyTripViewController: FadeBaseViewController {
         case viewAllButton1:
             listVC.navigationTitle = "Current Trips"
             listVC.myTrip = viewModel.myTrips.value.filter {
-                $0.participation.personalStatus != .completed &&
-                $0.participation.personalStatus != .cancel
+                let isActive = $0.participation.personalStatus != .cancel &&
+                               $0.participation.personalStatus != .completed
+                let role = $0.participation.role
+                let isRoleMatch = (role == .owner && $0.trip.status == .completed) || (role == .member)
+                
+                return isActive && isRoleMatch
             }
         case viewAllButton2:
             listVC.navigationTitle = "My Trips"
             listVC.myTrip = viewModel.myTrips.value.filter {
                 $0.participation.personalStatus == .completed &&
                 $0.participation.personalStatus == .cancel &&
-                $0.participation.role == .owner
+                $0.participation.role == .owner &&
+                $0.trip.status == .completed
             }
         case viewAllButton3:
             listVC.navigationTitle = "Joined Trips"
@@ -312,11 +396,29 @@ class MyTripViewController: FadeBaseViewController {
                 $0.participation.role == .member
             }
         default:
-            listVC.navigationTitle = "All of my Trips"
-            listVC.myTrip = viewModel.myTrips.value
+            listVC.navigationTitle = "My Trips on Feed Board"
+            listVC.myTrip = viewModel.myTrips.value.filter {
+                $0.participation.role == .owner &&
+                $0.trip.status != .completed
+            }
             
         }
         navigationController?.pushViewController(listVC, animated: true)
+    }
+    
+    @objc private func handleAdd() {
+        let formVC = HandSaveTrip()
+        
+        formVC.viewModel = self.viewModel
+        self.navigationController?.pushViewController(formVC, animated: true)
+    }
+    
+    private func pushToDetail(tripId: String) {
+        let detailVC = DetailViewController()
+        detailVC.id = tripId
+        detailVC.navigationTitle = "Detail"
+        detailVC.isFeedBoard = false
+        self.navigationController?.pushViewController(detailVC, animated: true)
     }
     
     //MARK: - Binding

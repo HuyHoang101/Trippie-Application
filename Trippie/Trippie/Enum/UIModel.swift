@@ -18,6 +18,7 @@ enum InputStyle {
     case phoneNumber // Bàn phím số
     case date        // Chọn ngày tháng từ lịch
     case text
+    case country
 }
 
 

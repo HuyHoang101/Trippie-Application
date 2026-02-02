@@ -96,7 +96,7 @@ extension ListViewController: UITableViewDataSource, UITableViewDelegate {
         }
         
         let item = displayData[indexPath.row]
-        // Cập nhật hàm bind: Truyền item (TripWithStatus) vào
+        
         cell.bindData(trip: item)
         cell.backgroundColor = .clear
         cell.selectionStyle = .none
