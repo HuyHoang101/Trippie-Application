@@ -134,7 +134,7 @@ class DetailViewController: FadeBaseViewController {
         // 3. Hiển thị các thành phần dùng chung
         titleLabel.text = trip.title
         locationLabel.text = "\(trip.location), \(trip.country)"
-        coverImage.setImage(url: trip.coverImage)
+        coverImage.setImage(url: trip.coverImage.first)
         ownerLabel.text = "Planner: \(trip.ownerName)"
         tripStyle.text = trip.tripType.rawValue.toSentenceCase()
         dayindex.text = "\(trip.dayIndex) days"

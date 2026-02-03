@@ -393,58 +393,110 @@ class TripService {
     
     // MARK: - SEED DATA GENERATOR
     func seedTrips() async {
-        guard let ownerId = AuthService.shared.currentUserId else {
+        guard AuthService.shared.currentUserId != nil else {
             print("❌ Lỗi: Chưa đăng nhập, không lấy được OwnerId")
             return
         }
         
         // 1. Bộ dữ liệu chuẩn (Location - Country - Image đi kèm nhau)
-        let destinations: [(loc: String, country: String, img: String)] = [
-            ("Ha Long Bay", "Vietnam", "https://images.vietnamtourism.gov.vn/en/images/2023/cnn5.jpg"),
-            ("Kyoto", "Japan", "https://www.pelago.com/img/destinations/kyoto/1129-0642_kyoto-xlarge.webp"),
-            ("Paris", "France", "https://res.klook.com/image/upload/fl_lossy.progressive,q_60/Mobile/City/swox6wjsl5ndvkv5jvum.jpg"),
-            ("Bali", "Indonesia", "https://trieuhaotravel.vn/Uploads/images/Ulun_Danu.jpg"),
-            ("Santorini", "Greece", "https://sothebysrealty.gr/wp-content/uploads/2016/11/Santorini-sunset-at-dawn-Greece-Sothebys-International-Realty.jpg"),
-            ("New York", "USA", "https://i.natgeofe.com/k/5b396b5e-59e7-43a6-9448-708125549aa1/new-york-statue-of-liberty.jpg"),
-            ("Rome", "Italy", "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTwWyq_eKnfHFkKRUUDfUE5AVSS-kYfHAg1Tg&s"),
-            ("Seoul", "South Korea", "https://www.agoda.com/wp-content/uploads/2024/08/Namsan-Tower-during-autumn-in-Seoul-South-Korea-1244x700.jpg"),
-            ("Phuket", "Thailand", "https://www.aleenta.com/wp-content/uploads/Phi-Phi-Islands-Day-Trip.jpg"),
-            ("Sydney", "Australia", "https://cdn.sydneycitytour.com.au/wp-content/uploads/2024/10/Sydney-Opera-House.png")
+        let destinations: [(loc: String, country: String, img: [String])] = [
+            // MARK: - 1. Vietnam
+            ("Ha Long Bay", "Vietnam", ["https://vietnam.travel/sites/default/files/inline-images/shutterstock_1218764578.jpg"]),
+            ("Da Nang", "Vietnam", ["https://i0.wp.com/littlebirdietravel.com/wp-content/uploads/2025/07/hand-bridge-da-nang.jpg?fit=2048%2C1152&ssl=1"]),
+            ("Hoi An", "Vietnam", ["https://blisshoian.com/wp-content/uploads/2024/08/hoi-an-dep.webp"]),
+            ("Sa Pa", "Vietnam", ["https://statics.vinwonders.com/what-to-do-in-sapa-01_1690273137.jpg"]),
+            ("Phu Quoc", "Vietnam", ["https://upload.wikimedia.org/wikipedia/commons/6/6e/Bai-sao-phu-quoc-tuonglamphotos.jpg"]),
+            ("Ho Chi Minh City", "Vietnam", ["https://lesrivesexperience.com/wp-content/uploads/2018/11/sunset-on-saigon-river.jpg"]),
+
+            // MARK: - 2. Japan
+            ("Tokyo", "Japan", ["https://res.cloudinary.com/aenetworks/image/upload/c_fill,w_1200,h_630,g_auto/dpr_auto/f_auto/q_auto:eco/v1/gettyimages-1390815938"]),
+            ("Kyoto", "Japan", ["https://www.pelago.com/img/destinations/kyoto/1129-0642_kyoto-xlarge.webp"]),
+            ("Osaka", "Japan", ["https://hanotour.com.vn/upload_images/images/2024/09/13/ve-dep-sam-uat-cho-am-thuc-Osaka-Dotonbori.jpg"]),
+            ("Hokkaido", "Japan", ["https://travelnation.co.uk/sites/default/files/900x600-japan-hokkaido-shikisei-hill-biei.jpg"]),
+            ("Okinawa", "Japan", ["https://digital.ihg.com/is/image/ihg/intercontinental---ana-okinawa-6162599978-4x3"]),
+            ("Nara", "Japan", ["https://dynamic-media-cdn.tripadvisor.com/media/photo-o/0b/35/6d/56/photo0jpg.jpg?w=900&h=500&s=1"]),
+
+            // MARK: - 3. Italy
+            ("Rome", "Italy", ["https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTwWyq_eKnfHFkKRUUDfUE5AVSS-kYfHAg1Tg&s"]),
+            ("Venice", "Italy", ["https://www.citalia.com/-/media/Bynder/Citalia-destinations/Italy/Cities/Venice/Venice-2023-Rialto-Bridge-001109-Hybris.jpg"]),
+            ("Florence", "Italy", ["https://cdn.britannica.com/59/179059-050-62BD6102/Cathedral-of-Santa-Maria-del-Fiore-Florence.jpg"]),
+            ("Milan", "Italy", ["https://cdn.britannica.com/32/20032-050-B0CF9E76/Shoppers-Galleria-Vittorio-Emanuele-II-Italy-Milan.jpg"]),
+            ("Amalfi Coast", "Italy", ["https://images.squarespace-cdn.com/content/v1/62681a0c1b9b025bc7d3d1cb/1651418824279-V1KN3BLDV2LT7AVDQP3Y/52883b7e-ef20-438a-bc38-4859ca0246ba.jpg"]),
+            ("Cinque Terre", "Italy", ["https://www.danflyingsolo.com/wp-content/uploads/2016/03/cinqueterreuntitled-.jpg"]),
+
+            // MARK: - 4. France
+            ("Paris", "France", ["https://res.cloudinary.com/dtljonz0f/image/upload/c_auto,ar_4:3,w_3840,g_auto/f_auto/q_auto/v1/shutterstock_2118458942_ss_non-editorial_jnjpwq?_a=BAVAZGGf0"]),
+            ("Nice", "France", ["https://media.cntraveler.com/photos/6859a7a1c2a40c2029b58992/1:1/w_2059,h_2059,c_limit/062325-Nice-France-Lede-GettyImages-1248448159_1.jpg"]),
+            ("Lyon", "France", ["https://dynamic-media-cdn.tripadvisor.com/media/photo-o/14/da/01/47/vieux-lyon.jpg?w=900&h=500&s=1"]),
+            ("Bordeaux", "France", ["https://www.franceguide.info/wp-content/uploads/sites/18/bordeaux-place-de-la-bourse-hd.jpg"]),
+            ("Marseille", "France", ["https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJiFtBMY5xtDjDkDquanqYBA7mv9Subwi3-w&s"]),
+            ("Strasbourg", "France", ["https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR1E30rGkKl3JN5K_sA8mmoPv9oJrjNEXc7fQ&s"]),
+
+            // MARK: - 5. USA
+            ("New York", "United States", ["https://cdn.britannica.com/61/93061-050-99147DCE/Statue-of-Liberty-Island-New-York-Bay.jpg"]),
+            ("Los Angeles", "United States", ["https://www.pelago.com/img/destinations/los-angeles/0619-0957_losangeles.jpg"]),
+            ("San Francisco", "United States", ["https://www.visittheusa.com/sites/default/files/styles/hero_l/public/images/hero_media_image/2016-10/Getty_591648687_Brand_City_SanFrancisco_Hero_FinalCrop.jpg?h=dd3c63f2&itok=iAr8BYrW"]),
+            ("Las Vegas", "United States", ["https://img.static-kl.com/transform/6b34090e-5450-4ab0-805c-7544a639f7ab/"]),
+            ("Hawaii", "United States", ["https://cdn-jbbdp.nitrocdn.com/KCXzqUWDoupzlrsIQCTXrmGUEEWeTtuj/assets/images/optimized/rev-37e873b/www.eshores.co.uk/wp-content/uploads/2025/08/Papaoneone_Beach_Oahu.jpg"]),
+            ("Miami", "United States", ["https://images.trvl-media.com/place/800070/9ea993d5-24cb-4fcb-86e9-ced4d9090113.jpg"])
         ]
         
         let tripRules = [
-            "Respect one another and avoid spamming in the group chat.",
-            "Be punctual for all scheduled group activities.",
-            "Share and track all expenses transparently through the app.",
-            "Complete assigned tasks on time to keep the trip on track.",
-            "Positive vibes only—let's support each other and have fun!"
+            "Please treat every member with absolute respect and kindness. Try to keep the group chat focused on important trip details to avoid unnecessary spamming or flooding the conversation with irrelevant messages.",
+            
+            "Value everyone's time by being strictly punctual for all scheduled meetups, departures, and activities. Late arrivals can cause unnecessary delays and might disrupt our carefully planned itinerary for the whole group.",
+            
+            "Financial transparency is key to a happy trip. Please ensure you upload all receipts immediately and track every shared expense within the app so we can settle debts fairly and quickly.",
+            
+            "To ensure our adventure runs smoothly, please take ownership of your assigned responsibilities. Completing your tasks on time helps the whole group relax and enjoy the experience without unnecessary stress or confusion.",
+            
+            "Let's promise to maintain a positive and supportive atmosphere throughout the journey. If conflicts arise, handle them with maturity, and always focus on creating unforgettable, happy, and stress-free memories together."
         ]
         
         let titles = ["Backpacking Adventure", "Food Tour", "Photography Expedition", "Relaxing Getaway", "Cultural Discovery"]
-        let descriptions = ["Join me for an amazing trip!", "Looking for buddies to explore.", "Can't wait to see this place.", "A budget-friendly journey.", "Experience local life together."]
+        let descriptions = [
+            "Get ready for an absolutely unforgettable adventure! I am inviting you to join me as we explore hidden gems, capture stunning photos, and create memories that will stay with us forever.",
+            
+            "I am actively looking for fun, energetic, and open-minded travel buddies to explore the city with. Let's wander through the streets, find cool spots, and make the most of this trip.",
+            
+            "This destination has been at the very top of my bucket list for years. I simply can't wait to finally see it in person and share the excitement with fellow travelers.",
+            
+            "We are planning a budget-friendly journey perfect for backpackers. Expect delicious street food, cozy hostels, and smart spending, proving that you don't need a fortune to have a world-class experience.",
+            
+            "Our goal is to skip the tourist traps and truly experience local life together. We will eat where the locals eat, learn about their traditions, and immerse ourselves in the culture."
+        ]
         let tripTypes: [TripType] = [.buddy, .localHost, .seekingLocal]
         let maxMembers = [2, 4, 6, 8, 10]
+        let owners: [(id: String, name: String)] = [
+            ("JdUmwWFq33Ucya1Up6fPTdnSKnv2", "Alex Nguyen"),
+            ("KOKTvfCmNtcCGUyZLpPTmPcZBLK2", "An Le"),
+            ("NSH713mAjBQeNGdCx9grfun9u3t1", "Van Nguyen"),
+            ("pTQEG1Y8NrSXOTRz7XynckxQqUx1", "Lily White"),
+            ("plubkGj48TSfAZONUlCcqrQu8sA3", "Anna Kim"),
+            ("qoiuQ5l0H0gZ1N4V37mu8EC4HEJ2", "Jack Nguyen")
+        ]
         
         print("🚀 Bắt đầu tạo 30 trips giả lập...")
         
         // 2. Vòng lặp tạo 30 cái
-        for i in 1...30 {
-            // Random dữ liệu
-            let dest = destinations.randomElement()!
-            let randomDays = Int.random(in: 1...60) // Ngày bắt đầu từ mai đến 2 tháng sau
+        for (index, dest) in destinations.enumerated() {
+                    
+            // Random dữ liệu bổ trợ
+            let randomOwner = owners.randomElement()! // Random Owner từ danh sách
+            let randomDays = Int.random(in: 1...60)
             let startDate = Calendar.current.date(byAdding: .day, value: randomDays, to: Date())!
             let dayIndex = Int.random(in: 4...10)
             
             let newTrip = Trip(
                 id: nil, // createTrip sẽ tự sinh ID
-                ownerId: ownerId,
-                ownerName: "Alex Nguyen",
-                coverImage: dest.img,
-                title: "\(titles.randomElement()!) to \(dest.loc) #\(i)",
+                ownerId: randomOwner.id,     // Dùng ID random
+                ownerName: randomOwner.name, // Dùng Name random tương ứng
+                coverImage: dest.img,        // Ảnh đúng theo địa điểm
+                title: "\(titles.randomElement()!) to \(dest.loc)",
                 description: descriptions.randomElement()!,
                 tripRule: tripRules.randomElement()!,
-                location: dest.loc,
-                country: dest.country,
+                location: dest.loc,          // Location cố định theo vòng lặp
+                country: dest.country,       // Country cố định theo vòng lặp
                 tripType: tripTypes.randomElement()!,
                 status: .recruiting,
                 members: [],
@@ -453,16 +505,16 @@ class TripService {
                 currentMember: 1,
                 startTime: startDate,
                 dayIndex: dayIndex,
-                createdAt: nil, // Server lo
+                createdAt: nil,
                 updatedAt: nil
             )
             
             do {
                 // Gọi hàm createTrip xịn xò mình vừa viết lúc nãy
                 _ = try await createTrip(trip: newTrip)
-                print("✅ Đã tạo trip số \(i): \(dest.loc)")
+                print("✅ Đã tạo trip số \(index): \(dest.loc)")
             } catch {
-                print("❌ Lỗi tạo trip \(i): \(error.localizedDescription)")
+                print("❌ Lỗi tạo trip \(index): \(error.localizedDescription)")
             }
         }
         

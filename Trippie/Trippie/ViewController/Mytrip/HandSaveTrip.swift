@@ -8,10 +8,13 @@
 import UIKit
 import Combine
 import CountryPickerView
+import PhotosUI
 
-class HandSaveTrip: UIViewController {
+class HandSaveTrip: FadeBaseViewController {
     // MARK: - Dependency
     var viewModel: TripViewModel!
+    private let imagesViewModel = ImageViewModel.shared
+    private var cancellabel = Set<AnyCancellable>()
     
     // MARK: - UI Components
     private let scrollView: UIScrollView = {
@@ -22,6 +25,8 @@ class HandSaveTrip: UIViewController {
         sv.keyboardDismissMode = .interactive
         return sv
     }()
+    
+    private lazy var coverImageSelected = StackImagePickerView()
     
     private lazy var titleField = UIStackView.createInputGroup(labelName: "Trip Title:", placeholder: "Trip title...", inputHeight: 45, delegate: self)
     private lazy var locationField = UIStackView.createInputGroup(labelName: "Location:", placeholder: "Location...", inputHeight: 45, delegate: self)
@@ -76,8 +81,11 @@ class HandSaveTrip: UIViewController {
         view.backgroundColor = .systemBackground
         setupUI()
         setupActions()
+        binding()
         checkEditMode()
         setupNavBar()
+        bindLoading(to: viewModel.loading)
+        bindLoading(to: imagesViewModel.loading)
         if let countryTF = countryField.arrangedSubviews[1] as? UITextField {
             countryTF.tintColor = .clear
             countryTF.inputView = UIView() 
@@ -98,6 +106,9 @@ class HandSaveTrip: UIViewController {
     // MARK: - SETUP UI
     
     private func setupUI() {
+        setupBackground()
+        coverImageSelected.delegate = self
+        
         // 1. Thêm ScrollView vào View chính trước
         view.addSubview(scrollView)
         
@@ -105,7 +116,7 @@ class HandSaveTrip: UIViewController {
         scrollView.addSubview(stackView)
         scrollView.addSubview(saveButton)
         
-        let fields = [titleField, locationField, countryField, maxMemberField, tripTypeGroup.stack, startDateField, dayIndexField, tripDescriptionField, tripRuleField]
+        let fields = [coverImageSelected, titleField, locationField, countryField, maxMemberField, tripTypeGroup.stack, startDateField, dayIndexField, tripDescriptionField, tripRuleField]
         fields.forEach { stackView.addArrangedSubview($0) }
         
         NSLayoutConstraint.activate([
@@ -159,7 +170,127 @@ class HandSaveTrip: UIViewController {
     }
     
     @objc private func handleSave() {
+        var isError = false
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "Asia/Ho_Chi_Minh")
+
+        guard let startDate: Date = formatter.date(from: startDateField.inputValue ?? "") else {
+            startDateField.showError("False date formatter")
+            isError = true
+            return
+        }
         
+        // 1. Validate Start Date
+        // Kiểm tra xem có parse được ngày không
+        guard let startDateStr = startDateField.inputValue,
+              let startDate = formatter.date(from: startDateStr) else {
+            startDateField.showError("Invalid date format (dd/MM/yyyy)")
+            isError = true
+            return // Riêng Date nếu nil thì return luôn để tránh crash logic sau, hoặc dùng if để đi tiếp
+        }
+        
+        // 2. Validate Max Member
+        let maxMemStr = maxMemberField.inputValue ?? ""
+        if maxMemStr.isEmpty {
+            maxMemberField.showError("Max member must not be empty!")
+            isError = true
+        } else if let maxMem = Int(maxMemStr), maxMem <= 0 {
+            maxMemberField.showError("Max member must be > 0!")
+            isError = true
+        } else if Int(maxMemStr) == nil {
+            maxMemberField.showError("Max member must be a number!")
+            isError = true
+        }
+        
+        // 3. Validate Day Index (Total Days)
+        let dayIndexStr = dayIndexField.inputValue ?? ""
+        if dayIndexStr.isEmpty {
+            dayIndexField.showError("Total days must not be empty!") // Sửa: startDateField -> dayIndexField
+            isError = true
+        } else if Int(dayIndexStr) == nil {
+            dayIndexField.showError("Total days must be a number!")
+            isError = true
+        }
+        
+        // 4. Validate Country
+        if (countryField.inputValue ?? "").isEmpty {
+            countryField.showError("Country must not be empty!")
+            isError = true
+        }
+        
+        // 5. Validate Location
+        if (locationField.inputValue ?? "").isEmpty {
+            locationField.showError("Location must not be empty!")
+            isError = true
+        }
+        
+        // 6. Validate Description
+        if (tripDescriptionField.inputValue ?? "").isEmpty {
+            tripDescriptionField.showError("Description must not be empty!")
+            isError = true
+        }
+        
+        // 7. Validate Title
+        if (titleField.inputValue ?? "").isEmpty {
+            titleField.showError("Title must not be empty!")
+            isError = true
+        }
+        
+        // --- CHECK TỔNG ---
+        if isError {
+            print("❌ Form có lỗi, không save được.")
+            return
+        }
+        
+        let finalMaxMember = Int(maxMemberField.inputValue!)!
+        let finalDayIndex = Int(dayIndexField.inputValue!)!
+        let finalTitle = titleField.inputValue!
+        let finalDesc = tripDescriptionField.inputValue!
+        let finalLoc = locationField.inputValue!
+        let finalCountry = countryField.inputValue!
+        
+        guard let ownerId = AuthService.shared.currentUserId else {
+            viewModel.errorMessage.send("Authorized Error, login again!")
+            return
+        }
+        guard let ownerName = AuthService.shared.currentUserId else {
+            viewModel.errorMessage.send("Authorized Error, login again!")
+            return
+        }
+        var trip: Trip = Trip(
+            ownerId: ownerId,
+            ownerName: ownerName,
+            coverImage: imagesViewModel.uploadedUrls,
+            title: finalTitle,
+            description: finalDesc,
+            tripRule: tripRuleField.inputValue,
+            location: finalLoc,
+            country: finalCountry,
+            tripType: TripType(rawValue: selectedType!) ?? .buddy,
+            status: TripStatus.recruiting,
+            members: [],
+            pendingRequests: [],
+            maxMember: finalMaxMember,
+            currentMember: 0,
+            startTime: startDate,
+            dayIndex: finalDayIndex,
+        )
+        
+        if let t = viewModel.editingTrip.value {
+            trip.id = t.trip.id
+            trip.currentMember = t.trip.currentMember
+            trip.status = t.trip.status
+            trip.members = t.trip.members
+            trip.pendingRequests = t.trip.pendingRequests
+            viewModel.handleSave(trip: trip)
+            self.navigationController?.popViewController(animated: true)
+        } else {
+            viewModel.handleSave(trip: trip)
+            self.navigationController?.popViewController(animated: true)
+            
+        }
     }
     
     @objc private func handleSingleChoice(_ sender: UIButton) {
@@ -190,10 +321,16 @@ class HandSaveTrip: UIViewController {
             return
         }
         title = "Editting Trip"
+        imagesViewModel.uploadedUrls = trip.coverImage
         titleField.inputValue = trip.title
         locationField.inputValue = trip.location
         countryField.inputValue = trip.country
         maxMemberField.inputValue = "\(trip.maxMember)"
+        dayIndexField.inputValue = "\(trip.dayIndex)"
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        let dateString = formatter.string(from: trip.startTime)
+        startDateField.inputValue = "\(dateString)"
         tripDescriptionField.inputValue = trip.description
         tripRuleField.inputValue = trip.tripRule
         saveButton.setTitle("Update", for: .normal)
@@ -220,7 +357,7 @@ class HandSaveTrip: UIViewController {
         var config = button.configuration
         
         if isSelected {
-            config?.background.backgroundColor = .button // Màu xanh (đã chọn)
+            config?.background.backgroundColor = .button
             config?.attributedTitle?.foregroundColor = .white
         } else {
             config?.background.backgroundColor = .systemGray6 // Màu xám (chưa chọn)
@@ -237,11 +374,101 @@ class HandSaveTrip: UIViewController {
         // 3. Hiển thị danh sách quốc gia (Dạng chuẩn UIKit)
         countryPickerView.showCountriesList(from: self)
     }
+    
+    //MARK: - BINDING
+    private func binding() {
+        imagesViewModel.$uploadedUrls
+            .dropFirst()
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] imgs in
+                self?.coverImageSelected.renderImages(imgs)
+            }
+            .store(in: &cancellabel)
+        
+        titleField.listenToChanges { [weak self] _ in
+            self?.titleField.showError(nil)
+        }
+        
+        tripDescriptionField.listenToChanges { [weak self] _ in
+            self?.tripDescriptionField.showError(nil)
+        }
+        
+        locationField.listenToChanges { [weak self] _ in
+            self?.locationField.showError(nil)
+        }
+        
+        countryField.listenToChanges { [weak self] _ in
+            self?.countryField.showError(nil)
+        }
+        
+        dayIndexField.listenToChanges { [weak self] _ in
+            self?.dayIndexField.showError(nil)
+        }
+        
+        startDateField.listenToChanges { [weak self] _ in
+            self?.startDateField.showError(nil)
+        }
+        
+        maxMemberField.listenToChanges { [weak self] _ in
+            self?.maxMemberField.showError(nil)
+        }
+        
+    }
+   
 }
 
 extension HandSaveTrip: CountryPickerViewDelegate {
     func countryPickerView(_ countryPickerView: CountryPickerView, didSelectCountry country: Country) {
         // Đúng ý cậu: Chỉ lưu tên Country
         self.countryField.inputValue = country.name
+    }
+}
+
+extension HandSaveTrip: StackImagePickerDelegate {
+    func didTapSelectImage() {
+        var config = PHPickerConfiguration()
+        config.selectionLimit = 10
+        config.filter = .images
+        
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+    
+    func didTapDeleteAll() {
+        imagesViewModel.deleteAllImages()
+    }
+}
+
+extension HandSaveTrip: PHPickerViewControllerDelegate {
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+        
+        guard !results.isEmpty else { return }
+        
+        var selectedImages: [UIImage] = []
+        let dispatchGroup = DispatchGroup()
+        
+        // Lấy UIImage từ kết quả chọn
+        for result in results {
+            dispatchGroup.enter()
+            if result.itemProvider.canLoadObject(ofClass: UIImage.self) {
+                result.itemProvider.loadObject(ofClass: UIImage.self) { (image, error) in
+                    if let img = image as? UIImage {
+                        selectedImages.append(img)
+                    }
+                    dispatchGroup.leave()
+                }
+            } else {
+                dispatchGroup.leave()
+            }
+        }
+        dispatchGroup.notify(queue: .main) { [weak self] in
+            //print("DEBUG: Đã load xong \(selectedImages.count) ảnh. Bắt đầu upload...")
+            
+            // Lúc này selectedImages mới có dữ liệu
+            self?.imagesViewModel.uploadImages(selectedImages)
+        }
     }
 }

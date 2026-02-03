@@ -132,7 +132,7 @@ class TripCardView: UIView {
         startDateLabel.text = "Start: " + formatter.string(from: trip.startTime)
         
         // 3. Image
-        imgView.setImage(url: trip.coverImage)
+        imgView.setImage(url: trip.coverImage.first)
         
         // 4. Personal Status & Animation
         statusBadge.configure(status: mytrip.participation.personalStatus)

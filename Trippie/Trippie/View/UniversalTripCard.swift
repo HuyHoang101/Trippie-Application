@@ -129,7 +129,7 @@ class UniversalTripCard: UIView {
         locationLabel.text = "\(trip.trip.location), \(trip.trip.country)"
         plannerLabel.text = "Planer: \(trip.trip.ownerName)"
         dayIndexLabel.text = "\(trip.trip.dayIndex) Days"
-        imgView.setImage(url: trip.trip.coverImage)
+        imgView.setImage(url: trip.trip.coverImage.first)
         
         // 2. Logic ẩn hiện
         footerStack.isHidden = !isListMode

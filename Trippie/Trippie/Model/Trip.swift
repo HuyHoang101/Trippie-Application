@@ -12,7 +12,7 @@ struct Trip: Codable { // Thêm Codable
     @DocumentID var id: String? // Tự lấy ID document
     var ownerId: String
     var ownerName: String
-    var coverImage: String
+    var coverImage: [String]
     var title: String
     var description: String
     var tripRule: String?

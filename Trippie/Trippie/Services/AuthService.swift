@@ -15,6 +15,8 @@ class AuthService {
     
     // Key để lưu vào UserDefaults
     private let userDefaultsKey = "cached_user_id"
+    private let userDefaultsName = "cached_user_name"
+    private let userDefaultsAvatar = "cached_user_avatar"
     
     // --- 1. REGISTER ---
     func register(email: String, pass: String, name: String, phone: String? = nil) async throws -> User {
@@ -41,6 +43,7 @@ class AuthService {
         
         // Lưu UID vào cache sau khi đăng ký thành công
         saveUserToCache(uid: uid)
+        saveUserNameToCache(name: name)
         
         return newUser
     }
@@ -48,9 +51,11 @@ class AuthService {
     // --- 2. LOGIN ---
     func login(email: String, pass: String) async throws {
         let result = try await Auth.auth().signIn(withEmail: email, password: pass)
-        
+        let user = try await UserService.shared.fetchUserById(id: result.user.uid)
         // Đăng nhập xong thì lưu ID vào cache ngay
         saveUserToCache(uid: result.user.uid)
+        saveUserNameToCache(name: user.name)
+        saveUserAvatarToCache(avatarUrl: user.avatarUrl)
     }
     
     // --- 3. LOGOUT ---
@@ -58,6 +63,8 @@ class AuthService {
         try Auth.auth().signOut()
         // Xoá sạch dấu vết trong cache khi logout
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
+        UserDefaults.standard.removeObject(forKey: userDefaultsName)
+        UserDefaults.standard.removeObject(forKey: userDefaultsAvatar)
     }
     
     // --- 4. CHECK USER (OPTIMIZED) ---
@@ -77,9 +84,29 @@ class AuthService {
         
         return nil
     }
+    
+    var currentUserName: String? {
+        if let cacheName = UserDefaults.standard.string(forKey: userDefaultsName) {
+            return cacheName
+        }
+        return nil
+    }
+    
+    var currentUserAvatar: String? {
+        if let cacheAvatar = UserDefaults.standard.string(forKey: userDefaultsAvatar) {
+            return cacheAvatar
+        }
+        return nil
+    }
 
     // --- PRIVATE HELPERS ---
     private func saveUserToCache(uid: String) {
         UserDefaults.standard.set(uid, forKey: userDefaultsKey)
+    }
+    private func saveUserNameToCache(name: String) {
+        UserDefaults.standard.set(name, forKey: userDefaultsName)
+    }
+    private func saveUserAvatarToCache(avatarUrl: String) {
+        UserDefaults.standard.set(avatarUrl, forKey: userDefaultsAvatar)
     }
 }

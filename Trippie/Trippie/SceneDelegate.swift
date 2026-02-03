@@ -24,6 +24,10 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         
         self.appCoorDinator = AppCoordinator(window: window)
         self.appCoorDinator?.start()
+//        Task {
+//            print("⏳ Đang bắt đầu seed data...")
+//            await TripService.shared.seedTrips()
+//        }
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {

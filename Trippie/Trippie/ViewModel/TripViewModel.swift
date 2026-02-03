@@ -111,6 +111,16 @@ class TripViewModel {
                         currentFeedTrips[index] = result.trip
                         trips.send(currentFeedTrips)
                     }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        NotificationCenter.default.post(
+                            name: .showGlobalToast,
+                            object: nil,
+                            userInfo: [
+                                "message": "Update Trip Successfully!",
+                                "isSuccess": true
+                            ]
+                        )
+                    }
                    
                 } else {
                     // --- CASE: CREATE ---
@@ -125,6 +135,16 @@ class TripViewModel {
                     var currentFeedTrips = trips.value
                     currentFeedTrips.insert(result.trip, at: 0)
                     trips.send(currentFeedTrips)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        NotificationCenter.default.post(
+                            name: .showGlobalToast,
+                            object: nil,
+                            userInfo: [
+                                "message": "Create Trip Successfully!",
+                                "isSuccess": true
+                            ]
+                        )
+                    }
                 }
               
                 self.loading.send(false)
@@ -133,6 +153,16 @@ class TripViewModel {
             } catch {
                 self.loading.send(false)
                 self.errorMessage.send("Lưu thất bại: \(error.localizedDescription)")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.post(
+                        name: .showGlobalToast,
+                        object: nil,
+                        userInfo: [
+                            "message": "Save trip failed!",
+                            "isSuccess": false
+                        ]
+                    )
+                }
             }
         }
     }
