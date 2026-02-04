@@ -12,11 +12,12 @@ class HomeViewController: FadeBaseViewController {
     
     private var viewModel = TripViewModel.shared
     private var cancellable = Set<AnyCancellable>()
-    
+    private let userName = AuthService.shared.currentUserName
+    private var weatherViewModel = LocalWeatherViewModel()
     //MARK: - UI COMPONENT
-    private let welcomlabel = UILabel.customLabel(text: "Let's pack for your trip", font: AppTheme.Font.mainMedium(size: 36), textColor: .label)
+    private let welcomlabel = UILabel.customLabel(text: "Let's pack for your trip", font: AppTheme.Font.mainMedium(size: 28), textColor: .label)
     
-    private let welcomlabel2 = UILabel.customLabel(text: "Use one of our suggestions or make a list of what a pack", font: AppTheme.Font.mainMedium(size: 16), textColor: .secondaryLabel)
+    private let welcomlabel2 = UILabel.customLabel(text: "Use one of our suggestions or make a list of what a pack", font: AppTheme.Font.mainMedium(size: 14), textColor: .secondaryLabel)
     
     private let searchBar = UITextField.createInput(placeholder: "Searching...", iconName: "magnifyingglass")
     
@@ -73,7 +74,10 @@ class HomeViewController: FadeBaseViewController {
     //MARK: - SET UP UI
     func setupUI() {
         setupBackground()
+        welcomlabel.text = "Welcome \(userName ?? "Unknown User")! Let's pack for your trip"
+        
         viewModel.fetchTripForFeedTable()
+        weatherViewModel.fetchCurrentWeather()
         viewModel.titleFilter.send("Earliest")
         searchBar.clipsToBounds = false
         searchBar.layer.shadowColor = UIColor.black.cgColor
@@ -89,8 +93,8 @@ class HomeViewController: FadeBaseViewController {
         mainScroll.translatesAutoresizingMaskIntoConstraints = false
         subScroll.translatesAutoresizingMaskIntoConstraints = false
         mainview.translatesAutoresizingMaskIntoConstraints = false
-        welcomlabel.numberOfLines = 2
-        welcomlabel2.numberOfLines = 2
+        welcomlabel.numberOfLines = 0
+        welcomlabel2.numberOfLines = 0
         
         
         view.addSubview(mainScroll)
@@ -350,6 +354,13 @@ class HomeViewController: FadeBaseViewController {
                 self?.renderTrips(forList: false)
             }
             .store(in: &cancellable)
+        weatherViewModel.$weatherAdvice
+            .dropFirst()
+            .receive(on: RunLoop.main)
+            .sink{ [weak self] weather in
+                self?.welcomlabel2.text = weather
+            }
+            .store(in: &cancellable)
     }
 }
 
@@ -366,6 +377,7 @@ extension HomeViewController: UIScrollViewDelegate {
     private func handleRefreshData() {
 
         viewModel.fetchTripForFeedTable()
+        weatherViewModel.fetchCurrentWeather()
         // Gợi ý: cảm giác "haptic" khi kéo đủ lực
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()

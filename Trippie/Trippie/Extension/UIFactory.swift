@@ -137,6 +137,7 @@ extension UITextField {
             formatter.dateStyle = .medium
             formatter.dateFormat = "dd/MM/yyyy"
             self?.text = formatter.string(from: datePicker.date)
+            self?.sendActions(for: .editingChanged)
         }
         datePicker.addAction(action, for: .valueChanged)
     }
@@ -231,6 +232,17 @@ extension UIStackView {
                 completion(tf?.text ?? "")
             }
             tf.addAction(action, for: .editingChanged)
+        }
+        
+        else if let tv = inputView as? UITextView {
+            // UITextView không có .editingChanged, phải nghe thông báo textDidChange
+            NotificationCenter.default.addObserver(
+                forName: UITextView.textDidChangeNotification,
+                object: tv,
+                queue: .main
+            ) { [weak tv] _ in
+                completion(tv?.text ?? "")
+            }
         }
     }
     

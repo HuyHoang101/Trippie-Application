@@ -7,6 +7,7 @@
 
 import Foundation
 import Combine
+import UIKit
 
 class LoginViewModel {
     
@@ -87,6 +88,64 @@ class LoginViewModel {
                     self.generalErrorMessage.send(error.localizedDescription)
                 }
             }
+        }
+    }
+    
+    
+    // MARK: - SOCIAL LOGIN ACTIONS
+    func loginWithGoogle(presenting vc: UIViewController) {
+        loading.send(true)
+        
+        Task {
+            do {
+                // Gọi AuthService (Hàm cậu vừa viết lúc nãy)
+                _ = try await AuthService.shared.signInWithGoogle(presenting: vc)
+                
+                await MainActor.run {
+                    self.loading.send(false)
+                    // Bắn tín hiệu thành công -> View Controller sẽ tự chuyển màn hình
+                    self.loginSuccess.send()
+                }
+            } catch {
+                await MainActor.run {
+                    self.loading.send(false)
+                    // Xử lý lỗi (Nếu user hủy thì thôi, còn lỗi khác thì hiện)
+                    self.handleSocialError(error)
+                }
+            }
+        }
+    }
+    
+    func loginWithFacebook(presenting vc: UIViewController) {
+        loading.send(true)
+        
+        Task {
+            do {
+                _ = try await AuthService.shared.signInWithFacebook(presenting: vc)
+                
+                await MainActor.run {
+                    self.loading.send(false)
+                    self.loginSuccess.send()
+                }
+            } catch {
+                await MainActor.run {
+                    self.loading.send(false)
+                    self.handleSocialError(error)
+                    print(error.localizedDescription)
+                }
+            }
+        }
+    }
+    
+    // Hàm xử lý lỗi riêng cho Social (để tránh hiện lỗi khi user tự bấm Cancel)
+    private func handleSocialError(_ error: Error) {
+        let nsError = error as NSError
+        // Nếu user tự bấm Cancel hoặc lỗi mạng, ta có thể lọc ở đây
+        // Mã lỗi -1 là do ta tự throw trong AuthService khi user cancel
+        if nsError.code == -1 && (nsError.domain == "Auth") {
+            print("User cancelled login.") // Không cần hiện Alert
+        } else {
+            generalErrorMessage.send(error.localizedDescription)
         }
     }
     

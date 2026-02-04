@@ -147,6 +147,8 @@ class LoginViewController: AuthBaseViewController {
     private func setupAction() {
         registerlink.addTarget(self, action: #selector(pressSignup), for: .touchUpInside)
         loginButton.addTarget(self, action: #selector(didTapLogin), for: .touchUpInside)
+        loginWithGoogle.addTarget(self, action: #selector(ssoLogin), for: .touchUpInside)
+        loginWithFaceBook.addTarget(self, action: #selector(ssoLogin), for: .touchUpInside)
     }
     
     @objc private func pressSignup() {
@@ -157,6 +159,17 @@ class LoginViewController: AuthBaseViewController {
     
     @objc private func didTapLogin() {
         viewModel.login()
+    }
+    
+    @objc private func ssoLogin(_ render: UIButton) {
+        switch render {
+        case loginWithGoogle:
+            viewModel.loginWithGoogle(presenting: self)
+        case loginWithFaceBook:
+            viewModel.loginWithFacebook(presenting: self)
+        default:
+            return
+        }
     }
     
     //MARK: - BINDING

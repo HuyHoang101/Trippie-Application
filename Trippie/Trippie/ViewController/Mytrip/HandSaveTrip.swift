@@ -175,12 +175,6 @@ class HandSaveTrip: FadeBaseViewController {
         formatter.dateFormat = "dd/MM/yyyy"
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = TimeZone(identifier: "Asia/Ho_Chi_Minh")
-
-        guard let startDate: Date = formatter.date(from: startDateField.inputValue ?? "") else {
-            startDateField.showError("False date formatter")
-            isError = true
-            return
-        }
         
         // 1. Validate Start Date
         // Kiểm tra xem có parse được ngày không
@@ -420,8 +414,13 @@ class HandSaveTrip: FadeBaseViewController {
 
 extension HandSaveTrip: CountryPickerViewDelegate {
     func countryPickerView(_ countryPickerView: CountryPickerView, didSelectCountry country: Country) {
-        // Đúng ý cậu: Chỉ lưu tên Country
+        // 1. Gán giá trị (Hiển thị lên màn hình nhưng chưa kích hoạt sự kiện)
         self.countryField.inputValue = country.name
+        
+        // Thủ công editingChanged
+        if let tf = self.countryField.arrangedSubviews[1] as? UITextField {
+            tf.sendActions(for: .editingChanged)
+        }
     }
 }
 

@@ -17,6 +17,8 @@ target 'Trippie' do
   pod 'lottie-ios'            # Chạy animation đẹp
   pod 'PhoneNumberKit', '~> 3.7'
   pod 'CountryPickerView'
+  pod 'GoogleSignIn'
+  pod 'FacebookLogin'
 
 end
 

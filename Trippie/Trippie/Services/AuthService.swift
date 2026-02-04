@@ -8,6 +8,10 @@
 import Foundation
 import FirebaseAuth
 import FirebaseFirestore
+import GoogleSignIn
+import FacebookLogin
+import FirebaseCore
+internal import FBSDKLoginKit
 
 class AuthService {
     static let shared = AuthService()
@@ -83,6 +87,144 @@ class AuthService {
         }
         
         return nil
+    }
+    
+    // MARK: - Google Sign In
+        func signInWithGoogle(presenting: UIViewController) async throws -> User {
+            // 1. Kiểm tra ClientID từ Firebase Config
+            guard let clientID = FirebaseApp.app()?.options.clientID else {
+                throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Chưa cấu hình GoogleService-Info.plist"])
+            }
+            
+            // 2. Cấu hình Google Sign In
+            let config = GIDConfiguration(clientID: clientID)
+            GIDSignIn.sharedInstance.configuration = config
+            
+            // 3. Mở popup đăng nhập và chờ kết quả
+            // Lưu ý: Nếu user bấm hủy ở đây, nó sẽ ném lỗi, cậu catch ở UI nhé
+            let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presenting)
+            
+            // 4. Lấy ID Token và Access Token từ Google
+            let user = result.user
+                    
+            guard let idToken = user.idToken?.tokenString else {
+                throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Không lấy được ID Token từ Google"])
+            }
+            
+            // 5. Tạo Credential để gửi cho Firebase
+            let credential = GoogleAuthProvider.credential(withIDToken: idToken, accessToken: user.accessToken.tokenString)
+            
+            // 6. Đăng nhập vào Firebase Auth
+            let authResult = try await Auth.auth().signIn(with: credential)
+            
+            // 7. Gọi hàm check logic (Lần đầu/Lần sau)
+            let trippieUser = try await handleCheckFirstLogin(firebaseUser: authResult.user)
+            
+            // 8. Quan trọng: Lưu Cache để app biết đã login
+            saveUserToCache(uid: trippieUser.id ?? "")
+            saveUserNameToCache(name: trippieUser.name)
+            saveUserAvatarToCache(avatarUrl: trippieUser.avatarUrl)
+            
+            return trippieUser
+        }
+
+        // MARK: - Facebook Sign In
+        func signInWithFacebook(presenting: UIViewController) async throws -> User {
+            let loginManager = LoginManager()
+            
+            // 1. Mở popup Facebook (Xin quyền public_profile và email)
+            // Vì LoginManager của FB chưa hỗ trợ async/await chuẩn, ta phải bọc nó lại bằng withCheckedThrowingContinuation
+            _ = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<LoginManagerLoginResult, Error>) in
+                loginManager.logIn(permissions: ["public_profile", "email"], from: presenting) { result, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                        return
+                    }
+                    guard let result = result, !result.isCancelled else {
+                        // User tự bấm nút Cancel
+                        continuation.resume(throwing: NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "User huỷ đăng nhập Facebook"]))
+                        return
+                    }
+                    continuation.resume(returning: result)
+                }
+            }
+            
+            // 2. Lấy Access Token hiện tại
+            guard let token = AccessToken.current?.tokenString else {
+                throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Lỗi Facebook Access Token"])
+            }
+            
+            // 3. Tạo Credential
+            let credential = FacebookAuthProvider.credential(withAccessToken: token)
+            
+            // 4. Đăng nhập vào Firebase Auth
+            let authResult = try await Auth.auth().signIn(with: credential)
+            
+            // 5. Check logic User cũ/mới
+            let trippieUser = try await handleCheckFirstLogin(firebaseUser: authResult.user)
+            
+            // 6. Lưu Cache
+            saveUserToCache(uid: trippieUser.id ?? "")
+            saveUserNameToCache(name: trippieUser.name)
+            saveUserAvatarToCache(avatarUrl: trippieUser.avatarUrl)
+            
+            return trippieUser
+        }
+    
+    
+    // --- Helper: check first login of sso ---
+    private func handleCheckFirstLogin(firebaseUser: FirebaseAuth.User) async throws -> User {
+        let uid = firebaseUser.uid
+        let userDoc = try await db.collection("users").document(uid).getDocument()
+        
+        if userDoc.exists {
+            // Lần sau: Chỉ lấy dữ liệu cũ về
+            return try userDoc.data(as: User.self)
+        } else {
+            // Lần đầu: Tự trích xuất "quà tặng"
+            
+            // --- LOGIC PHÂN LOẠI GOOGLE / FACEBOOK ---
+            var finalAvatarUrl = firebaseUser.photoURL?.absoluteString ?? ""
+            var joinMethod = "Google" // Mặc định
+            
+            // Kiểm tra xem user đăng nhập bằng provider nào
+            if let provider = firebaseUser.providerData.first {
+                switch provider.providerID {
+                case "facebook.com":
+                    joinMethod = "Facebook"
+                    // Xử lý riêng cho Facebook: Lấy ảnh HD (type=large) thay vì ảnh mờ mặc định
+                    finalAvatarUrl = "https://graph.facebook.com/\(provider.uid)/picture?type=large&return_ssl_resources=1"
+                    
+                case "google.com":
+                    joinMethod = "Google"
+                    // Google thì ảnh mặc định đã nét rồi, nhưng nếu thích cậu có thể thay đổi size
+                    // finalAvatarUrl = finalAvatarUrl.replacingOccurrences(of: "s96-c", with: "s400-c")
+                    
+                default:
+                    break
+                }
+            }
+            
+            // --- TẠO USER MỚI ---
+            let newUser = User(
+                id: uid,
+                avatarUrl: finalAvatarUrl,             // Đã xử lý ở trên
+                name: firebaseUser.displayName ?? "New User",
+                email: firebaseUser.email ?? "",
+                phone: firebaseUser.phoneNumber ?? "",
+                address: "",
+                aboutMe: "Joined via \(joinMethod)",   // Ví dụ: "Joined via Facebook"
+                rating: 0.0,
+                ratingCount: 0,
+                friendIds: [],
+                fcmToken: "",
+                createdAt: Date(),
+                updatedAt: Date()
+            )
+            
+            try db.collection("users").document(uid).setData(from: newUser)
+            return newUser
+        }
     }
     
     var currentUserName: String? {

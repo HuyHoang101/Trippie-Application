@@ -22,6 +22,7 @@ struct TaskOfTrip: Codable {
     
     var editBy: String?    // Tên người sửa cuối cùng
     
+    var date: Date?
     var dayIndex: Int
     var time: String
     

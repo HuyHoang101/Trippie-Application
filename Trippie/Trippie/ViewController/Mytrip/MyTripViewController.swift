@@ -346,7 +346,7 @@ class MyTripViewController: FadeBaseViewController {
             action: #selector(handleAdd)
         )
 
-        addButton.tintColor = .button
+        addButton.tintColor = .authBackground2
         self.navigationItem.rightBarButtonItem = addButton
         
         let appearance = UINavigationBarAppearance()
