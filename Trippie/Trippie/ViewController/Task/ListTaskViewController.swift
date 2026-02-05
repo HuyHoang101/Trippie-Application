@@ -9,9 +9,17 @@ import Combine
 
 class ListTaskViewController: FadeBaseViewController {
     var id: String?
+    var navigationTitle: String?
+    private var tripWithStatus: TripWithStatus?
     private let tripViewModel = TripViewModel.shared
     private let taskViewModel = TaskViewModel()
-    private var displayData: [TaskOfTrip] = []
+    private var displayData: [TaskOfTrip] = [] {
+        didSet {
+            DispatchQueue.main.async { [weak self] in
+                self?.tableView.reloadData()
+            }
+        }
+    }
     private var cancellabel = Set<AnyCancellable>()
     
     //MARK: - UI COMPONENT
@@ -19,10 +27,12 @@ class ListTaskViewController: FadeBaseViewController {
         let v = UIView()
         v.backgroundColor = .systemBackground
         v.layer.cornerRadius = 12
-        v.layer.shadowColor = UIColor.black.cgColor
+        v.layer.shadowColor = UIColor.authBackground2.cgColor
         v.layer.shadowRadius = 4
-        v.layer.shadowOffset = CGSize(width: 0, height: 4)
-        v.layer.shadowOpacity = 0.1
+        v.layer.shadowOffset = CGSize(width: 0, height: 2)
+        v.layer.shadowOpacity = 0.2
+        v.layer.borderColor = UIColor.authBackground2.withAlphaComponent(0.5).cgColor
+        v.layer.borderWidth = 0.5
         v.clipsToBounds = false
         v.translatesAutoresizingMaskIntoConstraints = false
         return v
@@ -33,6 +43,8 @@ class ListTaskViewController: FadeBaseViewController {
     
     private let tableView = UITableView()
     
+    private let backBtn = UIButton.customButton(image: UIImage(systemName: "arrow.left"), backgroundColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.5) ?? .systemGray.withAlphaComponent(0.5))
+    private let multipleChoice = UIButton.customButton(image: UIImage(systemName: "ellipsis"), backgroundColor: (UIColor.authBackground2.withAlphaComponent(0.5)))
     
     //MARK: - LIFE CYCLE
     override func viewDidLoad() {
@@ -64,32 +76,67 @@ class ListTaskViewController: FadeBaseViewController {
         view.addSubview(tableView)
         tableView.translatesAutoresizingMaskIntoConstraints = false
         
+        ruleLabel.numberOfLines = 0
+        ruleLabel.textAlignment = .justified
+        
         view.addSubview(ruleContainer)
         view.addSubview(tableView)
         ruleContainer.addSubview(ruleLabel)
         ruleContainer.addSubview(ruleAuthor)
         
         NSLayoutConstraint.activate([
-            ruleContainer.topAnchor.constraint(equalTo: view.topAnchor, constant: 20),
+            ruleContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
             ruleContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
             ruleContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
-            ruleContainer.bottomAnchor.constraint(equalTo: tableView.bottomAnchor, constant: -10),
+            ruleContainer.bottomAnchor.constraint(equalTo: tableView.topAnchor, constant: -10),
             
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             
-            ruleLabel.topAnchor.constraint(equalTo: ruleContainer.topAnchor, constant: 20),
+            ruleLabel.topAnchor.constraint(equalTo: ruleContainer.topAnchor, constant: 12),
             ruleLabel.leadingAnchor.constraint(equalTo: ruleContainer.leadingAnchor, constant: 20),
             ruleLabel.trailingAnchor.constraint(equalTo: ruleContainer.trailingAnchor, constant: -20),
-            ruleLabel.bottomAnchor.constraint(equalTo: ruleAuthor.topAnchor, constant: -10),
+            ruleLabel.bottomAnchor.constraint(equalTo: ruleAuthor.safeAreaLayoutGuide.topAnchor, constant: -10),
             
             ruleAuthor.trailingAnchor.constraint(equalTo: ruleContainer.trailingAnchor, constant: -20),
-            ruleAuthor.bottomAnchor.constraint(equalTo: ruleContainer.bottomAnchor, constant: 20)
+            ruleAuthor.bottomAnchor.constraint(equalTo: ruleContainer.bottomAnchor, constant: -12)
         ])
         
         renderTask()
         renderRule()
+        setupNavBar()
+    }
+    
+    private func setupNavBar() {
+        self.title = navigationTitle
+        backBtn.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
+        
+        let menuBtn = DropdownButton()
+        
+        // 2. Gán items
+        menuBtn.items = [
+            DropdownItem(title: "Add Task", icon: "plus", type: .normal) {
+                self.handlepushToCreateTask()
+            },
+            DropdownItem(title: "Delete Task", icon: "trash", type: .destructive) {
+                print("Delete Task")
+            }
+        ]
+        
+        let leftItem = UIBarButtonItem(customView: backBtn)
+        let rightItem = UIBarButtonItem(customView: menuBtn)
+        
+        self.navigationItem.leftBarButtonItem = leftItem
+        self.navigationItem.rightBarButtonItem = rightItem
+        
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = .systemBackground
+        appearance.shadowColor = .clear
+        
+        navigationController?.navigationBar.standardAppearance = appearance
+        navigationController?.navigationBar.scrollEdgeAppearance = appearance
     }
     
     private func renderTask() {
@@ -99,6 +146,8 @@ class ListTaskViewController: FadeBaseViewController {
     private func renderRule() {
         guard let id = self.id else { return }
         guard let trip = tripViewModel.myTrips.value.first(where: { $0.trip.id == id }) else  { return }
+        
+        self.tripWithStatus = trip
         
         ruleAuthor.text = "By \(trip.trip.ownerName)"
         
@@ -126,11 +175,28 @@ class ListTaskViewController: FadeBaseViewController {
         
     }
     
+    @objc private func handleBack() {
+        self.navigationController?.popViewController(animated: true)
+    }
     
+    @objc private func handlepushToCreateTask() {
+        let creatTaskVC = HandsaveTask()
+        creatTaskVC.id = self.id
+        creatTaskVC.userRole = tripWithStatus?.participation.role
+        creatTaskVC.viewModel = taskViewModel
+        self.navigationController?.pushViewController(creatTaskVC, animated: true)
+    }
     
     //MARK: - BINDING
     private func binding() {
-        
+        taskViewModel.tasks
+            .dropFirst()
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] t in
+                self?.displayData = t
+            }
+            .store(in: &cancellabel)
     }
 }
 
@@ -149,7 +215,7 @@ extension ListTaskViewController: UITableViewDataSource, UITableViewDelegate {
         
         let item = displayData[indexPath.row]
         
-        cell.configure(with: item)
+        cell.configure(with: item, id: AuthService.shared.currentUserId!)
         cell.backgroundColor = .clear
         cell.selectionStyle = .none
         
@@ -157,7 +223,6 @@ extension ListTaskViewController: UITableViewDataSource, UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        let selectedTrip = displayData[indexPath.row]
-        
+        _ = displayData[indexPath.row]
     }
 }

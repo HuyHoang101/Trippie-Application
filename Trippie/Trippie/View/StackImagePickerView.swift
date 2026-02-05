@@ -116,7 +116,7 @@ class StackImagePickerView: UIView {
         var config = actionButton.configuration ?? UIButton.Configuration.filled()
         
         if hasImages {
-            config.title = "Delete All Photos"
+            config.title = "Cancel All Photos"
             config.image = UIImage(systemName: "trash")
             config.baseBackgroundColor = #colorLiteral(red: 0.9254902005, green: 0.2352941185, blue: 0.1019607857, alpha: 1)
             config.baseForegroundColor = .white
@@ -141,7 +141,7 @@ class StackImagePickerView: UIView {
     @objc private func handleButtonTap() {
         print("Debug: is tapped!")
         let currentTitle = actionButton.configuration?.title ?? ""
-        if currentTitle.contains("Delete") {
+        if currentTitle.contains("Cancel") {
             delegate?.didTapDeleteAll()
         } else {
             delegate?.didTapSelectImage()

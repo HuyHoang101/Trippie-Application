@@ -6,15 +6,31 @@
 //
 
 import UIKit
+import Combine
 
 class ListViewController: FadeBaseViewController {
     
     // MARK: - DATA
-    var trip: [Trip]?
-    var myTrip: [TripWithStatus]?
+    var trip: [Trip]? {
+        didSet {
+            DispatchQueue.main.async { [weak self] in
+                self?.tableView.reloadData()
+            }
+        }
+    }
+    
+    var myTrip: [TripWithStatus]? {
+        didSet {
+            DispatchQueue.main.async { [weak self] in
+                self?.tableView.reloadData()
+            }
+        }
+    }
+    
     var navigationTitle: String?
    
     private let tableView = UITableView()
+    private var cancellable = Set<AnyCancellable>()
     
     // Đã chỉnh lại để luôn trả về kiểu TripWithStatus
     private var displayData: [TripWithStatus] {
@@ -80,6 +96,38 @@ class ListViewController: FadeBaseViewController {
     
     @objc private func handleBack() {
         navigationController?.popViewController(animated: true)
+    }
+    
+    private func binding() {
+        TripViewModel.shared.didTapChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] changedID in
+                guard let self = self else { return }
+                self.syncData(with: changedID)
+            }
+            .store(in: &cancellable)
+    }
+    
+    private func syncData(with id: String) {
+        if self.myTrip != nil {
+            guard let index = self.myTrip?.firstIndex(where: { $0.trip.id == id }) else { return }
+            if let freshItem = TripViewModel.shared.myTrips.value.first(where: { $0.trip.id == id }) {
+                self.myTrip?[index] = freshItem
+            } else {
+                self.myTrip?.remove(at: index)
+            }
+            return
+        }
+
+        if self.trip != nil {
+            guard let index = self.trip?.firstIndex(where: { $0.id == id }) else { return }
+            
+            if let freshItem = TripViewModel.shared.trips.value.first(where: { $0.id == id }) {
+                self.trip?[index] = freshItem
+            } else {
+                self.trip?.remove(at: index)
+            }
+        }
     }
 }
 

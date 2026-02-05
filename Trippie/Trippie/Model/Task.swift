@@ -8,8 +8,9 @@
 import Foundation
 import FirebaseFirestore
 
-struct TaskOfTrip: Codable {
+struct TaskOfTrip: Codable, Equatable {
     @DocumentID var id: String?
+    var coverImage: String
     var title: String
     var description: String
     var status: TaskStatus

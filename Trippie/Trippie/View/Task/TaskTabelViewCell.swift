@@ -13,7 +13,7 @@ class TaskTableViewCell: UITableViewCell {
     // --- UI Components ---
     
     // Dòng 1: Avatar + Name (Left) | Day - Time (Right)
-    private let avatarImageView = TrippieImageView(style: .circle, isShadow: false, borderColor: .white)
+    private let avatarImageView = TrippieImageView(style: .circle, isShadow: false, borderColor: .systemGray6)
     
     private let nameLabel = UILabel.customLabel(text: "Unknown User", font: .systemFont(ofSize: 13, weight: .regular), textColor: .label)
     
@@ -28,6 +28,13 @@ class TaskTableViewCell: UITableViewCell {
     // Dòng 3: Edit By (Right only)
     private let editByLabel: UILabel = UILabel.customLabel(text: "Edited by Unknown", font: .systemFont(ofSize: 12), textColor: .label, textAligment: .right)
 
+    
+    private let userStack = UIStackView()
+    private let topRowStack = UIStackView()
+    private let middleRowStack = UIStackView()
+    private let mainStack = UIStackView()
+    private let mainContainer = UIView()
+    
     // --- Init ---
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -42,10 +49,12 @@ class TaskTableViewCell: UITableViewCell {
     private func setupLayout() {
         // 1. Tạo StackView cho Dòng 1 (Top)
         // Group Avatar + Name lại với nhau trước
-        let userStack = UIStackView(arrangedSubviews: [avatarImageView, nameLabel])
+        userStack.addArrangedSubview(avatarImageView)
+        userStack.addArrangedSubview(nameLabel)
         userStack.axis = .horizontal
         userStack.spacing = 8
         userStack.alignment = .center
+        avatarImageView.translatesAutoresizingMaskIntoConstraints = false
         
         // Ràng buộc kích thước Avatar
         NSLayoutConstraint.activate([
@@ -53,12 +62,16 @@ class TaskTableViewCell: UITableViewCell {
             avatarImageView.heightAnchor.constraint(equalToConstant: 32)
         ])
         
-        let topRowStack = UIStackView(arrangedSubviews: [userStack, dayTimeLabel])
+        topRowStack.addArrangedSubview(userStack)
+        topRowStack.addArrangedSubview(dayTimeLabel)
         topRowStack.axis = .horizontal
         topRowStack.distribution = .equalSpacing // Đẩy 2 thằng ra 2 đầu
         
         // 2. Tạo StackView cho Dòng 2 (Middle)
-        let middleRowStack = UIStackView(arrangedSubviews: [titleLabel, statusBadge])
+        let spacer = UIView()
+        middleRowStack.addArrangedSubview(titleLabel)
+        middleRowStack.addArrangedSubview(spacer)
+        middleRowStack.addArrangedSubview(statusBadge)
         middleRowStack.axis = .horizontal
         middleRowStack.spacing = 8
         middleRowStack.alignment = .top // Căn lề trên để title dài không làm lệch badge
@@ -69,20 +82,21 @@ class TaskTableViewCell: UITableViewCell {
         // 3. Dòng 3 là editByLabel đứng một mình
         
         // 4. Gom tất cả vào 1 StackView dọc chính (Main Container)
-        let mainStack = UIStackView(arrangedSubviews: [topRowStack, middleRowStack, editByLabel])
+        mainStack.addArrangedSubview(topRowStack)
+        mainStack.addArrangedSubview(middleRowStack)
+        mainStack.addArrangedSubview(editByLabel)
         mainStack.axis = .vertical
         mainStack.spacing = 8 // Khoảng cách giữa các dòng
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         
-        let mainContainer = UIView()
         mainContainer.backgroundColor = .systemBackground
         mainContainer.layer.cornerRadius = 12
         
         // Cấu hình đổ bóng (Shadow)
-        mainContainer.layer.shadowColor = UIColor.black.cgColor
-        mainContainer.layer.shadowOpacity = 0.1
-        mainContainer.layer.shadowOffset = CGSize(width: 0, height: 4)
-        mainContainer.layer.shadowRadius = 6
+        mainContainer.layer.shadowColor = UIColor.authBackground2.cgColor
+        mainContainer.layer.shadowOpacity = 0.2
+        mainContainer.layer.shadowOffset = CGSize(width: 0, height: 0)
+        mainContainer.layer.shadowRadius = 3
 
         mainContainer.layer.masksToBounds = false
         mainContainer.translatesAutoresizingMaskIntoConstraints = false
@@ -105,7 +119,7 @@ class TaskTableViewCell: UITableViewCell {
     }
     
     // --- Configuration (Hàm đổ dữ liệu) ---
-    func configure(with task: TaskOfTrip) {
+    func configure(with task: TaskOfTrip, id: String) {
         // Dòng 1
         if task.userRole == .owner {
             nameLabel.text = "\(task.userName) - Admin"
@@ -130,6 +144,12 @@ class TaskTableViewCell: UITableViewCell {
         } else {
             editByLabel.text = nil
             editByLabel.isHidden = true
+        }
+        
+        if id == task.creatorId {
+            mainContainer.backgroundColor = .background.withAlphaComponent(0.5)
+        } else {
+            mainContainer.backgroundColor = .systemBackground
         }
     }
 }

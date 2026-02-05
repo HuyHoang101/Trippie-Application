@@ -101,6 +101,9 @@ class HandSaveTrip: FadeBaseViewController {
         super.viewDidDisappear(animated)
         // Xoá dữ liệu edit để lần sau mở lên ko bị dính data cũ
         viewModel.editingTrip.send(nil)
+        if !imagesViewModel.uploadedUrls.isEmpty {
+            imagesViewModel.deleteAllImages()
+        }
     }
     
     // MARK: - SETUP UI
@@ -171,19 +174,6 @@ class HandSaveTrip: FadeBaseViewController {
     
     @objc private func handleSave() {
         var isError = false
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd/MM/yyyy"
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "Asia/Ho_Chi_Minh")
-        
-        // 1. Validate Start Date
-        // Kiểm tra xem có parse được ngày không
-        guard let startDateStr = startDateField.inputValue,
-              let startDate = formatter.date(from: startDateStr) else {
-            startDateField.showError("Invalid date format (dd/MM/yyyy)")
-            isError = true
-            return // Riêng Date nếu nil thì return luôn để tránh crash logic sau, hoặc dùng if để đi tiếp
-        }
         
         // 2. Validate Max Member
         let maxMemStr = maxMemberField.inputValue ?? ""
@@ -232,11 +222,25 @@ class HandSaveTrip: FadeBaseViewController {
             isError = true
         }
         
-        // --- CHECK TỔNG ---
+        // --- CHECK TỔNG, và ngày ---
+        let formatter = DateFormatter()
+        formatter.dateFormat = "dd/MM/yyyy"
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(identifier: "Asia/Ho_Chi_Minh")
+        
+        
+        guard let startDateStr = startDateField.inputValue,
+              let startDate = formatter.date(from: startDateStr) else {
+            startDateField.showError("Invalid date format (dd/MM/yyyy)")
+            isError = true
+            return
+        }
+        
         if isError {
             print("❌ Form có lỗi, không save được.")
             return
         }
+        
         
         let finalMaxMember = Int(maxMemberField.inputValue!)!
         let finalDayIndex = Int(dayIndexField.inputValue!)!
@@ -278,13 +282,11 @@ class HandSaveTrip: FadeBaseViewController {
             trip.status = t.trip.status
             trip.members = t.trip.members
             trip.pendingRequests = t.trip.pendingRequests
-            viewModel.handleSave(trip: trip)
-            self.navigationController?.popViewController(animated: true)
-        } else {
-            viewModel.handleSave(trip: trip)
-            self.navigationController?.popViewController(animated: true)
-            
         }
+        
+        viewModel.handleSave(trip: trip)
+        imagesViewModel.uploadedUrls = []
+        self.navigationController?.popViewController(animated: true)
     }
     
     @objc private func handleSingleChoice(_ sender: UIButton) {
@@ -311,7 +313,7 @@ class HandSaveTrip: FadeBaseViewController {
         // Kiểm tra xem có data edit không
         guard let trip = viewModel.editingTrip.value?.trip else {
             title = "Create New Trip"
-            saveButton.setTitle("Create", for: .normal)
+            saveButton.configuration?.title = "Create Trip"
             return
         }
         title = "Editting Trip"

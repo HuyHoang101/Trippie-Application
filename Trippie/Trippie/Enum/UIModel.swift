@@ -53,3 +53,16 @@ enum ConfirmActionType {
         }
     }
 }
+
+
+struct DropdownItem {
+    let title: String
+    let icon: String?
+    let type: ItemType
+    let action: () -> Void
+    
+    enum ItemType {
+        case normal
+        case destructive
+    }
+}

@@ -37,12 +37,12 @@ class DetailViewController: FadeBaseViewController {
     private let applyButton = UIButton.customButton(text: "Apply", backgroundColor: UIColor.button, isCircle: false)
     private let containerAppliedButton = UIStackView.customStack(xPadding: 20, yPadding: 20, background: .white, axis: .horizontal, alignment: .center, distribution: .fill, cornerRadius: 12, isShadow: true)
     private let appliedLabel = UILabel.customLabel(text: "This trip would be even better with you. Join the trip now!", font: .systemFont(ofSize: 13), textColor: .black)
+    private let planBtn = UIButton.customButton(text: "📆 View the detailed schedule  ＞", font: .systemFont(ofSize: 14), backgroundColor: .clear, textColor: .systemBlue, isCircle: false, xPadding: 0, yPadding: 2, alignment: .left)
     
     
     private let backBtn = UIButton.customButton(image: UIImage(systemName: "arrow.left"), backgroundColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.5) ?? .systemGray.withAlphaComponent(0.5))
     private let questionBtn = UIButton.customButton(image: UIImage(systemName: "questionmark"), backgroundColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.5) ?? .systemGray.withAlphaComponent(0.5))
-    
-    //MARK: - LIFE CYCLE
+        //MARK: - LIFE CYCLE
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -59,6 +59,7 @@ class DetailViewController: FadeBaseViewController {
         coverImage.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.numberOfLines = 0
         descriptionLabel.numberOfLines = 0
+        descriptionLabel.textAlignment = .justified
         
         view.addSubview(mainScroll)
         mainScroll.addSubview(mainContent)
@@ -70,6 +71,7 @@ class DetailViewController: FadeBaseViewController {
         mainContent.addArrangedSubview(peopleJoinedLabel)
         mainContent.addArrangedSubview(pendingRequests)
         mainContent.addArrangedSubview(startDateLabel)
+        mainContent.addArrangedSubview(planBtn)
         mainContent.addArrangedSubview(descriptionTitle)
         mainContent.addArrangedSubview(descriptionLabel)
         
@@ -155,6 +157,7 @@ class DetailViewController: FadeBaseViewController {
                 personalStatus.isHidden = false
             }
             personalStatus.configure(status: part.personalStatus)
+            planBtn.isHidden = false
             
             // Chỉ hiện request nếu là chủ phòng (Owner)
             pendingRequests.isHidden = (part.role != .owner)
@@ -164,6 +167,7 @@ class DetailViewController: FadeBaseViewController {
             // Trường hợp Feed Board (Chưa tham gia)
             personalStatus.isHidden = true
             pendingRequests.isHidden = true
+            planBtn.isHidden = true
             
             var config = UIButton.Configuration.filled()
             var container = AttributeContainer()
@@ -228,6 +232,7 @@ class DetailViewController: FadeBaseViewController {
     //MARK: - ACTION
     private func action() {
         questionBtn.addTarget(self, action: #selector(openExplainationSheet), for: .touchUpInside)
+        planBtn.addTarget(self, action: #selector(pushToTask), for: .touchUpInside)
     }
     
     private func appliedAction() {
@@ -243,6 +248,13 @@ class DetailViewController: FadeBaseViewController {
         }
         
         self.present(explaination, animated: true)
+    }
+    
+    @objc private func pushToTask() {
+        let taskVC = ListTaskViewController()
+        taskVC.id = self.id
+        taskVC.navigationTitle = self.locationLabel.text
+        self.navigationController?.pushViewController(taskVC, animated: true)
     }
     
     //MARK: - BINDING

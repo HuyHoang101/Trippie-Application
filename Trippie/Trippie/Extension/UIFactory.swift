@@ -575,10 +575,16 @@ extension UIButton {
                              isSystemImage: Bool = true,
                              imageSize: CGFloat = 20, // size ảnh
                              isBorder: Bool = false,
-                             borderColor: UIColor = .clear
+                             borderColor: UIColor = .clear,
+                             cornerRadius: CGFloat = 12,
+                             xPadding: CGFloat = 20,
+                             yPadding: CGFloat = 12,
+                             alignment: UIControl.ContentHorizontalAlignment = .center
     ) -> UIButton {
         
         let button = AnimatedButton(type: .custom)
+        
+        button.contentHorizontalAlignment = alignment
         
         // Config
         var config = UIButton.Configuration.filled()
@@ -586,7 +592,7 @@ extension UIButton {
         config.baseForegroundColor = textColor
         
         if isPadding {
-            config.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 20, bottom: 12, trailing: 20)
+            config.contentInsets = NSDirectionalEdgeInsets(top: yPadding, leading: xPadding, bottom: yPadding, trailing: xPadding)
         } else {
             config.contentInsets = .zero
         }
@@ -623,7 +629,7 @@ extension UIButton {
             config.cornerStyle = .capsule
         } else {
             config.cornerStyle = .fixed
-            config.background.cornerRadius = 12
+            config.background.cornerRadius = cornerRadius
         }
         
         // 2. FIX BORDER (Dùng chuẩn Configuration)
