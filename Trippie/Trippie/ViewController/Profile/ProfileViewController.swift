@@ -7,11 +7,14 @@
 
 import UIKit
 import Combine
+import PhotosUI
+
 
 class ProfileViewController: FadeBaseViewController {
     
     private let viewModel = LoginViewModel()
     private let viewModel2 = UserViewModel.shared
+    private let imagesViewModel = ImageViewModel()
     private var cancellable = Set<AnyCancellable>()
     
     
@@ -60,10 +63,13 @@ class ProfileViewController: FadeBaseViewController {
         setupUI()
         setAction()
         binding()
+        bindLoading(to: viewModel2.loading)
+        bindLoading(to: imagesViewModel.loading)
     }
     
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        editViewContainer.clipsToBounds = true
         editViewContainer.layer.cornerRadius = editViewContainer.frame.width / 2
         applyCurve(to: decorateUI)
     }
@@ -165,7 +171,19 @@ class ProfileViewController: FadeBaseViewController {
     private func setupNavBar() {
         let appearance = UINavigationBarAppearance()
         
-        let rightItem = UIBarButtonItem(customView: multipleChoice)
+        let menuBtn = DropdownButton()
+        
+        // 2. Gán items
+        menuBtn.items = [
+            DropdownItem(title: "Edit information", icon: "person.text.rectangle", type: .normal) {
+                print("")
+            },
+            DropdownItem(title: "Log out", icon: "rectangle.portrait.and.arrow.right", type: .destructive) {
+                self.logoutAction()
+            }
+        ]
+        
+        let rightItem = UIBarButtonItem(customView: menuBtn)
         let leftItem = UIBarButtonItem(customView: notification)
         
         self.navigationItem.rightBarButtonItem = rightItem
@@ -249,11 +267,56 @@ class ProfileViewController: FadeBaseViewController {
     
     //MARK: - SETUP ACTION
     private func setAction() {
-        multipleChoice.addTarget(self, action: #selector(logoutAction), for: .touchUpInside)
+        editAvatarButton.addTarget(self, action: #selector(didTapSelectImage), for: .touchUpInside)
     }
     
     @objc private func logoutAction() {
         viewModel.logout()
+    }
+    
+    
+    @objc func didTapSelectImage() {
+        var config = PHPickerConfiguration()
+        config.selectionLimit = 1
+        config.filter = .images
+        
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = self
+        present(picker, animated: true)
+    }
+    
+    @MainActor
+    private func showConfirmAndUpdateAvatar(newUrl: String) async {
+        // 1. Hiện preview ảnh mới cho user xem trước (Optimistic UI)
+        self.avatar.setImage(url: newUrl)
+        
+        // 2. Hiện Alert hỏi
+        let isConfirmed = await confirmAlert(type: .add, title: "your new avatar?")
+        
+        if isConfirmed {
+            // --- ĐỒNG Ý ---
+            var profile = self.viewModel2.myProfile.value
+            profile?.avatarUrl = newUrl
+            
+            // Gọi API update profile...
+            // self.viewModel2.updateProfile(profile)
+            
+            // Quan trọng: Sau khi xong việc, nên clear list url tạm đi để tránh trigger lại lần sau
+            // (Tuỳ logic bên ViewModel của bạn có cần giữ lại không)
+            // self.imagesViewModel.uploadedUrls = []
+            
+        } else {
+            // --- HỦY ---
+            // Revert về ảnh cũ từ Profile gốc
+            if let oldUrl = self.viewModel2.myProfile.value?.avatarUrl, !oldUrl.isEmpty {
+                self.avatar.setImage(url: oldUrl)
+            } else {
+                self.avatar.setLocalImage(name: "UserDefault")
+            }
+            
+            // Xoá ảnh vừa up lên server
+            self.imagesViewModel.deleteAllImages()
+        }
     }
     
     //Mark: - Binding
@@ -274,5 +337,50 @@ class ProfileViewController: FadeBaseViewController {
                 self?.renderProfile()
             }
             .store(in: &cancellable)
+        
+        imagesViewModel.$uploadedUrls // Giả sử biến này là @Published
+            .dropFirst() // Bỏ qua giá trị khởi tạo đầu tiên (thường là rỗng)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] urls in
+                guard let self = self else { return }
+                
+                // Chỉ chạy khi có URL mới (tức là upload thành công)
+                guard let newUrl = urls.first, !newUrl.isEmpty else { return }
+                
+                // Gọi hàm xử lý Async trong Sink
+                Task {
+                    await self.showConfirmAndUpdateAvatar(newUrl: newUrl)
+                }
+            }
+            .store(in: &cancellable)
+    }
+}
+
+extension ProfileViewController: PHPickerViewControllerDelegate {
+    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+        picker.dismiss(animated: true)
+        
+        guard !results.isEmpty else { return }
+        
+        var selectedImages: [UIImage] = []
+        let dispatchGroup = DispatchGroup()
+        
+        // Lấy UIImage từ kết quả chọn
+        for result in results {
+            dispatchGroup.enter()
+            if result.itemProvider.canLoadObject(ofClass: UIImage.self) {
+                result.itemProvider.loadObject(ofClass: UIImage.self) { (image, error) in
+                    if let img = image as? UIImage {
+                        selectedImages.append(img)
+                    }
+                    dispatchGroup.leave()
+                }
+            } else {
+                dispatchGroup.leave()
+            }
+        }
+        dispatchGroup.notify(queue: .main) { [weak self] in
+            self?.imagesViewModel.uploadImages(selectedImages, folder: "avatars")
+        }
     }
 }

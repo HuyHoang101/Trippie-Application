@@ -27,11 +27,13 @@ enum ConfirmActionType {
     case cancel
     case deny
     case kick
+    case add
     
     var color: UIColor {
         switch self {
         case .delete, .kick, .deny : return #colorLiteral(red: 0.9254902005, green: 0.2352941185, blue: 0.1019607857, alpha: 1)
         case .cancel: return #colorLiteral(red: 0.9529411793, green: 0.5595523814, blue: 0.2865278571, alpha: 1)
+        case .add: return UIColor.button
         }
     }
     
@@ -41,6 +43,7 @@ enum ConfirmActionType {
         case .cancel: return "xmark.circle.fill"
         case .deny: return "hand.raised.fill"
         case .kick: return "person.fill.xmark"
+        case .add: return "person.fill.checkmark"
         }
     }
     
@@ -50,6 +53,7 @@ enum ConfirmActionType {
         case .cancel: return "cancel"
         case .deny: return "deny"
         case .kick: return "kick"
+        case .add: return "add"
         }
     }
 }
