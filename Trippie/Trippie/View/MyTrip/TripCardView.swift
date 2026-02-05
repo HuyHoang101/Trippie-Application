@@ -9,9 +9,10 @@ import UIKit
 
 class TripCardView: UIView {
     
+    var didTapCard: (() -> Void)?
+    
     // MARK: - Components
     
- 
     private let imgView = TrippieImageView(
         style: .rounded(radius: 12, corners: [.layerMaxXMinYCorner, .layerMinXMinYCorner]),
         isShadow: false,
@@ -31,6 +32,7 @@ class TripCardView: UIView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupLayout()
+        setupTapAction()
     }
     
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -104,8 +106,18 @@ class TripCardView: UIView {
         ])
     }
     
+    private func setupTapAction() {
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+        self.addGestureRecognizer(tap)
+        self.isUserInteractionEnabled = true
+    }
+    
+    @objc private func handleTap() {
+        didTapCard?() // Khi chạm vào thì gọi closure
+    }
+    
     // MARK: - Data Configuration
-    func configure(mytrip: TripWithStatus) {
+    func configure(mytrip: TripWithStatus, isOnFeedBoard: Bool = false) {
         // 1. Data Mapping
         let trip = mytrip.trip
         
@@ -120,9 +132,15 @@ class TripCardView: UIView {
         startDateLabel.text = "Start: " + formatter.string(from: trip.startTime)
         
         // 3. Image
-        imgView.setImage(url: trip.coverImage)
+        imgView.setImage(url: trip.coverImage.first)
         
         // 4. Personal Status & Animation
         statusBadge.configure(status: mytrip.participation.personalStatus)
+        
+        if isOnFeedBoard {
+            statusBadge.isHidden = false
+        } else {
+            statusBadge.isHidden = true
+        }
     }
 }

@@ -11,6 +11,8 @@ import FirebaseFirestore
 class UserService {
     static let shared = UserService()
     private let db = Firestore.firestore()
+    private let userDefaultsName = "cached_user_name"
+    private let userDefaultsAvatar = "cached_user_avatar"
     
     // MARK: - 1. FETCH USER BY ID
     func fetchUserById(id: String) async throws -> User {
@@ -153,5 +155,47 @@ class UserService {
             .getDocuments()
         
         return try snapshot.documents.first?.data(as: RatingFor.self)
+    }
+    
+    // MARK: - 6. UPDATE AVATAR
+    func updateAvatar(id: String, url: String) async throws -> User {
+        let userRef = db.collection("users").document(id)
+        let updatedTime = Date()
+        
+        // 1. Update avatarUrl
+        try await userRef.updateData([
+            "avatarUrl": url,
+            "updatedAt": updatedTime
+        ])
+        
+        UserDefaults.standard.set(url, forKey: userDefaultsAvatar)
+        // 2. Lấy lại user sau khi update
+        let snapshot = try await userRef.getDocument()
+
+        guard let user = try? snapshot.data(as: User.self) else {
+            throw NSError(domain: "DecodeUserError", code: -1)
+        }
+        
+        return user
+    }
+    
+    //MARK: - 7. UPDATE INFORMATION
+    func updateInfor(user: User) async throws -> User {
+        guard let id = user.id else { throw NSError(domain: "DecodeUserError", code: -1) }
+        let userRef = db.collection("user").document(id)
+        var updateUser = user
+        updateUser.updatedAt = Date()
+        
+        try userRef.setData(from: updateUser, merge: true)
+        
+        UserDefaults.standard.set(user.name, forKey: userDefaultsName)
+        
+        let snapshot = try await userRef.getDocument()
+
+        guard let user = try? snapshot.data(as: User.self) else {
+            throw NSError(domain: "DecodeUserError", code: -1)
+        }
+        
+        return user
     }
 }

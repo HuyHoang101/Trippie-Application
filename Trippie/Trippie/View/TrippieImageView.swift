@@ -124,8 +124,8 @@ class TrippieImageView: UIView {
         // 5. TẢI ẢNH (Background Thread)
         currentTask = URLSession.shared.dataTask(with: validUrl) { [weak self] data, response, error in
             
-            // Nếu lỗi hoặc bị cancel thì dừng
-            if let error = error {
+            // Nếu lỗi hoặc bị cancel
+            if error != nil {
                 // print("❌ Lỗi tải: \(error.localizedDescription)")
                 return
             }

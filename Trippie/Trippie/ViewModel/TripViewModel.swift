@@ -22,6 +22,7 @@ class TripViewModel {
     let loading = CurrentValueSubject<Bool, Never>(false)
     let errorMessage = PassthroughSubject<String, Never>()
     let editingTrip = CurrentValueSubject<TripWithStatus?, Never>(nil)
+    let didTapChange = PassthroughSubject<String, Never>()
     
     // MARK: - INPUT (FILTER & SEARCH)
     let searchText = CurrentValueSubject<String?, Never>(nil)
@@ -48,7 +49,7 @@ class TripViewModel {
             do {
                 let result = try await tripService.fetchTripForFeedingList(tripType: tripType.value, country: country.value, searchText: searchText.value)
                 
-                // 2. Đợi cho đủ 0.3s nếu API trả về quá nhanh
+                
                 await waitMinTime(startTime: startTime)
                 
                 trips.send(result)
@@ -98,33 +99,35 @@ class TripViewModel {
                     // --- CASE: UPDATE ---
                     let result = try await tripService.updateTrip(trip: trip)
                    
-                    // A. Cập nhật MyTrips
-                    var currentMyTrips = myTrips.value
-                    if let index = currentMyTrips.firstIndex(where: { $0.trip.id == result.trip.id }) {
-                        currentMyTrips[index] = result
-                        myTrips.send(currentMyTrips)
-                    }
-                   
-                    // B. Cập nhật Feed Trips
-                    var currentFeedTrips = trips.value
-                    if let index = currentFeedTrips.firstIndex(where: { $0.id == result.trip.id }) {
-                        currentFeedTrips[index] = result.trip
-                        trips.send(currentFeedTrips)
+                    self.updateLocalLists(updatedTrip: result.trip)
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        NotificationCenter.default.post(
+                            name: .showGlobalToast,
+                            object: nil,
+                            userInfo: [
+                                "message": "Update Trip Successfully!",
+                                "isSuccess": true
+                            ]
+                        )
                     }
                    
                 } else {
                     // --- CASE: CREATE ---
                     let result = try await tripService.createTrip(trip: trip)
                    
-                    // A. Thêm vào đầu MyTrips
-                    var currentMyTrips = myTrips.value
-                    currentMyTrips.insert(result, at: 0)
-                    myTrips.send(currentMyTrips)
-                   
-                    // B. Thêm vào đầu Feed
-                    var currentFeedTrips = trips.value
-                    currentFeedTrips.insert(result.trip, at: 0)
-                    trips.send(currentFeedTrips)
+                    self.updateLocalLists(updatedTrip: result.trip)
+                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        NotificationCenter.default.post(
+                            name: .showGlobalToast,
+                            object: nil,
+                            userInfo: [
+                                "message": "Create Trip Successfully!",
+                                "isSuccess": true
+                            ]
+                        )
+                    }
                 }
               
                 self.loading.send(false)
@@ -133,6 +136,16 @@ class TripViewModel {
             } catch {
                 self.loading.send(false)
                 self.errorMessage.send("Lưu thất bại: \(error.localizedDescription)")
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.post(
+                        name: .showGlobalToast,
+                        object: nil,
+                        userInfo: [
+                            "message": "Save trip failed!",
+                            "isSuccess": false
+                        ]
+                    )
+                }
             }
         }
     }
@@ -156,6 +169,8 @@ class TripViewModel {
                     currentFeedTrips.removeAll { $0.id == tripId }
                     trips.send(currentFeedTrips)
                 }
+                
+                self.didTapChange.send(tripId)
               
                 self.loading.send(false)
               
@@ -179,6 +194,8 @@ class TripViewModel {
             currentFeedTrips[index] = updatedTrip
             trips.send(currentFeedTrips)
         }
+        
+        didTapChange.send(updatedTrip.id!)
     }
 
     // MARK: - 5. MEMBER MANAGEMENT ACTIONS
@@ -191,7 +208,7 @@ class TripViewModel {
                 self.loading.send(false)
             } catch {
                 self.loading.send(false)
-                self.errorMessage.send("Duyệt thất bại: \(error.localizedDescription)")
+                self.errorMessage.send("Accept failed: \(error.localizedDescription)")
             }
         }
     }
@@ -239,6 +256,7 @@ class TripViewModel {
                     }) {
                         currentList[index].participation = result
                         myTrips.send(currentList)
+                        didTapChange.send(result.tripId)
                     }
                 }
               
@@ -259,17 +277,7 @@ class TripViewModel {
             do {
                 let updatedTrip = try await tripService.leaveTrip(input: tripWithStatus)
               
-                var currentMyTrips = myTrips.value
-                if let index = currentMyTrips.firstIndex(where: { $0.trip.id == updatedTrip.id }) {
-                    currentMyTrips.remove(at: index)
-                    myTrips.send(currentMyTrips)
-                }
-              
-                var currentFeedTrips = trips.value
-                if let index = currentFeedTrips.firstIndex(where: { $0.id == updatedTrip.id }) {
-                    currentFeedTrips[index] = updatedTrip
-                    trips.send(currentFeedTrips)
-                }
+                updateLocalLists(updatedTrip: updatedTrip)
               
                 self.loading.send(false)
               
@@ -294,13 +302,14 @@ class TripViewModel {
                 if let index = currentFeedTrips.firstIndex(where: { $0.id == updatedTrip.id }) {
                     currentFeedTrips[index] = updatedTrip
                     trips.send(currentFeedTrips)
+                    didTapChange.send(updatedTrip.id!)
                 }
               
                 self.loading.send(false)
               
             } catch {
                 self.loading.send(false)
-                self.errorMessage.send("Huỷ yêu cầu thất bại: \(error.localizedDescription)")
+                self.errorMessage.send("Cancel request failed: \(error.localizedDescription)")
             }
         }
     }
@@ -317,8 +326,13 @@ class TripViewModel {
                 }
                 .store(in: &cancellable)
 
-            // Luồng 2: Filter Local
+            // Filter Local
             Publishers.CombineLatest(randomTrips, titleFilter)
+                .removeDuplicates { prev, current in
+                    let isArraySame = prev.0.map { $0.id } == current.0.map { $0.id }
+                    let isStringSame = prev.1 == current.1
+                    return isArraySame && isStringSame
+                }
                 .map { (allTrips, filter) -> [Trip] in
                    
                     switch filter {

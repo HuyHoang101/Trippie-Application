@@ -367,8 +367,8 @@ extern "C" {
 // Apps targeting new SDKs can force the old behavior by defining
 // GTMSESSION_RECONNECT_BACKGROUND_SESSIONS_ON_LAUNCH = 0.
 #ifndef GTMSESSION_RECONNECT_BACKGROUND_SESSIONS_ON_LAUNCH
-// Default to the on-launch behavior for iOS.
-#if TARGET_OS_IOS
+// Default to the on-launch behavior for iOS 13+.
+#if TARGET_OS_IOS && defined(__IPHONE_13_0) && __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_13_0
 #define GTMSESSION_RECONNECT_BACKGROUND_SESSIONS_ON_LAUNCH 1
 #else
 #define GTMSESSION_RECONNECT_BACKGROUND_SESSIONS_ON_LAUNCH 0
@@ -503,6 +503,7 @@ typedef void (^GTMSessionFetcherRetryResponse)(BOOL shouldRetry);
 typedef void (^GTMSessionFetcherRetryBlock)(BOOL suggestedWillRetry, NSError *_Nullable error,
                                             GTMSessionFetcherRetryResponse response);
 
+API_AVAILABLE(ios(10.0), macosx(10.12), tvos(10.0), watchos(6.0))
 typedef void (^GTMSessionFetcherMetricsCollectionBlock)(NSURLSessionTaskMetrics *metrics);
 
 typedef void (^GTMSessionFetcherTestResponse)(NSHTTPURLResponse *_Nullable response,
@@ -604,7 +605,14 @@ NSData *_Nullable GTMDataFromInputStream(NSInputStream *inputStream, NSError **o
 #endif
 
 // Completion handler passed to -[GTMFetcherDecoratorProtocol fetcherWillStart:completionHandler:].
-typedef void (^GTMFetcherDecoratorFetcherWillStartCompletionHandler)(NSURLRequest *_Nullable_result,
+
+// TODO(https://github.com/google/gtm-session-fetcher/issues/398): Uncomment this when the next
+// major version bump happens, since this is an API breaking change for Swift clients.
+//
+// typedef void (^GTMFetcherDecoratorFetcherWillStartCompletionHandler)(NSURLRequest *_Nullable_result,
+//                                                                      NSError *_Nullable);
+
+typedef void (^GTMFetcherDecoratorFetcherWillStartCompletionHandler)(NSURLRequest *_Nullable,
                                                                      NSError *_Nullable);
 
 // Allows intercepting a request and optionally modifying it before the request (or a retry)
@@ -865,9 +873,8 @@ __deprecated_msg("implement GTMSessionFetcherAuthorizer instead")
 
 // The fetcher encodes information used to resume a session in the session identifier.
 // This method, intended for internal use returns the encoded information.  The sessionUserInfo
-// dictionary is stored as identifier metadata. The values here are limited to things that
-// can be stored in a plist, so they aren't completely open ended.
-- (nullable NSDictionary<NSString *, id> *)sessionIdentifierMetadata;
+// dictionary is stored as identifier metadata.
+- (nullable NSDictionary<NSString *, NSString *> *)sessionIdentifierMetadata;
 
 #if TARGET_OS_IPHONE && !TARGET_OS_WATCH
 // The app should pass to this method the completion handler passed in the app delegate method
@@ -1070,7 +1077,9 @@ __deprecated_msg("implement GTMSessionFetcherAuthorizer instead")
 // The optional block for collecting the metrics of the present session.
 //
 // This is called on the callback queue.
-@property(atomic, copy, nullable) GTMSessionFetcherMetricsCollectionBlock metricsCollectionBlock;
+@property(atomic, copy, nullable)
+    GTMSessionFetcherMetricsCollectionBlock metricsCollectionBlock API_AVAILABLE(
+        ios(10.0), macosx(10.12), tvos(10.0), watchos(6.0));
 
 // Retry intervals must be strictly less than maxRetryInterval, else
 // they will be limited to maxRetryInterval and no further retries will

@@ -35,8 +35,6 @@ class TripContainerCell: UITableViewCell {
     }
     
     func bindData(trip: TripWithStatus) {
-        // Cậu có thể đổi isListMode: true nếu muốn hiện Status/Date
-        // isFullTitle: true (nếu cậu đã update UniversalTripCard có tham số này)
         cardView.configure(trip: trip, isListMode: true)
     }
 }

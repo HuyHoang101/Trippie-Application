@@ -18,6 +18,7 @@ enum InputStyle {
     case phoneNumber // Bàn phím số
     case date        // Chọn ngày tháng từ lịch
     case text
+    case country
 }
 
 
@@ -50,5 +51,18 @@ enum ConfirmActionType {
         case .deny: return "deny"
         case .kick: return "kick"
         }
+    }
+}
+
+
+struct DropdownItem {
+    let title: String
+    let icon: String?
+    let type: ItemType
+    let action: () -> Void
+    
+    enum ItemType {
+        case normal
+        case destructive
     }
 }

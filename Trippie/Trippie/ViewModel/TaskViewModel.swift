@@ -34,11 +34,13 @@ class TaskViewModel {
     //1. FETCH TASK
     func fetchTask(tripId: String) {
         self.loading.send(true)
+        let startTime = Date()
         
         Task {
             do {
                 let resultTasks = try await taskService.fetchTaskByTripId(tripId: tripId)
                 
+                await waitMinTime(startTime: startTime)
                 self.tasks.send(resultTasks)
                 self.loading.send(false)
             } catch {
@@ -57,7 +59,16 @@ class TaskViewModel {
                 if let tripId = editingTask.value?.tripId {
                     
                     let result = try await taskService.updateTask(tripId: tripId, task: task, name: name)
-                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        NotificationCenter.default.post(
+                            name: .showGlobalToast,
+                            object: nil,
+                            userInfo: [
+                                "message": "Updated Task Successfully!",
+                                "isSuccess": true
+                            ]
+                        )
+                    }
                     var updatedTasks = tasks.value
                     updatedTasks.removeAll(where: {$0.id == result.id})
                     updatedTasks.append(result)
@@ -75,7 +86,16 @@ class TaskViewModel {
                 } else {
                     
                     let result = try await taskService.createTask(tripId: task.tripId, task: task)
-                    
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        NotificationCenter.default.post(
+                            name: .showGlobalToast,
+                            object: nil,
+                            userInfo: [
+                                "message": "Create Task Successfully!",
+                                "isSuccess": true
+                            ]
+                        )
+                    }
                     var updatedTasks = tasks.value
                     updatedTasks.append(result)
                     
@@ -92,6 +112,16 @@ class TaskViewModel {
             } catch {
                 self.loading.send(false)
                 self.errorMessage.send(error.localizedDescription)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.post(
+                        name: .showGlobalToast,
+                        object: nil,
+                        userInfo: [
+                            "message": "Save Task failed: \(error.localizedDescription)",
+                            "isSuccess": false
+                        ]
+                    )
+                }
             }
         }
     }
@@ -110,6 +140,16 @@ class TaskViewModel {
                 self.loading.send(false)
                 self.errorMessage.send(error.localizedDescription)
             }
+        }
+    }
+    
+    // MARK: - PRIVATE HELPER (DELAY)
+    private func waitMinTime(startTime: Date, minDuration: Double = 1) async {
+        let elapsed = Date().timeIntervalSince(startTime)
+        if elapsed < minDuration {
+            // Nếu chạy nhanh quá (ví dụ 0.05s) -> Ngủ thêm (1.0 - 0.05 = 0.95s)
+            let leftTime = minDuration - elapsed
+            try? await Task.sleep(nanoseconds: UInt64(leftTime * 1_000_000_000))
         }
     }
 }

@@ -84,7 +84,7 @@ class SplashViewController: AuthBaseViewController {
     //MARK: - ANIMATION
     private func prepareAnimation() {
         for label in allLetterLabels {
-            label.transform = CGAffineTransform(translationX: -20, y: -50)
+            label.transform = CGAffineTransform(translationX: 0, y: -50)
             label.alpha = 0
         }
     }
@@ -107,7 +107,7 @@ class SplashViewController: AuthBaseViewController {
             delayCounter += 0.1
         }
         
-        let totalTime = delayCounter + 0.5 + 0.7
+        let totalTime = delayCounter + 0.5
         
         // Call func go to app
         DispatchQueue.main.asyncAfter(deadline: .now() + totalTime) { [weak self] in

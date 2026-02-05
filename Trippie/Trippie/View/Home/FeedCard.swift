@@ -76,6 +76,6 @@ class FeedCard: UIView {
         titleLabel.text = trip.title
         countryLabel.text = trip.country
         dayIndex.text = "\(trip.dayIndex) days"
-        image.setImage(url: trip.coverImage)
+        image.setImage(url: trip.coverImage.first)
     }
 }
