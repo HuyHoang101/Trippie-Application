@@ -182,7 +182,7 @@ class UserService {
     //MARK: - 7. UPDATE INFORMATION
     func updateInfor(user: User) async throws -> User {
         guard let id = user.id else { throw NSError(domain: "DecodeUserError", code: -1) }
-        let userRef = db.collection("user").document(id)
+        let userRef = db.collection("users").document(id)
         var updateUser = user
         updateUser.updatedAt = Date()
         
@@ -197,5 +197,14 @@ class UserService {
         }
         
         return user
+    }
+    
+    //MARK: - 8. FETCH ALL USER
+    func fetchAllUser() async throws -> [User] {
+        let userRef = try await db.collection("users").getDocuments()
+        let users = userRef.documents.compactMap { document -> User? in
+            try? document.data(as: User.self)
+        }
+        return users
     }
 }

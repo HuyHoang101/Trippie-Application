@@ -55,6 +55,10 @@ class ListTaskViewController: FadeBaseViewController {
         bindLoading(to: taskViewModel.loading)
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        setupNavBar()
+    }
     
     
     //MARK: - SETUP UI

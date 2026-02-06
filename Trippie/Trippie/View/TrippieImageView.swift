@@ -81,8 +81,9 @@ class TrippieImageView: UIView {
         
         switch style {
         case .circle:
-            let radius = min(bounds.width, bounds.height) / 2
+            let radius = bounds.width / 2
             imageView.layer.cornerRadius = radius
+            self.layer.cornerRadius = radius
             if layer.shadowOpacity > 0 {
                 layer.shadowPath = UIBezierPath(ovalIn: bounds).cgPath
             }
@@ -108,11 +109,25 @@ class TrippieImageView: UIView {
         let config = UIImage.SymbolConfiguration(pointSize: 30, weight: .light)
         let placeholder = UIImage(systemName: placeholderSystemName, withConfiguration: config)
         
+        // 2.1. Đặt ảnh placeholder
         self.imageView.image = placeholder
-        self.imageView.contentMode = .center // Icon để giữa cho đẹp
+
+        // 2.2. Chỉnh màu cho icon (SF Symbol) thành màu xám đậm
+        self.imageView.tintColor = .systemGray // Hoặc .darkGray
+
+        // 2.3. Đặt màu nền cho ImageView
+        // Cậu dùng .systemGray6 hoặc tự pha màu gray đậm một chút
+        self.backgroundColor = UIColor(white: 0.9, alpha: 1.0)
+        self.clipsToBounds = true
+
+        // 2.4. Căn giữa icon
+        self.imageView.contentMode = .scaleAspectFit
         
         // 3. Kiểm tra URL hợp lệ
         guard let urlString = url, let validUrl = URL(string: urlString) else { return }
+        self.imageView.backgroundColor = .white
+        self.backgroundColor = .clear
+        self.clipsToBounds = false
         
         // 4. KIỂM TRA CACHE: Nếu có ảnh rồi thì lấy ra dùng luôn
         if let cachedImage = globalImageCache.object(forKey: urlString as NSString) {
@@ -151,7 +166,6 @@ class TrippieImageView: UIView {
                 }, completion: nil)
             }
         }
-        
         // Bắt đầu tải
         currentTask?.resume()
     }

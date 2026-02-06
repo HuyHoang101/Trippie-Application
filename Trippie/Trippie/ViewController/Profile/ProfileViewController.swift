@@ -12,6 +12,8 @@ import PhotosUI
 
 class ProfileViewController: FadeBaseViewController {
     
+    var anotherUserProfile: User?
+    
     private let viewModel = LoginViewModel()
     private let viewModel2 = UserViewModel.shared
     private let imagesViewModel = ImageViewModel()
@@ -19,8 +21,7 @@ class ProfileViewController: FadeBaseViewController {
     
     
     //MARK: - UI COMPONENT
-    private let multipleChoice = UIButton.customButton(image: UIImage(systemName: "ellipsis"), backgroundColor: (UIColor.background), tintColor: .label, padding: 12)
-    private let notification = UIButton.customButton(image: UIImage(systemName: "bell"), backgroundColor: (UIColor.background), tintColor: .label, padding: 12)
+    private let notification = UIButton.customButton(image: UIImage(systemName: "bell"), backgroundColor: (UIColor.background), tintColor: .label, padding: 10)
     private let mainScroll = UIScrollView()
     private let maincontent = UIView()
     
@@ -39,6 +40,7 @@ class ProfileViewController: FadeBaseViewController {
     private let avatar = TrippieImageView(style: .circle, isShadow: true, borderColor: UIColor.background)
     private let editAvatarButton = UIButton.customButton(image: UIImage(systemName: "pencil"), backgroundColor: UIColor.systemGray5, tintColor: .black, isCircle: true, padding: 10)
     private let nameLabel = UILabel.customLabel(text: "Unknown User", font: AppTheme.Font.mainBold(size: 24), textColor: .label, textAligment: .center)
+    private let followLabel = UIButton.customButton(text: "+ Follow", font: .systemFont(ofSize: 15), backgroundColor: .clear, textColor: .authBackground2, isPadding: false)
     private let emailAndPhoneLabel = UILabel.customLabel(text: "abc@example.com | +1 234 567 89", font: UIFont.systemFont(ofSize: 13, weight: .medium), textColor: .label, textAligment: .center)
     
     private let iconRating = TrippieImageView(style: .circle, isShadow: false, borderColor: .clear)
@@ -74,6 +76,10 @@ class ProfileViewController: FadeBaseViewController {
         applyCurve(to: decorateUI)
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        setupNavBar()
+    }
+    
     //MARK: - SETUP UI
     private func setupUI() {
         setupBackground()
@@ -96,6 +102,18 @@ class ProfileViewController: FadeBaseViewController {
         
         let stack = UIStackView.customStack(xPadding: 15, yPadding: 20, axis: .vertical, alignment: .fill, distribution: .fill, stackSpacing: 10)
         stack.addArrangedSubview(nameLabel)
+        if let id = anotherUserProfile?.id, id != AuthService.shared.currentUserId {
+            let spacer1 = UIView()
+            let spacer2 = UIView()
+            let hstack = UIStackView.customStack(axis: .horizontal, alignment: .center, distribution: .fill)
+            hstack.addArrangedSubview(spacer1)
+            hstack.addArrangedSubview(followLabel)
+            hstack.addArrangedSubview(spacer2)
+            spacer1.translatesAutoresizingMaskIntoConstraints = false
+            spacer2.translatesAutoresizingMaskIntoConstraints = false
+            spacer1.widthAnchor.constraint(equalTo: spacer2.widthAnchor).isActive = true
+            stack.addArrangedSubview(hstack)
+        }
         stack.addArrangedSubview(emailAndPhoneLabel)
         
         view.addSubview(stack)
@@ -172,22 +190,40 @@ class ProfileViewController: FadeBaseViewController {
         let appearance = UINavigationBarAppearance()
         
         let menuBtn = DropdownButton()
+        menuBtn.backgroundColor = .background
         
         // 2. Gán items
-        menuBtn.items = [
-            DropdownItem(title: "Edit information", icon: "person.text.rectangle", type: .normal) {
-                print("")
-            },
-            DropdownItem(title: "Log out", icon: "rectangle.portrait.and.arrow.right", type: .destructive) {
-                self.logoutAction()
-            }
-        ]
+        if (anotherUserProfile?.id) != nil {
+            menuBtn.items = [
+                DropdownItem(title: "Rating", icon: "star.fill", type: .normal) {
+                    self.showRatingModal()
+                },
+            ]
+        } else {
+            menuBtn.items = [
+                DropdownItem(title: "All Users", icon: "person.3.fill", type: .normal) {
+                    self.pushToAllUsersList()
+                },
+                DropdownItem(title: "Friends List", icon: "person.2.fill", type: .normal) {
+                    self.pushToFriendList()
+                },
+                DropdownItem(title: "Edit information", icon: "person.text.rectangle", type: .normal) {
+                    self.pushToEditingProfile()
+                },
+                DropdownItem(title: "Log out", icon: "rectangle.portrait.and.arrow.right", type: .destructive) {
+                    self.logoutAction()
+                }
+            ]
+        }
         
         let rightItem = UIBarButtonItem(customView: menuBtn)
         let leftItem = UIBarButtonItem(customView: notification)
+        menuBtn.tintColor = .label
         
         self.navigationItem.rightBarButtonItem = rightItem
+        
         self.navigationItem.leftBarButtonItem = leftItem
+        
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = UIColor.authBackground2.withAlphaComponent(0.7)
         appearance.shadowColor = .clear
@@ -197,7 +233,11 @@ class ProfileViewController: FadeBaseViewController {
     }
     
     private func renderProfile() {
-        guard let user = viewModel2.myProfile.value else { return }
+        guard var user = viewModel2.myProfile.value else { return }
+        
+        if let p = anotherUserProfile {
+            user = p
+        }
         
         let name = (user.name.isEmpty == true) ? "Unknown User" : user.name
         nameLabel.text = name
@@ -222,7 +262,16 @@ class ProfileViewController: FadeBaseViewController {
         
         addressLabel.attributedText = createBoldPrefixLabel(prefix: "Address: ", content: address)
         aboutMeLabel.attributedText = createBoldPrefixLabel(prefix: "About me: ", content: aboutMe)
+        addressLabel.numberOfLines = 0
+        aboutMeLabel.numberOfLines = 0
+        aboutMeLabel.textAlignment = .justified
         
+        
+        notification.configuration?.image = UIImage(systemName: anotherUserProfile == nil ? "bell" : "arrow.left")
+        guard let anotherId = anotherUserProfile?.id else { return }
+        let isFriend = viewModel2.isMyFriend(userId: anotherId)
+        followLabel.configuration?.title = isFriend ? "Following" : "+ Follow"
+        followLabel.configuration?.baseForegroundColor = isFriend ? .authBackground1 : .authBackground2
     }
     
     func applyCurve(to view: UIView) {
@@ -268,12 +317,74 @@ class ProfileViewController: FadeBaseViewController {
     //MARK: - SETUP ACTION
     private func setAction() {
         editAvatarButton.addTarget(self, action: #selector(didTapSelectImage), for: .touchUpInside)
+        if (anotherUserProfile?.id) != nil {
+            notification.addTarget(self, action: #selector(goBackAction), for: .touchUpInside)
+            followLabel.addTarget(self, action: #selector(addFriendAction), for: .touchUpInside)
+        } else {
+            
+        }
+        
+    }
+    
+    @objc private func showRatingModal() {
+        let vc = RatingModalViewController()
+        vc.otherUserId = self.anotherUserProfile?.id// Truyền ID người được rate
+        
+        // Quan trọng: Set style này để nền trong suốt đè lên màn hình cũ
+        vc.modalPresentationStyle = .overFullScreen
+        vc.modalTransitionStyle = .crossDissolve // Hiệu ứng mờ dần
+        
+        self.present(vc, animated: true)
+    }
+
+    @objc private func addFriendAction() {
+        Task {
+            await doAddFriendAction()
+        }
+    }
+    
+    @MainActor
+    private func doAddFriendAction() async {
+        guard let another = anotherUserProfile, let anotherId = another.id else { return }
+        
+        // Kiểm tra trạng thái bạn bè
+        let isFriend = viewModel2.isMyFriend(userId: anotherId)
+        
+        // Hiển thị Alert xác nhận
+        let isConfirmed = await confirmAlert(type: isFriend ? .unfollow : .follow, title: "\(another.name)")
+        
+        if isConfirmed {
+            self.viewModel2.toggleFriendship(targetUser: another)
+        }
+    }
+    
+    @objc private func goBackAction() {
+        self.navigationController?.popViewController(animated: true)
     }
     
     @objc private func logoutAction() {
         viewModel.logout()
     }
     
+    @objc private func pushToEditingProfile() {
+        let editProfileVC = HandSaveProfile()
+        editProfileVC.viewModel = viewModel2
+        viewModel2.editingProfile.send(viewModel2.myProfile.value)
+        self.navigationController?.pushViewController(editProfileVC, animated: true)
+    }
+    
+    @objc private func pushToFriendList() {
+        let userListVC = FriendsOrMembersListViewController()
+        userListVC.navigationTitle = "Friends"
+        self.navigationController?.pushViewController(userListVC, animated: true)
+    }
+    
+    @objc private func pushToAllUsersList() {
+        let userListVC = FriendsOrMembersListViewController()
+        userListVC.isAllUser = true
+        userListVC.navigationTitle = "All Users"
+        self.navigationController?.pushViewController(userListVC, animated: true)
+    }
     
     @objc func didTapSelectImage() {
         var config = PHPickerConfiguration()
@@ -291,20 +402,11 @@ class ProfileViewController: FadeBaseViewController {
         self.avatar.setImage(url: newUrl)
         
         // 2. Hiện Alert hỏi
-        let isConfirmed = await confirmAlert(type: .add, title: "your new avatar?")
+        let isConfirmed = await confirmAlert(type: .add, title: "your new avatar")
         
         if isConfirmed {
             // --- ĐỒNG Ý ---
-            var profile = self.viewModel2.myProfile.value
-            profile?.avatarUrl = newUrl
-            
-            // Gọi API update profile...
-            // self.viewModel2.updateProfile(profile)
-            
-            // Quan trọng: Sau khi xong việc, nên clear list url tạm đi để tránh trigger lại lần sau
-            // (Tuỳ logic bên ViewModel của bạn có cần giữ lại không)
-            // self.imagesViewModel.uploadedUrls = []
-            
+            self.viewModel2.updateAvatar(avatarUrl: newUrl)
         } else {
             // --- HỦY ---
             // Revert về ảnh cũ từ Profile gốc

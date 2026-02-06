@@ -54,6 +54,12 @@ class ListViewController: FadeBaseViewController {
         setupNavBar()
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        setupNavBar()
+    }
+    
+    
     // MARK: - SETUP UI
     private func setupTableView() {
         tableView.delegate = self

@@ -31,15 +31,15 @@ class DropdownButton: UIButton {
     private func setupButtonAppearance() {
         let symbolConfig = UIImage.SymbolConfiguration(pointSize: 20, weight: .medium)
         setImage(UIImage(systemName: "ellipsis", withConfiguration: symbolConfig), for: .normal)
-        tintColor = .label
+        tintColor = .white
         
         backgroundColor = UIColor.authBackground2.withAlphaComponent(0.5)
         
-        layer.cornerRadius = 16
+        layer.cornerRadius = 18
         layer.masksToBounds = true
         
-        widthAnchor.constraint(equalToConstant: 32).isActive = true
-        heightAnchor.constraint(equalToConstant: 32).isActive = true
+        widthAnchor.constraint(equalToConstant: 36).isActive = true
+        heightAnchor.constraint(equalToConstant: 36).isActive = true
     }
     
     // --- Action ---

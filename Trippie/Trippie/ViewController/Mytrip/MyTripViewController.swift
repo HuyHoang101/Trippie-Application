@@ -60,6 +60,11 @@ class MyTripViewController: FadeBaseViewController {
         binding()
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        setupNavBar()
+    }
+    
     //MARK: - SETUP UI
     func setupUI() {
         setupBackground()

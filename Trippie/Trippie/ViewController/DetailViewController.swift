@@ -51,6 +51,11 @@ class DetailViewController: FadeBaseViewController {
         binding()
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        setupNavBar()
+    }
+    
     
     //MARK: - SETUP UI
     private func setupUI() {
