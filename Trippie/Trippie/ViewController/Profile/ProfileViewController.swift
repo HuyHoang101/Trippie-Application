@@ -65,8 +65,6 @@ class ProfileViewController: FadeBaseViewController {
         setupUI()
         setAction()
         binding()
-        bindLoading(to: viewModel2.loading)
-        bindLoading(to: imagesViewModel.loading)
     }
     
     override func viewDidLayoutSubviews() {
@@ -89,12 +87,10 @@ class ProfileViewController: FadeBaseViewController {
         iconRating.translatesAutoresizingMaskIntoConstraints = false
         iconFriend.translatesAutoresizingMaskIntoConstraints = false
         
-        viewModel2.fetchMyProfile()
         avatar.setLocalImage(name: "UerDefault")
         avatar.translatesAutoresizingMaskIntoConstraints = false
         
         editViewContainer.addSubview(editAvatarButton)
-        avatar.addSubview(editViewContainer)
         
         view.addSubview(decorateUI)
         view.addSubview(avatar)
@@ -113,6 +109,13 @@ class ProfileViewController: FadeBaseViewController {
             spacer2.translatesAutoresizingMaskIntoConstraints = false
             spacer1.widthAnchor.constraint(equalTo: spacer2.widthAnchor).isActive = true
             stack.addArrangedSubview(hstack)
+        } else {
+            avatar.addSubview(editViewContainer)
+            editViewContainer.trailingAnchor.constraint(equalTo: avatar.trailingAnchor, constant: 0).isActive = true
+            editViewContainer.bottomAnchor.constraint(equalTo: avatar.bottomAnchor, constant: 0).isActive = true
+            editAvatarButton.widthAnchor.constraint(equalTo: avatar.widthAnchor, multiplier: 0.25).isActive = true
+            editAvatarButton.heightAnchor.constraint(equalTo: editAvatarButton.widthAnchor).isActive = true
+            viewModel2.fetchMyProfile()
         }
         stack.addArrangedSubview(emailAndPhoneLabel)
         
@@ -171,11 +174,6 @@ class ProfileViewController: FadeBaseViewController {
             editAvatarButton.leadingAnchor.constraint(equalTo: editViewContainer.leadingAnchor, constant: 3.5),
             editAvatarButton.trailingAnchor.constraint(equalTo: editViewContainer.trailingAnchor, constant: -3.5),
             
-            editViewContainer.trailingAnchor.constraint(equalTo: avatar.trailingAnchor, constant: 0),
-            editViewContainer.bottomAnchor.constraint(equalTo: avatar.bottomAnchor, constant: 0),
-            editAvatarButton.widthAnchor.constraint(equalTo: avatar.widthAnchor, multiplier: 0.25),
-            editAvatarButton.heightAnchor.constraint(equalTo: editAvatarButton.widthAnchor),
-            
             iconFriend.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.1),
             iconFriend.heightAnchor.constraint(equalTo: iconFriend.widthAnchor),
             iconRating.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.1),
@@ -183,7 +181,6 @@ class ProfileViewController: FadeBaseViewController {
         ])
         
         renderProfile()
-        setupNavBar()
     }
     
     private func setupNavBar() {
@@ -355,6 +352,15 @@ class ProfileViewController: FadeBaseViewController {
         
         if isConfirmed {
             self.viewModel2.toggleFriendship(targetUser: another)
+            let id = AuthService.shared.currentUserId!
+            if isFriend {
+                if let ids = self.anotherUserProfile?.friendIds {
+                    let filteredIds = ids.filter { $0 != id }
+                    self.anotherUserProfile?.friendIds = filteredIds
+                }
+            } else {
+                self.anotherUserProfile?.friendIds.append(id)
+            }
         }
     }
     
@@ -440,6 +446,16 @@ class ProfileViewController: FadeBaseViewController {
             }
             .store(in: &cancellable)
         
+        viewModel2.userAfterRating
+            .receive(on: RunLoop.main)
+            .filter { $0 != nil }
+            .sink { [weak self] profile in
+                self?.ratingLabel.text = "\(profile?.ratingCount ?? 0) rating"
+                self?.ratingNumber.text = "\(profile?.rating ?? 0.0)/5.0"
+                self?.viewModel2.userAfterRating.send(nil)
+            }
+            .store(in: &cancellable)
+        
         imagesViewModel.$uploadedUrls // Giả sử biến này là @Published
             .dropFirst() // Bỏ qua giá trị khởi tạo đầu tiên (thường là rỗng)
             .receive(on: RunLoop.main)
@@ -452,6 +468,20 @@ class ProfileViewController: FadeBaseViewController {
                 // Gọi hàm xử lý Async trong Sink
                 Task {
                     await self.showConfirmAndUpdateAvatar(newUrl: newUrl)
+                }
+            }
+            .store(in: &cancellable)
+        
+        Publishers.CombineLatest(viewModel2.loading, imagesViewModel.loading)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] (isLoadingUser, isLoadingImage) in
+                // Logic OR: Chỉ cần 1 trong 2 đang load thì hiện Loading
+                let shouldShowLoading = isLoadingUser || isLoadingImage
+                
+                if shouldShowLoading {
+                    self?.showLoading() // Hàm hiện loading của cậu
+                } else {
+                    self?.hideLoading() // Hàm ẩn loading của cậu
                 }
             }
             .store(in: &cancellable)

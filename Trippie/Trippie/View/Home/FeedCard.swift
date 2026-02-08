@@ -12,7 +12,7 @@ class FeedCard: UIView {
     private let titleLabel = UILabel.customLabel(text: "", font: UIFont.systemFont(ofSize: 14, weight: .semibold), textColor: .black)
     private let countryLabel = UILabel.customLabel(text: "", font: UIFont.systemFont(ofSize: 12, weight: .medium), textColor: .systemGray3)
     private let dayIndex = UILabel.customLabel(text: "", font: UIFont.systemFont(ofSize: 12, weight: .semibold), textColor: UIColor(named: "AuthBackground1") ?? UIColor.purple, textAligment: .right)
-    private let image = TrippieImageView(style: .rounded(radius: 12, corners: [.layerMaxXMaxYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMaxXMinYCorner]), isShadow: false, borderColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.3))
+    private let image = TrippieImageView(style: .rounded(radius: 12, corners: [.layerMaxXMaxYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner]), isShadow: false, borderColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.3))
     private let subview: UIView = {
         let v = UIView()
         v.backgroundColor = .white

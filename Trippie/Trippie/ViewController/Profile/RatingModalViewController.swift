@@ -13,6 +13,7 @@ class RatingModalViewController: UIViewController {
     // MARK: - Data
     var otherUserId: String?
     private let viewModel = UserViewModel.shared
+    private var cancellable = Set<AnyCancellable>()
     private var currentRating: Int = 0 {
         didSet { updateStarUI() }
     }
@@ -87,6 +88,7 @@ class RatingModalViewController: UIViewController {
         setupUI()
         checkEditMode()
         setupAction()
+        binding()
     }
     
     override func viewDidDisappear(_ animated: Bool) {
@@ -102,18 +104,19 @@ class RatingModalViewController: UIViewController {
             
             // Set UI cho Edit Mode
             self.currentRating = editingItem.num
-            self.confirmButton.setTitle("Update", for: .normal)
+            self.confirmButton.configuration?.title = "Update"
             self.deleteButton.isHidden = false // Hiện nút xoá
             self.questionLabel.text = "Update your rating for this user?"
         } else {
             // Create Mode
             self.currentRating = 0
-            self.confirmButton.setTitle("Confirm", for: .normal)
+            self.confirmButton.configuration?.title = "Confirm"
             self.deleteButton.isHidden = true
         }
     }
     
     private func setupUI() {
+        questionLabel.numberOfLines = 0
         viewModel.checkRating(otherId: self.otherUserId!)
         view.backgroundColor = UIColor.black.withAlphaComponent(0.4) // Nền tối mờ
         
@@ -250,5 +253,15 @@ class RatingModalViewController: UIViewController {
         }
         
         dismiss(animated: true)
+    }
+    
+    //MARK: - BINDDING
+    private func binding() {
+        viewModel.editingRating
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                self?.checkEditMode()
+            }
+            .store(in: &cancellable)
     }
 }

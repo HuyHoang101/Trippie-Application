@@ -227,6 +227,12 @@ extension ListTaskViewController: UITableViewDataSource, UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        _ = displayData[indexPath.row]
+        let row = displayData[indexPath.row]
+        let vc = TaskDetailModalViewController()
+        vc.task = row
+        vc.modalTransitionStyle = .crossDissolve
+        vc.modalPresentationStyle = .overFullScreen
+        
+        self.present(vc, animated: true)
     }
 }

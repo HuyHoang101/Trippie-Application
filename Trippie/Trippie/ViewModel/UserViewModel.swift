@@ -25,6 +25,7 @@ class UserViewModel {
     let myProfile = CurrentValueSubject<User?, Never>(nil)
     let editingProfile = CurrentValueSubject<User?, Never>(nil)
     let editingRating = CurrentValueSubject<RatingFor?, Never>(nil)
+    let userAfterRating = CurrentValueSubject<User?, Never>(nil)
     
     let loading = CurrentValueSubject<Bool, Never>(false)
     let errorMessage = PassthroughSubject<String, Never>()
@@ -54,11 +55,14 @@ class UserViewModel {
     // MARK: - 1. FETCH MY PROFILE
     func fetchMyProfile() {
         guard let uid = authService.currentUserId else { return }
+        let time = Date()
         
         self.loading.send(true)
         Task {
             do {
                 let user = try await userService.fetchUserById(id: uid)
+                await self.waitMinTime(startTime: time)
+                print("fetch my profile success")
                 self.myProfile.send(user) // Update data của mình
                 self.loading.send(false)
             } catch {
@@ -72,11 +76,12 @@ class UserViewModel {
     // MARK: - 2. FETCH OTHER PROFILES
     func fetchUsers(ids: [String], isFriend: Bool) {
         if ids.isEmpty { return }
-        
+        let time = Date()
         self.loading.send(true)
         Task {
             do {
                 let users = try await userService.fetchUsersByIds(ids: ids)
+                await self.waitMinTime(startTime: time)
                 if isFriend {
                     self.friendProfiles.send(users)
                 } else {
@@ -349,9 +354,11 @@ class UserViewModel {
     // MARK: - ALL USER
     func fetchAlluser() {
         self.loading.send(true)
+        let time = Date()
         Task {
             do {
                 let resutl = try await userService.fetchAllUser()
+                await self.waitMinTime(startTime: time)
                 allUsers.send(resutl)
                 loading.send(false)
             } catch {
@@ -368,6 +375,7 @@ class UserViewModel {
     private func refreshSingleUserInList(userId: String) async throws {
         // 1. Lấy thông tin mới nhất từ Server (đã được tính toán Average mới)
         let updatedUser = try await userService.fetchUserById(id: userId)
+        self.userAfterRating.send(updatedUser)
         
         // 2. Cập nhập vào tất cả danh sách
         updateUserInSubject(subject: profiles, updatedUser: updatedUser)
@@ -409,5 +417,15 @@ class UserViewModel {
             mutableList[index] = user
         }
         return mutableList
+    }
+    
+    // MARK: - PRIVATE HELPER (DELAY)
+    private func waitMinTime(startTime: Date, minDuration: Double = 1) async {
+        let elapsed = Date().timeIntervalSince(startTime)
+        if elapsed < minDuration {
+            // Nếu chạy nhanh quá (ví dụ 0.05s) -> Ngủ thêm (1.0 - 0.05 = 0.95s)
+            let leftTime = minDuration - elapsed
+            try? await Task.sleep(nanoseconds: UInt64(leftTime * 1_000_000_000))
+        }
     }
 }
