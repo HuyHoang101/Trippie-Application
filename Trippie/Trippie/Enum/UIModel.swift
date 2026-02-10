@@ -34,6 +34,7 @@ enum ConfirmActionType {
     case follow
     case unfollow
     case remove
+    case clear
     
     var color: UIColor {
         switch self {
@@ -41,6 +42,7 @@ enum ConfirmActionType {
         case .cancel: return #colorLiteral(red: 0.9529411793, green: 0.5595523814, blue: 0.2865278571, alpha: 1)
         case .add: return UIColor.button
         case .follow: return UIColor.authBackground2
+        case .clear: return #colorLiteral(red: 0.4666666687, green: 0.7647058964, blue: 0.2666666806, alpha: 1)
         }
     }
     
@@ -55,6 +57,7 @@ enum ConfirmActionType {
         case .follow: return "person.badge.plus"
         case .unfollow: return "person.badge.minus"
         case .remove: return "arrow.down.document"
+        case .clear: return "sparkles.rectangle.stack.fill"
         }
     }
     
@@ -69,6 +72,7 @@ enum ConfirmActionType {
         case .follow: return "follow"
         case .unfollow: return "unfollow"
         case .remove: return "remove this trip from the feed board?"
+        case .clear: return "clear cache of the app?"
         }
     }
 }
@@ -82,6 +86,7 @@ struct DropdownItem {
     
     enum ItemType {
         case normal
+        case clear
         case destructive
     }
 }

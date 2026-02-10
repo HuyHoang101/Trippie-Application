@@ -231,9 +231,9 @@ private class DropdownMenuView: UIView, UITableViewDataSource, UITableViewDelega
         
         if isSelected {
             cell.imageView?.image = UIImage(systemName: "checkmark")
-            cell.imageView?.tintColor = item.type == .destructive ? .systemRed.withAlphaComponent(0.6) : .label.withAlphaComponent(0.6)
+            cell.imageView?.tintColor = item.type == .destructive ? .systemRed.withAlphaComponent(0.6) : item.type == .clear ? .systemGreen.withAlphaComponent(0.6) : .label.withAlphaComponent(0.6)
             
-            cell.textLabel?.textColor = item.type == .destructive ? .systemRed.withAlphaComponent(0.6) : .label.withAlphaComponent(0.6)
+            cell.textLabel?.textColor = item.type == .destructive ? .systemRed.withAlphaComponent(0.6) : item.type == .clear ? .systemGreen.withAlphaComponent(0.6) : .label.withAlphaComponent(0.6)
             cell.isUserInteractionEnabled = false
         } else {
             cell.isUserInteractionEnabled = true

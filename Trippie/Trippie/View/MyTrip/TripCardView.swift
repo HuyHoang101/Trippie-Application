@@ -87,23 +87,34 @@ class TripCardView: UIView {
         infoStack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(infoStack)
         
+        // 1. Tạo constraint chiều cao 75%
+        let imageHeights = imgView.heightAnchor.constraint(equalTo: heightAnchor, multiplier: 0.75)
+
+        // 2. Giảm độ ưu tiên xuống (mức 750 - DefaultHigh)
+        // Nghĩa là: "Tôi muốn cao 75%, nhưng nếu có thằng khác quan trọng hơn thì tôi nhường"
+        imageHeights.priority = .defaultLow
+        
         // --- 5. Constraints ---
         NSLayoutConstraint.activate([
             // Image: Neo trên, trái, phải. Chiều cao theo tỷ lệ
             imgView.topAnchor.constraint(equalTo: topAnchor),
             imgView.leadingAnchor.constraint(equalTo: leadingAnchor),
             imgView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            imgView.bottomAnchor.constraint(equalTo: infoStack.topAnchor, constant: -12),
+            
+            imageHeights,
             
             // Status Badge: Góc trên phải, đè lên ảnh
             statusBadge.topAnchor.constraint(equalTo: topAnchor, constant: 12),
             statusBadge.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
             
             // Info Stack: Nằm dưới ảnh, cách lề
-            infoStack.topAnchor.constraint(equalTo: imgView.bottomAnchor, constant: 12),
             infoStack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
             infoStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
             infoStack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12) // Quan trọng để Card tự giãn chiều cao
         ])
+        
+        infoStack.setContentCompressionResistancePriority(.required, for: .vertical)
     }
     
     private func setupTapAction() {

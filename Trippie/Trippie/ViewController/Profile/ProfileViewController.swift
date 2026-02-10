@@ -65,6 +65,7 @@ class ProfileViewController: FadeBaseViewController {
         setupUI()
         setAction()
         binding()
+        updateCacheUI()
     }
     
     override func viewDidLayoutSubviews() {
@@ -76,6 +77,13 @@ class ProfileViewController: FadeBaseViewController {
     
     override func viewWillAppear(_ animated: Bool) {
         setupNavBar()
+    }
+    
+    func updateCacheUI() {
+        let sizeMB = GlobalCacheForApplication.calculateCurrentCacheSize()
+        
+        let sizeString = String(format: "%.1f MB", sizeMB)
+        print("Memory Cache: \(sizeString)")
     }
     
     //MARK: - SETUP UI
@@ -192,23 +200,36 @@ class ProfileViewController: FadeBaseViewController {
         // 2. Gán items
         if (anotherUserProfile?.id) != nil {
             menuBtn.items = [
-                DropdownItem(title: "Rating", icon: "star.fill", type: .normal) {
+                DropdownItem(title: "Rating", icon: "star.fill", type: .normal) { [weak self] in
+                    guard let self = self else { return }
                     self.showRatingModal()
                 },
             ]
         } else {
             menuBtn.items = [
-                DropdownItem(title: "All Users", icon: "person.3.fill", type: .normal) {
+                DropdownItem(title: "All Users", icon: "person.3.fill", type: .normal) { [weak self] in
+                    guard let self = self else { return }
                     self.pushToAllUsersList()
                 },
-                DropdownItem(title: "Friends List", icon: "person.2.fill", type: .normal) {
+                DropdownItem(title: "Friends List", icon: "person.2.fill", type: .normal) { [weak self] in
+                    guard let self = self else { return }
                     self.pushToFriendList()
                 },
-                DropdownItem(title: "Edit information", icon: "person.text.rectangle", type: .normal) {
+                DropdownItem(title: "Edit information", icon: "person.text.rectangle", type: .normal) { [weak self] in
+                    guard let self = self else { return }
                     self.pushToEditingProfile()
                 },
-                DropdownItem(title: "Log out", icon: "rectangle.portrait.and.arrow.right", type: .destructive) {
+                DropdownItem(title: "Log out", icon: "rectangle.portrait.and.arrow.right", type: .destructive) { [weak self] in
+                    guard let self = self else { return }
                     self.logoutAction()
+                },
+                DropdownItem(title: "Clear cache", icon: "bubbles.and.sparkles", type: .clear) { [weak self] in
+                    guard let self = self else { return }
+                    Task {
+                        do {
+                            await self.clearAllCache()
+                        }
+                    }
                 }
             ]
         }
@@ -246,7 +267,7 @@ class ProfileViewController: FadeBaseViewController {
         if  user.avatarUrl.isEmpty {
             avatar.setLocalImage(name: "UserDefault")
         } else {
-            avatar.setImage(url: user.avatarUrl, placeholderSystemName: "person")
+            avatar.setImage(url: user.avatarUrl, placeholderSystemName: "person.fill")
         }
         
         friendNumber.text = "\(user.friendIds.count)"
@@ -392,14 +413,22 @@ class ProfileViewController: FadeBaseViewController {
         self.navigationController?.pushViewController(userListVC, animated: true)
     }
     
-    @objc func didTapSelectImage() {
-        var config = PHPickerConfiguration()
-        config.selectionLimit = 1
-        config.filter = .images
-        
-        let picker = PHPickerViewController(configuration: config)
+    @objc private func didTapSelectImage() {
+        let picker = UIImagePickerController()
+        picker.sourceType = .photoLibrary
         picker.delegate = self
+        // 🟢 QUAN TRỌNG: Cho phép chỉnh sửa (Cắt hình vuông)
+        picker.allowsEditing = true
         present(picker, animated: true)
+    }
+    
+    @MainActor
+    func clearAllCache() async {
+        let isConfirmed = await confirmAlert(type: .clear, title: "")
+        
+        if isConfirmed {
+            GlobalCacheForApplication.clearAllCache()
+        }
     }
     
     @MainActor
@@ -456,8 +485,8 @@ class ProfileViewController: FadeBaseViewController {
             }
             .store(in: &cancellable)
         
-        imagesViewModel.$uploadedUrls // Giả sử biến này là @Published
-            .dropFirst() // Bỏ qua giá trị khởi tạo đầu tiên (thường là rỗng)
+        imagesViewModel.$uploadedUrls
+            .dropFirst()
             .receive(on: RunLoop.main)
             .sink { [weak self] urls in
                 guard let self = self else { return }
@@ -488,31 +517,33 @@ class ProfileViewController: FadeBaseViewController {
     }
 }
 
-extension ProfileViewController: PHPickerViewControllerDelegate {
-    func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+extension ProfileViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+    
+    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        
+        // 1. Lấy ảnh đã được người dùng cắt hình vuông
+        guard let editedImage = info[.editedImage] as? UIImage else {
+            picker.dismiss(animated: true)
+            return
+        }
+        
         picker.dismiss(animated: true)
         
-        guard !results.isEmpty else { return }
-        
-        var selectedImages: [UIImage] = []
-        let dispatchGroup = DispatchGroup()
-        
-        // Lấy UIImage từ kết quả chọn
-        for result in results {
-            dispatchGroup.enter()
-            if result.itemProvider.canLoadObject(ofClass: UIImage.self) {
-                result.itemProvider.loadObject(ofClass: UIImage.self) { (image, error) in
-                    if let img = image as? UIImage {
-                        selectedImages.append(img)
-                    }
-                    dispatchGroup.leave()
-                }
+        // 2. Xử lý Resize và Upload
+        Task {
+            // Chuyển UIImage sang Data để dùng hàm downsample tối ưu RAM
+            guard let imageData = editedImage.jpegData(compressionQuality: 1.0) else { return }
+            
+            // Gọi hàm resize targetSize: 1024
+            if let resizedImage = ImageUtils.downsample(imageData: imageData, maxDimension: 1024) {
+                self.imagesViewModel.uploadImages([resizedImage], folder: "avatars")
             } else {
-                dispatchGroup.leave()
+                self.imagesViewModel.uploadImages([editedImage], folder: "avatars")
             }
         }
-        dispatchGroup.notify(queue: .main) { [weak self] in
-            self?.imagesViewModel.uploadImages(selectedImages, folder: "avatars")
-        }
+    }
+    
+    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+        picker.dismiss(animated: true)
     }
 }

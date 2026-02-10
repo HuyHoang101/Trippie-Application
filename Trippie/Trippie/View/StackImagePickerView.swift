@@ -26,6 +26,8 @@ class StackImagePickerView: UIView {
         return view
     }()
     
+    private let loadingView = TrippieLoadingView()
+    
     private let placeholderLabel = UILabel.customLabel(text: "No image selected", font: .systemFont(ofSize: 14), textColor: .systemGray3, textAligment: .center)
     public var actionButton = UIButton.customButton(text: "Select photos", backgroundColor: .button, imageName: "photo.on.rectangle", isSystemImage: true)
     
@@ -55,6 +57,9 @@ class StackImagePickerView: UIView {
         addSubview(containerView)
         addSubview(actionButton)
         containerView.addSubview(placeholderLabel)
+        containerView.addSubview(loadingView)
+        loadingView.translatesAutoresizingMaskIntoConstraints = false
+        loadingView.isHidden = true
         
         NSLayoutConstraint.activate([
             containerView.topAnchor.constraint(equalTo: topAnchor, constant: 20),
@@ -62,6 +67,11 @@ class StackImagePickerView: UIView {
             containerView.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -20),
             containerView.bottomAnchor.constraint(equalTo: actionButton.topAnchor, constant: -15),
             containerView.heightAnchor.constraint(equalTo: containerView.widthAnchor, multiplier: 0.6),
+            
+            loadingView.topAnchor.constraint(equalTo: containerView.topAnchor),
+            loadingView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
+            loadingView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            loadingView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
             
             actionButton.centerXAnchor.constraint(equalTo: centerXAnchor),
             actionButton.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -20),
@@ -124,6 +134,15 @@ class StackImagePickerView: UIView {
             label.centerYAnchor.constraint(equalTo: containerView.centerYAnchor).isActive = true
         }
         
+        containerView.addSubview(loadingView)
+        
+        NSLayoutConstraint.activate([
+            loadingView.topAnchor.constraint(equalTo: containerView.topAnchor),
+            loadingView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
+            loadingView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
+            loadingView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor),
+        ])
+        
         updateButtonState(!images.isEmpty)
     }
     
@@ -160,6 +179,20 @@ class StackImagePickerView: UIView {
             delegate?.didTapDeleteAll()
         } else {
             delegate?.didTapSelectImage()
+        }
+    }
+    
+    func imageLoading(_ isLoading: Bool) {
+        if isLoading {
+            self.loadingView.isHidden = false
+            self.loadingView.start()
+            self.actionButton.isEnabled = false
+            self.actionButton.configuration?.baseBackgroundColor = .authBackground1.withAlphaComponent(0.4)
+        } else {
+            self.loadingView.isHidden = true
+            self.loadingView.stop()
+            self.actionButton.isEnabled = false
+            self.actionButton.configuration?.baseBackgroundColor = .authBackground1
         }
     }
 }

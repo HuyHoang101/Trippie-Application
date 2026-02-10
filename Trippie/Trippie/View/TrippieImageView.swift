@@ -6,9 +6,56 @@
 //
 
 import UIKit
+class GlobalCacheForApplication {
+    // 1. Tạo cache toàn cục (nằm ngoài class) để dùng chung cho mọi ảnh
+    static let globalImageCache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+            // giới hạn 200MB (1024 * 1024 * 200)
+            cache.totalCostLimit = 200 * 1024 * 1024
+            return cache
+    }()
+    
+    private static var allKeys = Set<NSString>()
 
-// 1. Tạo cache toàn cục (nằm ngoài class) để dùng chung cho mọi ảnh
-private let globalImageCache = NSCache<NSString, UIImage>()
+    static func cacheImage(_ image: UIImage, for url: String, cost: Int) {
+        let key = url as NSString
+        globalImageCache.setObject(image, forKey: key, cost: cost)
+        allKeys.insert(key)
+    }
+    
+    // Hàm lấy ảnh từ cache (cập nhật lại Set nếu ảnh bị hệ thống tự xóa)
+    static func getCachedImage(for url: String) -> UIImage? {
+        let key = url as NSString
+        guard let image = globalImageCache.object(forKey: key) else {
+            allKeys.remove(key) // Nếu cache tự xóa thì ta cũng xóa key
+            return nil
+        }
+        return image
+    }
+    
+    static func clearAllCache() {
+        globalImageCache.removeAllObjects()
+        allKeys.removeAll()
+    }
+    
+    static func calculateCurrentCacheSize() -> Double {
+        var totalBytes = 0
+        let keys = allKeys // Tạo bản sao để tránh lỗi crash khi thay đổi mảng lúc đang lặp
+        
+        for key in keys {
+            if let image = globalImageCache.object(forKey: key) {
+                let bytesPerPixel = 4
+                // 💡 Quan trọng: Phải nhân với scale^2 vì ảnh Retina chiếm nhiều RAM hơn
+                let sizeInBytes = Int(image.size.width * image.size.height * image.scale * image.scale) * bytesPerPixel
+                totalBytes += sizeInBytes
+            } else {
+                // Nếu ảnh không còn trong NSCache, dọn dẹp luôn cái key này cho sạch
+                allKeys.remove(key)
+            }
+        }
+        return Double(totalBytes) / (1024 * 1024)
+    }
+}
 
 class TrippieImageView: UIView {
     
@@ -113,7 +160,7 @@ class TrippieImageView: UIView {
         self.imageView.image = placeholder
 
         // 2.2. Chỉnh màu cho icon (SF Symbol) thành màu xám đậm
-        self.imageView.tintColor = .systemGray // Hoặc .darkGray
+        self.imageView.tintColor = .systemGray5.withAlphaComponent(0.25)
 
         // 2.3. Đặt màu nền cho ImageView
         // Cậu dùng .systemGray6 hoặc tự pha màu gray đậm một chút
@@ -124,50 +171,51 @@ class TrippieImageView: UIView {
         self.imageView.contentMode = .scaleAspectFit
         
         // 3. Kiểm tra URL hợp lệ
-        guard let urlString = url, let validUrl = URL(string: urlString) else { return }
         self.imageView.backgroundColor = .white
         self.backgroundColor = .clear
         self.clipsToBounds = false
+        guard let urlString = url, let validUrl = URL(string: urlString) else { return }
         
         // 4. KIỂM TRA CACHE: Nếu có ảnh rồi thì lấy ra dùng luôn
-        if let cachedImage = globalImageCache.object(forKey: urlString as NSString) {
+        if let cachedImage = GlobalCacheForApplication.globalImageCache.object(forKey: urlString as NSString) {
             self.imageView.image = cachedImage
             self.imageView.contentMode = .scaleAspectFill
             return
         }
         
-        // 5. TẢI ẢNH (Background Thread)
+        // 5. TẢI ẢNH và down size
         currentTask = URLSession.shared.dataTask(with: validUrl) { [weak self] data, response, error in
-            
-            // Nếu lỗi hoặc bị cancel
-            if error != nil {
-                // print("❌ Lỗi tải: \(error.localizedDescription)")
-                return
-            }
-            
-            guard let data = data, let downloadedImage = UIImage(data: data) else { return }
-            
-            // Lưu vào Cache để lần sau dùng lại
-            globalImageCache.setObject(downloadedImage, forKey: urlString as NSString)
-            
-            // 6. Cập nhật UI (Main Thread)
-            DispatchQueue.main.async {
-                guard let self = self else { return }
+                guard let self = self, let data = data, error == nil else { return }
                 
-                // Chuyển mode về fill để ảnh đẹp
-                self.imageView.contentMode = .scaleAspectFill
+                // --- TÍNH TOÁN KÍCH THƯỚC CỐ ĐỊNH (FIXED SIZE) ---
                 
-                // Hiệu ứng hiện ảnh mượt mà (Fade in)
-                UIView.transition(with: self.imageView,
-                                  duration: 0.3,
-                                  options: .transitionCrossDissolve,
-                                  animations: {
-                    self.imageView.image = downloadedImage
-                }, completion: nil)
+                let screenWidth = UIScreen.main.bounds.width
+                let targetWidth = screenWidth - 40 // Trừ hao padding an toàn
+                let scale = UIScreen.main.scale
+                
+                // Đây là con số Max Pixel (cạnh lớn nhất của ảnh sẽ không vượt quá số này)
+                let maxDimension = targetWidth * scale
+                
+                // --- DOWNSAMPLE ---
+                guard let downsampledImage = ImageUtils.downsample(imageData: data, maxDimension: maxDimension) else { return }
+                
+                // --- LƯU CACHE ---
+                // Tính cost chuẩn xác
+                let cost = Int(downsampledImage.size.width * downsampledImage.size.height * 4)
+                GlobalCacheForApplication.cacheImage(downsampledImage, for: urlString, cost: cost)
+                
+                DispatchQueue.main.async {
+                    self.imageView.contentMode = .scaleAspectFill
+                    // Animation hiện ảnh
+                    UIView.transition(with: self.imageView,
+                                      duration: 0.3,
+                                      options: .transitionCrossDissolve,
+                                      animations: {
+                        self.imageView.image = downsampledImage
+                    }, completion: nil)
+                }
             }
-        }
-        // Bắt đầu tải
-        currentTask?.resume()
+            currentTask?.resume()
     }
     
     // Hàm set ảnh local

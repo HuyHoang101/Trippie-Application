@@ -58,7 +58,11 @@ class UserCell: UITableViewCell {
         
         contentView.addSubview(avatarImageView)
         contentView.addSubview(infoStackView)
-        
+            
+        avatarImageView.layer.cornerRadius = 25
+        avatarImageView.clipsToBounds = true
+        avatarImageView.layer.borderWidth = 0.5
+        avatarImageView.layer.borderColor = UIColor.authBackground2.withAlphaComponent(0.5).cgColor
         avatarImageView.translatesAutoresizingMaskIntoConstraints = false
         infoStackView.translatesAutoresizingMaskIntoConstraints = false
         

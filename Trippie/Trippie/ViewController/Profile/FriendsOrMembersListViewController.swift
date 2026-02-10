@@ -89,11 +89,13 @@ class FriendsOrMembersListViewController: FadeBaseViewController {
         
         // 2. Gán items
         menuBtn.items = [
-            DropdownItem(title: "Add Task", icon: "plus", type: .normal) {
+            DropdownItem(title: "Add Task", icon: "plus", type: .normal) { [weak self] in
+                guard let self = self else { return }
                 
             },
-            DropdownItem(title: "Delete Task", icon: "trash", type: .destructive) {
-                print("Delete Task")
+            DropdownItem(title: "Delete Task", icon: "trash", type: .destructive) { [weak self] in
+                guard let self = self else { return }
+                
             }
         ]
         

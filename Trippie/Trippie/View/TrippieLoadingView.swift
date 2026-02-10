@@ -12,6 +12,8 @@ class TrippieLoadingView: UIView {
     
     private var isAnimating = false
     
+    var isBus: Bool = true
+    
     // MARK: - UI COMPONENTS
     
     //1. LABEL LOADING
@@ -30,7 +32,7 @@ class TrippieLoadingView: UIView {
         return lottie
     }()
     
-    private let mainStack = UIStackView.customStack(axis: .vertical, alignment: .center, distribution: .fill, stackSpacing: 4)
+    private let mainStack = UIStackView.customStack(axis: .vertical, alignment: .center, distribution: .fill, stackSpacing: 0)
     
     
     //MARK: - INIT
@@ -46,15 +48,22 @@ class TrippieLoadingView: UIView {
     
     //MARK: - SETUP UI
     private func setupUI() {
-        self.backgroundColor = UIColor.black.withAlphaComponent(0.2)
+        self.backgroundColor = .clear
         self.isUserInteractionEnabled = true
         
         let text = "Loading"
         
-        let font = AppTheme.Font.mainBold(size: 16)
+        let font = AppTheme.Font.mainMedium(size: 14)
         
         for char in text {
             let label = UILabel.customLabel(text: String(char), font: font, textColor: .white)
+            
+            label.layer.shadowColor = UIColor.black.cgColor
+            label.layer.shadowOffset = CGSize(width: 0, height: 2)
+            label.layer.shadowRadius = 3
+            label.layer.shadowOpacity = 0.5
+            label.layer.masksToBounds = false
+            
             letterStack.addArrangedSubview(label)
             letterViews.append(label)
         }
@@ -62,17 +71,24 @@ class TrippieLoadingView: UIView {
         for _ in 0...2 {
             let dot = UIView()
             dot.backgroundColor = .white
-            dot.layer.cornerRadius = 2
-            dot.translatesAutoresizingMaskIntoConstraints = false
-            dot.widthAnchor.constraint(equalToConstant: 4).isActive = true
-            dot.heightAnchor.constraint(equalTo: dot.widthAnchor).isActive = true
+            dot.layer.cornerRadius = 1.7
+            
+            dot.layer.shadowColor = UIColor.black.cgColor
+            dot.layer.shadowOffset = CGSize(width: 0, height: 1)
+            dot.layer.shadowRadius = 2
+            dot.layer.shadowOpacity = 0.4
+            
             dotStack.addArrangedSubview(dot)
             dotViews.append(dot)
+            
+            dot.translatesAutoresizingMaskIntoConstraints = false
+            dot.widthAnchor.constraint(equalToConstant: 3.4).isActive = true
+            dot.heightAnchor.constraint(equalTo: dot.widthAnchor).isActive = true
         }
         
         let textRowStack = UIStackView(arrangedSubviews: [letterStack, dotStack])
         textRowStack.axis = .horizontal
-        textRowStack.spacing = 5 // Khoảng cách giữa chữ 'g' và dấu chấm đầu tiên
+        textRowStack.spacing = 4 // Khoảng cách giữa chữ 'g' và dấu chấm đầu tiên
         textRowStack.alignment = .bottom
         
         mainStack.addArrangedSubview(textRowStack)
@@ -80,12 +96,18 @@ class TrippieLoadingView: UIView {
         
         addSubview(mainStack)
         
+        if isBus {
+            busAnimationView.isHidden = false
+        } else {
+            busAnimationView.isHidden = true
+        }
+        
         NSLayoutConstraint.activate([
             mainStack.centerXAnchor.constraint(equalTo: centerXAnchor),
             mainStack.centerYAnchor.constraint(equalTo: centerYAnchor),
                         
             // Xe bus rộng 1/4 màn hình
-            busAnimationView.widthAnchor.constraint(equalTo: self.widthAnchor, multiplier: 0.25),
+            busAnimationView.widthAnchor.constraint(equalTo: self.widthAnchor, multiplier: 0.2),
             busAnimationView.heightAnchor.constraint(equalTo: busAnimationView.widthAnchor)
         ])
     }
@@ -119,7 +141,7 @@ class TrippieLoadingView: UIView {
                                delay: delay,
                                options: [.curveEaseOut], // Lên chậm dần
                                animations: {
-                    item.transform = CGAffineTransform(translationX: 0, y: -8)
+                    item.transform = CGAffineTransform(translationX: 0, y: -6)
                 }) { _ in
                     // 2. Animation rơi xuống (Completion của nhảy lên)
                     UIView.animate(withDuration: totalDuration / 2, // Xuống nhanh

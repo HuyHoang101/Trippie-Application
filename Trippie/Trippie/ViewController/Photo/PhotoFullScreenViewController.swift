@@ -78,7 +78,7 @@ class PhotoFullScreenViewController: UIViewController {
     private func updateImageCount(index: Int) {
         let total = imageUrls.count
         // Cộng 1 vì index bắt đầu từ 0 (ảnh 0 -> hiển thị là 1)
-        imageCountLabel.text = "Images \(index + 1)/\(total)"
+        imageCountLabel.text = " Images \(index + 1)/\(total)  "
     }
 }
 
@@ -165,6 +165,12 @@ class FullScreenPhotoCell: UICollectionViewCell, UIScrollViewDelegate {
     
     // Hàm thần thánh: Tính frame ảnh để chặn scroll ra vùng đen
     private func updateLayout(for image: UIImage) {
+        // 1. Đảm bảo layout của Cell đã hoàn tất
+        contentView.layoutIfNeeded()
+        
+        // 2. TRIỆT TIÊU TRANSFORM CŨ (Chìa khóa để hết lag/phóng đại)
+        imageView.transform = .identity
+        
         let boundsSize = contentView.bounds.size
         let imageSize = image.size
         
@@ -234,5 +240,17 @@ class FullScreenPhotoCell: UICollectionViewCell, UIScrollViewDelegate {
                                  y: touchPoint.y - size.height / 2)
             scrollView.zoom(to: CGRect(origin: origin, size: size), animated: true)
         }
+    }
+    
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        // 1. Reset zoom về 1
+        scrollView.setZoomScale(1.0, animated: false)
+        
+        // 2. Quan trọng nhất: Đưa transform của imageView về mặc định
+        imageView.transform = .identity
+        
+        // 3. Xóa ảnh cũ để tránh hiện ảnh cũ trước khi tải ảnh mới
+        imageView.image = nil
     }
 }

@@ -48,12 +48,14 @@ class ContainCoverImageOfTrip: UIView {
             stackView.removeArrangedSubview(view)
         }
         
-        for i in 0..<count {
+        for _ in 0..<count {
             let v = UIView()
             v.backgroundColor = .systemGray6.withAlphaComponent(0.4)
             v.translatesAutoresizingMaskIntoConstraints = false
             v.widthAnchor.constraint(equalToConstant: 6).isActive = true
             v.heightAnchor.constraint(equalToConstant: 6).isActive = true
+            v.layer.cornerRadius = 3
+            v.clipsToBounds = true
             dotViews.append(v)
             stackView.addArrangedSubview(v)
         }

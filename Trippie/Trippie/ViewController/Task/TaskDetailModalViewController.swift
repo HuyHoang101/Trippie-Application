@@ -141,16 +141,20 @@ class TaskDetailModalViewController: UIViewController {
             multipleChoiceBtn.selectedIndex = index
             
             multipleChoiceBtn.items = [
-                DropdownItem(title: "Upcoming", icon: "clock", type: .normal) {
+                DropdownItem(title: "Upcoming", icon: "clock", type: .normal) { [weak self] in
+                    guard let self = self else { return }
                     self.didTapUpcoming()
                 },
-                DropdownItem(title: "On going", icon: "figure.walk", type: .normal) {
+                DropdownItem(title: "On going", icon: "figure.walk", type: .normal) { [weak self] in
+                    guard let self = self else { return }
                     self.didTapOngoing()
                 },
-                DropdownItem(title: "Completed", icon: "checkmark.seal.fill", type: .normal) {
+                DropdownItem(title: "Completed", icon: "checkmark.seal.fill", type: .normal) { [weak self] in
+                    guard let self = self else { return }
                     self.didTapCompleted()
                 },
-                DropdownItem(title: "Cancel", icon: "xmark.circle.fill", type: .destructive) {
+                DropdownItem(title: "Cancel", icon: "xmark.circle.fill", type: .destructive) { [weak self] in
+                    guard let self = self else { return }
                     self.didTapCancel()
                 },
             ]

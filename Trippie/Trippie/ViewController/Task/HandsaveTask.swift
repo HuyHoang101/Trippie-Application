@@ -351,28 +351,25 @@ extension HandsaveTask: PHPickerViewControllerDelegate {
         
         guard !results.isEmpty else { return }
         
-        var selectedImages: [UIImage] = []
-        let dispatchGroup = DispatchGroup()
-        
-        // Lấy UIImage từ kết quả chọn
-        for result in results {
-            dispatchGroup.enter()
-            if result.itemProvider.canLoadObject(ofClass: UIImage.self) {
-                result.itemProvider.loadObject(ofClass: UIImage.self) { (image, error) in
-                    if let img = image as? UIImage {
-                        selectedImages.append(img)
+        Task {
+            // Sử dụng TaskGroup để xử lý song song (Nhanh hơn Loop thường)
+            let processedImages = await withTaskGroup(of: UIImage?.self) { group -> [UIImage] in
+                for result in results {
+                    group.addTask {
+                        // Gọi hàm vừa fix ở trên
+                        return await result.loadResizedImage(targetSize: 1024)
                     }
-                    dispatchGroup.leave()
                 }
-            } else {
-                dispatchGroup.leave()
+                
+                var images: [UIImage] = []
+                for await image in group {
+                    if let img = image { images.append(img) }
+                }
+                return images
             }
-        }
-        dispatchGroup.notify(queue: .main) { [weak self] in
-            //print("DEBUG: Đã load xong \(selectedImages.count) ảnh. Bắt đầu upload...")
             
-            // Lúc này selectedImages mới có dữ liệu
-            self?.imagesViewModel.uploadImages(selectedImages, folder: "tasks")
+            // Upload mảng ảnh đã được resize
+            self.imagesViewModel.uploadImages(processedImages, folder: "tasks")
         }
     }
 }

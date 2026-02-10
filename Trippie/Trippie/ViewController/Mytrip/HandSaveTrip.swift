@@ -84,6 +84,7 @@ class HandSaveTrip: FadeBaseViewController {
         binding()
         checkEditMode()
         setupNavBar()
+        bindLoading(to: viewModel.loading)
         if let countryTF = countryField.arrangedSubviews[1] as? UITextField {
             countryTF.tintColor = .clear
             countryTF.inputView = UIView() 
@@ -98,9 +99,8 @@ class HandSaveTrip: FadeBaseViewController {
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         // Xoá dữ liệu edit để lần sau mở lên ko bị dính data cũ
-        if let trip = viewModel.editingTrip.value {
+        if viewModel.editingTrip.value != nil {
             viewModel.editingTrip.send(nil)
-            imagesViewModel.uploadedUrls = []
         } else {
             if !imagesViewModel.uploadedUrls.isEmpty {
                 imagesViewModel.deleteAllImages()
@@ -420,17 +420,19 @@ class HandSaveTrip: FadeBaseViewController {
             self?.maxMemberField.showError(nil)
         }
         
-        Publishers.CombineLatest(viewModel.loading, imagesViewModel.loading)
-            .receive(on: RunLoop.main)
-            .sink { [weak self] (isLoadingUser, isLoadingImage) in
-                // Logic OR: Chỉ cần 1 trong 2 đang load thì hiện Loading
-                let shouldShowLoading = isLoadingUser || isLoadingImage
+        imagesViewModel.loading
+            .dropFirst()
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] loading in
+                guard let self = self else { return }
+                self.coverImageSelected.imageLoading(loading)
                 
-                if shouldShowLoading {
-                    self?.showLoading() // Hàm hiện loading của cậu
-                } else {
-                    self?.hideLoading() // Hàm ẩn loading của cậu
-                }
+                self.saveButton.isEnabled = !loading
+                self.saveButton.alpha = loading ? 0.5 : 1.0
+                
+                self.navigationItem.rightBarButtonItem?.isEnabled = !loading
+                self.navigationItem.leftBarButtonItem?.isEnabled = !loading
             }
             .store(in: &cancellable)
     }
@@ -471,28 +473,25 @@ extension HandSaveTrip: PHPickerViewControllerDelegate {
         
         guard !results.isEmpty else { return }
         
-        var selectedImages: [UIImage] = []
-        let dispatchGroup = DispatchGroup()
-        
-        // Lấy UIImage từ kết quả chọn
-        for result in results {
-            dispatchGroup.enter()
-            if result.itemProvider.canLoadObject(ofClass: UIImage.self) {
-                result.itemProvider.loadObject(ofClass: UIImage.self) { (image, error) in
-                    if let img = image as? UIImage {
-                        selectedImages.append(img)
+        Task {
+            // Sử dụng TaskGroup để xử lý song song (Nhanh hơn Loop thường)
+            let processedImages = await withTaskGroup(of: UIImage?.self) { group -> [UIImage] in
+                for result in results {
+                    group.addTask {
+                        // Gọi hàm vừa fix ở trên
+                        return await result.loadResizedImage(targetSize: 1024)
                     }
-                    dispatchGroup.leave()
                 }
-            } else {
-                dispatchGroup.leave()
+                
+                var images: [UIImage] = []
+                for await image in group {
+                    if let img = image { images.append(img) }
+                }
+                return images
             }
-        }
-        dispatchGroup.notify(queue: .main) { [weak self] in
-            //print("DEBUG: Đã load xong \(selectedImages.count) ảnh. Bắt đầu upload...")
             
-            // Lúc này selectedImages mới có dữ liệu
-            self?.imagesViewModel.uploadImages(selectedImages)
+            // Upload mảng ảnh đã được resize
+            self.imagesViewModel.uploadImages(processedImages, folder: "trips")
         }
     }
 }

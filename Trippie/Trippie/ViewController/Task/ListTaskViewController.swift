@@ -125,16 +125,20 @@ class ListTaskViewController: FadeBaseViewController {
         
         // 2. Gán items
         menuBtn.items = [
-            DropdownItem(title: "Add Task", icon: "plus", type: .normal) {
+            DropdownItem(title: "Add Task", icon: "plus", type: .normal) { [weak self] in
+                guard let self = self else { return }
                 self.handlepushToCreateTask()
             },
-            DropdownItem(title: "Edit Task", icon: "pencil.line", type: .normal) {
+            DropdownItem(title: "Edit Task", icon: "pencil.line", type: .normal) { [weak self] in
+                guard let self = self else { return }
                 self.currentMode = .edit
             },
-            DropdownItem(title: "Delete Task", icon: "trash", type: .destructive) {
+            DropdownItem(title: "Delete Task", icon: "trash", type: .destructive) { [weak self] in
+                guard let self = self else { return }
                 self.currentMode = .delete
             },
-            DropdownItem(title: "Cancel Action", icon: "xmark", type: .normal) {
+            DropdownItem(title: "Cancel Action", icon: "xmark", type: .normal) { [weak self] in
+                guard let self = self else { return }
                 self.currentMode = .normal
             }
         ]

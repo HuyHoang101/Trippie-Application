@@ -11,12 +11,19 @@ import Combine
 
 class AllPhotosViewController: FadeBaseViewController {
     
+    private var startingDelete: Bool = false {
+        didSet {
+            if oldValue != startingDelete {
+                self.setupNavBar()
+            }
+        }
+    }
+    
     var imageUrls: [String] = []
     var isOwnerOpen: Bool!
     var trip: TripWithStatus!
     
     private var isAdding = false
-    @Published private var startingDelete = false
     private var deleteUrls: [String] = []
     
     private let viewModel = TripViewModel.shared
@@ -45,10 +52,13 @@ class AllPhotosViewController: FadeBaseViewController {
         super.viewDidLoad()
         setupUI()
         setupNavBar()
+        action()
         bindLoading(to: imagesViewModel.loading)
+        binding()
     }
     
     private func setupUI() {
+        startingDelete = false
         view.addSubview(collectionView)
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
@@ -64,7 +74,8 @@ class AllPhotosViewController: FadeBaseViewController {
         
         if isOwnerOpen {
             var dropDownItems: [DropdownItem] = []
-            dropDownItems.append(DropdownItem(title: "Add Photos", icon: "photo.badge.plus", type: .normal) {
+            dropDownItems.append(DropdownItem(title: "Add Photos", icon: "photo.badge.plus", type: .normal) { [weak self] in
+                guard let self = self else { return }
                 self.handleAdd()
             })
             
@@ -73,13 +84,15 @@ class AllPhotosViewController: FadeBaseViewController {
             
             if startingDelete {
                 self.navigationItem.rightBarButtonItems = [rightItem1, rightItem]
-                dropDownItems.append(DropdownItem(title: "Cancel Action", icon: "xmark", type: .destructive) {
-                    self.startingDelete = false
+                dropDownItems.append(DropdownItem(title: "Cancel Action", icon: "xmark", type: .destructive) { [weak self] in
+                    guard let self = self else { return }
+                    self.handleCancleDeleteAction()
                 })
             } else {
                 self.navigationItem.rightBarButtonItem = rightItem
-                dropDownItems.append(DropdownItem(title: "Delete Photos", icon: "trash", type: .destructive) {
-                    self.startingDelete = true
+                dropDownItems.append(DropdownItem(title: "Delete Photos", icon: "trash", type: .destructive) { [weak self] in
+                    guard let self = self else { return }
+                    self.handleStartDeleteAction()
                 })
             }
             menubtn.items = dropDownItems
@@ -95,6 +108,10 @@ class AllPhotosViewController: FadeBaseViewController {
         
         navigationController?.navigationBar.standardAppearance = appearance
         navigationController?.navigationBar.scrollEdgeAppearance = appearance
+    }
+    
+    private func action() {
+        self.deleteBtn.addTarget(self, action: #selector(handledDoingDelete), for: .touchUpInside)
     }
     
     @objc private func handleBack() {
@@ -113,7 +130,42 @@ class AllPhotosViewController: FadeBaseViewController {
     }
     
     @objc private func handledDoingDelete() {
-        
+        Task {
+            await performDeleteLogic()
+        }
+    }
+    
+    @MainActor
+    private func performDeleteLogic() async {
+        isAdding = false
+        let confirmAlert = await self.confirmAlert(type: .delete, title: "these images?")
+        if deleteUrls.isEmpty {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                NotificationCenter.default.post(
+                    name: .showGlobalToast,
+                    object: nil,
+                    userInfo: [
+                        "message": "No image was choosen!",
+                        "isSuccess": false
+                    ]
+                )
+            }
+        } else {
+            if confirmAlert {
+                self.imagesViewModel.uploadedUrls = self.deleteUrls
+            }
+        }
+    }
+    
+    private func handleCancleDeleteAction() {
+        self.startingDelete = false
+        self.deleteUrls = []
+        self.collectionView.reloadData()
+    }
+    
+    private func handleStartDeleteAction() {
+        self.startingDelete = true
+        self.collectionView.reloadData()
     }
     
     private func binding() {
@@ -130,22 +182,18 @@ class AllPhotosViewController: FadeBaseViewController {
                     t.coverImage.insert(contentsOf: uniqueUrls, at: 0)
                     self.viewModel.handleSave(trip: t)
                     self.imagesViewModel.uploadedUrls = []
-                    
+                    self.imageUrls.insert(contentsOf: uniqueUrls, at: 0)
                 } else {
                     self.viewModel.editingTrip.send(self.trip)
                     guard var t = self.trip?.trip else { return }
                     t.coverImage.removeAll(where: { urls.contains($0) })
                     self.viewModel.handleSave(trip: t)
                     self.imagesViewModel.deleteAllImages()
+                    self.imageUrls.removeAll(where: { urls.contains($0) })
+                    self.deleteUrls = []
+                    self.startingDelete = false
                 }
-            }
-            .store(in: &cancellable)
-        
-        self.$startingDelete
-            .dropFirst()
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.setupNavBar()
+                self.collectionView.reloadData()
             }
             .store(in: &cancellable)
     }
@@ -159,7 +207,12 @@ extension AllPhotosViewController: UICollectionViewDataSource, UICollectionViewD
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "PhotoGridCell", for: indexPath) as! PhotoGridCell
-        cell.configure(url: imageUrls[indexPath.item])
+        
+        let url = imageUrls[indexPath.item]
+        
+        let isSelected = deleteUrls.contains(url)
+        
+        cell.configure(url: imageUrls[indexPath.item], isDeleteMode: startingDelete, isSelected: isSelected)
         return cell
     }
     
@@ -170,37 +223,93 @@ extension AllPhotosViewController: UICollectionViewDataSource, UICollectionViewD
     }
     
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let fullVC = PhotoFullScreenViewController()
-        fullVC.imageUrls = self.imageUrls
-        fullVC.currentIndex = indexPath.item
-        fullVC.modalPresentationStyle = .overFullScreen
-        fullVC.modalTransitionStyle = .crossDissolve
-        present(fullVC, animated: true)
+        if startingDelete {
+            let url = imageUrls[indexPath.item]
+            if let index = deleteUrls.firstIndex(of: url) {
+                deleteUrls.remove(at: index)
+            } else {
+                deleteUrls.append(url)
+            }
+            collectionView.reloadItems(at: [indexPath])
+            
+        } else {
+            let fullVC = PhotoFullScreenViewController()
+            fullVC.imageUrls = self.imageUrls
+            fullVC.currentIndex = indexPath.item
+            fullVC.modalPresentationStyle = .overFullScreen
+            fullVC.modalTransitionStyle = .crossDissolve
+            present(fullVC, animated: true)
+        }
     }
 }
 
 // MARK: - Cell
 class PhotoGridCell: UICollectionViewCell {
+    private let bgContainer: UIView = {
+        let v = UIView()
+        v.backgroundColor = .authBackground2
+        v.translatesAutoresizingMaskIntoConstraints = false
+        return v
+    }()
+    private let checkmarkIcon: UIImageView = {
+        let iv = UIImageView()
+        iv.translatesAutoresizingMaskIntoConstraints = false
+        iv.contentMode = .scaleAspectFit
+        return iv
+    }()
     private let imageView = TrippieImageView(style: .rounded(radius: 0, corners: []), isShadow: false, borderColor: .authBackground2.withAlphaComponent(0.3))
     
     override init(frame: CGRect) {
         super.init(frame: frame)
-        contentView.addSubview(imageView)
+        contentView.addSubview(bgContainer)
+        bgContainer.addSubview(imageView)
+        bgContainer.addSubview(checkmarkIcon)
+        
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
+        
         NSLayoutConstraint.activate([
-            imageView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            imageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            imageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            imageView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
+            bgContainer.topAnchor.constraint(equalTo: contentView.topAnchor),
+            bgContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            bgContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            bgContainer.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            
+            imageView.topAnchor.constraint(equalTo: bgContainer.topAnchor),
+            imageView.leadingAnchor.constraint(equalTo: bgContainer.leadingAnchor),
+            imageView.trailingAnchor.constraint(equalTo: bgContainer.trailingAnchor),
+            imageView.bottomAnchor.constraint(equalTo: bgContainer.bottomAnchor),
+            
+            checkmarkIcon.topAnchor.constraint(equalTo: bgContainer.topAnchor, constant: 12),
+            checkmarkIcon.trailingAnchor.constraint(equalTo: bgContainer.trailingAnchor, constant: -12),
+            checkmarkIcon.widthAnchor.constraint(equalToConstant: 24),
+            checkmarkIcon.heightAnchor.constraint(equalToConstant: 24)
         ])
     }
     
     required init?(coder: NSCoder) { fatalError() }
     
-    func configure(url: String) {
+    func configure(url: String, isDeleteMode: Bool, isSelected: Bool) {
         imageView.setImage(url: url)
+        checkmarkIcon.isHidden = !isDeleteMode
+        imageView.transform = .identity
+        
+        if isDeleteMode {
+            checkmarkIcon.clipsToBounds = true
+            checkmarkIcon.layer.cornerRadius = 12
+            if isSelected {
+                imageView.transform = CGAffineTransform(scaleX: 0.92, y: 0.92)
+                checkmarkIcon.image = UIImage(systemName: "checkmark.circle.fill")
+                checkmarkIcon.tintColor = .authBackground2
+                checkmarkIcon.backgroundColor = .white
+                checkmarkIcon.alpha = 1
+            } else {
+                imageView.transform = .identity
+                checkmarkIcon.image = UIImage(systemName: "")
+                checkmarkIcon.backgroundColor = .black
+                checkmarkIcon.alpha = 0.15
+            }
+        }
     }
 }
 
@@ -210,30 +319,28 @@ extension AllPhotosViewController: PHPickerViewControllerDelegate {
         
         guard !results.isEmpty else { return }
         
-        var selectedImages: [UIImage] = []
-        let dispatchGroup = DispatchGroup()
-        
-        // Lấy UIImage từ kết quả chọn
-        for result in results {
-            dispatchGroup.enter()
-            if result.itemProvider.canLoadObject(ofClass: UIImage.self) {
-                result.itemProvider.loadObject(ofClass: UIImage.self) { (image, error) in
-                    if let img = image as? UIImage {
-                        selectedImages.append(img)
+        Task {
+            // Sử dụng TaskGroup để xử lý song song (Nhanh hơn Loop thường)
+            let processedImages = await withTaskGroup(of: UIImage?.self) { group -> [UIImage] in
+                for result in results {
+                    group.addTask {
+                        // Gọi hàm vừa fix ở trên
+                        return await result.loadResizedImage(targetSize: 1024)
                     }
-                    dispatchGroup.leave()
                 }
-            } else {
-                dispatchGroup.leave()
-            }
-        }
-        dispatchGroup.notify(queue: .main) { [weak self] in
-            Task { [weak self] in
-                let confirmed = await self?.confirmAlert(type: .add, title: "these Images?") ?? false
                 
-                if confirmed {
-                    self?.imagesViewModel.uploadImages(selectedImages, folder: "trips")
+                var images: [UIImage] = []
+                for await image in group {
+                    if let img = image { images.append(img) }
                 }
+                return images
+            }
+            
+            // Upload mảng ảnh đã được resize
+            let confirmed = await self.confirmAlert(type: .add, title: "these Images?")
+            
+            if confirmed {
+                self.imagesViewModel.uploadImages(processedImages, folder: "trips")
             }
         }
     }

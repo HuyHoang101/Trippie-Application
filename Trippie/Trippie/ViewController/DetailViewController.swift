@@ -20,7 +20,7 @@ class DetailViewController: FadeBaseViewController {
     private var tripDetailWithStatus: TripWithStatus?
     
     //MARK: - UI COMPONENT
-    private let coverImage = TrippieImageView(style: .rounded(radius: 14, corners: [.layerMaxXMaxYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMinXMinYCorner]), isShadow: false, borderColor: .clear)
+    private let coverImage = ContainCoverImageOfTrip()
     private let titleLabel = UILabel.customLabel(text: "Trip title", font: .systemFont(ofSize: 22, weight: .semibold), textColor: .label)
     private let ownerLabel = UILabel.customLabel(text: "Planer: None", font: .systemFont(ofSize: 16), textColor: .systemGray)
     private let locationLabel = UILabel.customLabel(text: "On the sun", font: .systemFont(ofSize: 16), textColor: .systemGray)
@@ -64,7 +64,6 @@ class DetailViewController: FadeBaseViewController {
     //MARK: - SETUP UI
     private func setupUI() {
         setupBackground()
-        coverImage.setImage(url: "")
         coverImage.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.numberOfLines = 0
         descriptionLabel.numberOfLines = 0
@@ -145,7 +144,9 @@ class DetailViewController: FadeBaseViewController {
         // 3. Hiển thị các thành phần dùng chung
         titleLabel.text = trip.title
         locationLabel.text = "\(trip.location), \(trip.country)"
-        coverImage.setImage(url: trip.coverImage.first)
+        let prefixImages = Array(trip.coverImage.prefix(5))
+        let urls = prefixImages.isEmpty ? ["."] : prefixImages
+        coverImage.setData(from: urls)
         ownerLabel.text = "Planner: \(trip.ownerName)"
         tripStyle.text = trip.tripType.rawValue.toSentenceCase()
         dayindex.text = "\(trip.dayIndex) days"
@@ -217,35 +218,43 @@ class DetailViewController: FadeBaseViewController {
         var dropDownMenus: [DropdownItem] = []
         
         if id == trip.ownerId {
-            dropDownMenus.append(DropdownItem(title: "All images", icon: "photo.on.rectangle.angled", type: .normal) {
+            dropDownMenus.append(DropdownItem(title: "All images", icon: "photo.on.rectangle.angled", type: .normal) { [weak self] in
+                guard let self = self else { return }
                 self.pushToAllImage(isOwner: true)
             })
             if trip.status != .completed {
-                dropDownMenus.append(DropdownItem(title: "Remove from Feed", icon: "arrow.down.document", type: .normal) {
+                dropDownMenus.append(DropdownItem(title: "Remove from Feed", icon: "arrow.down.document", type: .normal) { [weak self] in
+                    guard let self = self else { return }
                     Task {
                         await self.didTapRemoveFormFeed()
                     }
                 })
             }
-            dropDownMenus.append(DropdownItem(title: "Edit Trip", icon: "pencil.line", type: .normal) {
+            dropDownMenus.append(DropdownItem(title: "Edit Trip", icon: "pencil.line", type: .normal) { [weak self] in
+                guard let self = self else { return }
                 self.pushToHandSaveTrip()
             })
-            dropDownMenus.append(DropdownItem(title: "Members Joined", icon: "person.2.badge.gearshape", type: .normal) {
+            dropDownMenus.append(DropdownItem(title: "Members Joined", icon: "person.2.badge.gearshape", type: .normal) { [weak self] in
+                guard let self = self else { return }
                 self.pushToMembers(isOwner: true)
             })
-            dropDownMenus.append(DropdownItem(title: "Pending Requests", icon: "person.checkmark.and.xmark", type: .normal) {
+            dropDownMenus.append(DropdownItem(title: "Pending Requests", icon: "person.checkmark.and.xmark", type: .normal) { [weak self] in
+                guard let self = self else { return }
                 self.pushToPendingRequests()
             })
-            dropDownMenus.append(DropdownItem(title: "Delete the trip", icon: "trash", type: .destructive) {
+            dropDownMenus.append(DropdownItem(title: "Delete the trip", icon: "trash", type: .destructive) { [weak self] in
+                guard let self = self else { return }
                 Task {
                     await self.didTapDeleteTheTrip()
                 }
             })
         } else {
-            dropDownMenus.append(DropdownItem(title: "All images", icon: "photo.on.rectangle.angled", type: .normal) {
+            dropDownMenus.append(DropdownItem(title: "All images", icon: "photo.on.rectangle.angled", type: .normal) { [weak self] in
+                guard let self = self else { return }
                 self.pushToAllImage(isOwner: false)
             })
-            dropDownMenus.append(DropdownItem(title: "Members Joined", icon: "person.3.sequence", type: .normal) {
+            dropDownMenus.append(DropdownItem(title: "Members Joined", icon: "person.3.sequence", type: .normal) { [weak self] in
+                guard let self = self else { return }
                 self.pushToMembers(isOwner: false)
             })
         }
