@@ -77,15 +77,16 @@ class TaskService {
     }
     
     // MARK: - 3. EDIT TASK
-    func updateTask(tripId: String, task: TaskOfTrip, name: String) async throws -> TaskOfTrip {
+    func updateTask(tripId: String, task: TaskOfTrip, name: String, isEdit: Bool = true) async throws -> TaskOfTrip {
         guard let taskId = task.id else {
             throw NSError(domain: "TaskService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Task ID not found"])
         }
         
         var updatedTask = task
-        updatedTask.updatedAt = Date() // Cập nhật thời gian sửa
-        updatedTask.editBy = name
-        
+        if isEdit {
+            updatedTask.editBy = name
+            updatedTask.updatedAt = Date()
+        }
         let docRef = db.collection("trips")
             .document(tripId)
             .collection("tasks")

@@ -13,8 +13,8 @@ import PhotosUI
 class HandSaveTrip: FadeBaseViewController {
     // MARK: - Dependency
     var viewModel: TripViewModel!
-    private let imagesViewModel = ImageViewModel.shared
-    private var cancellabel = Set<AnyCancellable>()
+    private let imagesViewModel = ImageViewModel()
+    private var cancellable = Set<AnyCancellable>()
     
     // MARK: - UI Components
     private let scrollView: UIScrollView = {
@@ -84,8 +84,6 @@ class HandSaveTrip: FadeBaseViewController {
         binding()
         checkEditMode()
         setupNavBar()
-        bindLoading(to: viewModel.loading)
-        bindLoading(to: imagesViewModel.loading)
         if let countryTF = countryField.arrangedSubviews[1] as? UITextField {
             countryTF.tintColor = .clear
             countryTF.inputView = UIView() 
@@ -100,9 +98,15 @@ class HandSaveTrip: FadeBaseViewController {
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         // Xoá dữ liệu edit để lần sau mở lên ko bị dính data cũ
-        viewModel.editingTrip.send(nil)
-        if !imagesViewModel.uploadedUrls.isEmpty {
-            imagesViewModel.deleteAllImages()
+        if let trip = viewModel.editingTrip.value {
+            viewModel.editingTrip.send(nil)
+            imagesViewModel.uploadedUrls = []
+        } else {
+            if !imagesViewModel.uploadedUrls.isEmpty {
+                imagesViewModel.deleteAllImages()
+            }
+            viewModel.editingTrip.send(nil)
+            return
         }
     }
     
@@ -118,6 +122,12 @@ class HandSaveTrip: FadeBaseViewController {
         // 2. Thêm StackView và Button VÀO TRONG ScrollView
         scrollView.addSubview(stackView)
         scrollView.addSubview(saveButton)
+        
+        if let _ = viewModel.editingTrip.value {
+            coverImageSelected.isHidden = true
+        } else {
+            coverImageSelected.isHidden = false
+        }
         
         let fields = [coverImageSelected, titleField, locationField, countryField, maxMemberField, tripTypeGroup.stack, startDateField, dayIndexField, tripDescriptionField, tripRuleField]
         fields.forEach { stackView.addArrangedSubview($0) }
@@ -253,7 +263,7 @@ class HandSaveTrip: FadeBaseViewController {
             viewModel.errorMessage.send("Authorized Error, login again!")
             return
         }
-        guard let ownerName = AuthService.shared.currentUserId else {
+        guard let ownerName = AuthService.shared.currentUserName else {
             viewModel.errorMessage.send("Authorized Error, login again!")
             return
         }
@@ -380,7 +390,7 @@ class HandSaveTrip: FadeBaseViewController {
             .sink { [weak self] imgs in
                 self?.coverImageSelected.renderImages(imgs)
             }
-            .store(in: &cancellabel)
+            .store(in: &cancellable)
         
         titleField.listenToChanges { [weak self] _ in
             self?.titleField.showError(nil)
@@ -410,6 +420,19 @@ class HandSaveTrip: FadeBaseViewController {
             self?.maxMemberField.showError(nil)
         }
         
+        Publishers.CombineLatest(viewModel.loading, imagesViewModel.loading)
+            .receive(on: RunLoop.main)
+            .sink { [weak self] (isLoadingUser, isLoadingImage) in
+                // Logic OR: Chỉ cần 1 trong 2 đang load thì hiện Loading
+                let shouldShowLoading = isLoadingUser || isLoadingImage
+                
+                if shouldShowLoading {
+                    self?.showLoading() // Hàm hiện loading của cậu
+                } else {
+                    self?.hideLoading() // Hàm ẩn loading của cậu
+                }
+            }
+            .store(in: &cancellable)
     }
    
 }

@@ -39,6 +39,7 @@ class UniversalTripCard: UIView {
     
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     
+    
     // MARK: - SETUP LAYOUT
     private func setupLayout() {
         self.backgroundColor = .white
@@ -49,6 +50,8 @@ class UniversalTripCard: UIView {
         self.layer.shadowOpacity = 1
         self.layer.shadowOffset = CGSize(width: 0, height: 2)
         self.layer.shadowRadius = 4
+        self.layer.shouldRasterize = true
+        self.layer.rasterizationScale = UIScreen.main.scale
         
         // 1. Setup Image
         imgView.translatesAutoresizingMaskIntoConstraints = false
@@ -156,18 +159,23 @@ class UniversalTripCard: UIView {
             statusLabel.font = .systemFont(ofSize: 11, weight: .bold)
         }
         
-        if let id = trip.participation.id, !id.isEmpty {
+        if let id = trip.participation?.id, !id.isEmpty {
             footerStackforMyTrip.isHidden = false
             footerStack.isHidden = true
-            personalStatus.configure(status: trip.participation.personalStatus)
-            if trip.participation.role == .owner && trip.trip.status != .completed {
+            if trip.participation?.role == .owner && trip.trip.status != .completed {
                 personalStatus.isHidden = true
             } else {
                 personalStatus.isHidden = false
             }
+            guard let personalstatus = trip.participation?.personalStatus else { return }
+            personalStatus.configure(status: personalstatus)
         } else {
             footerStackforMyTrip.isHidden = true
             footerStack.isHidden = false
         }
+    }
+    
+    func prepareForReuse() {
+        self.imgView.setImage(url: "")
     }
 }

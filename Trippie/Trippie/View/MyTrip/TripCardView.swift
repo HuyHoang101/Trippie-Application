@@ -118,6 +118,13 @@ class TripCardView: UIView {
     
     // MARK: - Data Configuration
     func configure(mytrip: TripWithStatus, isOnFeedBoard: Bool = false) {
+        
+        if isOnFeedBoard {
+            statusBadge.isHidden = true
+        } else {
+            statusBadge.isHidden = false
+        }
+        
         // 1. Data Mapping
         let trip = mytrip.trip
         
@@ -135,12 +142,7 @@ class TripCardView: UIView {
         imgView.setImage(url: trip.coverImage.first)
         
         // 4. Personal Status & Animation
-        statusBadge.configure(status: mytrip.participation.personalStatus)
-        
-        if isOnFeedBoard {
-            statusBadge.isHidden = false
-        } else {
-            statusBadge.isHidden = true
-        }
+        guard let personalStatus = mytrip.participation?.personalStatus else { return }
+        statusBadge.configure(status: personalStatus)
     }
 }

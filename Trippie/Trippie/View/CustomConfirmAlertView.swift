@@ -46,7 +46,7 @@ class CustomConfirmAlertView: UIView {
         
         let label = UILabel.customLabel(text: "", font: .systemFont(ofSize: 16, weight: .regular), textColor: .label, textAligment: .center)
         label.numberOfLines = 0
-        let fullText = "Do you want to \(type.verb) \(title)?"
+        let fullText = "Do you want to \(type.verb) \(title)"
         let attString = NSMutableAttributedString(string: fullText, attributes: [
             .font: UIFont.systemFont(ofSize: 16, weight: .regular),
             .foregroundColor: UIColor.black

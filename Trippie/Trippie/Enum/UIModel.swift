@@ -19,10 +19,13 @@ enum InputStyle {
     case date        // Chọn ngày tháng từ lịch
     case text
     case country
+    case time
+    
 }
 
 
 enum ConfirmActionType {
+    case deleteTrip
     case delete
     case cancel
     case deny
@@ -30,10 +33,11 @@ enum ConfirmActionType {
     case add
     case follow
     case unfollow
+    case remove
     
     var color: UIColor {
         switch self {
-        case .delete, .kick, .deny, .unfollow : return #colorLiteral(red: 0.9254902005, green: 0.2352941185, blue: 0.1019607857, alpha: 1)
+        case .deleteTrip, .delete, .kick, .deny, .unfollow, .remove : return #colorLiteral(red: 0.9254902005, green: 0.2352941185, blue: 0.1019607857, alpha: 1)
         case .cancel: return #colorLiteral(red: 0.9529411793, green: 0.5595523814, blue: 0.2865278571, alpha: 1)
         case .add: return UIColor.button
         case .follow: return UIColor.authBackground2
@@ -42,6 +46,7 @@ enum ConfirmActionType {
     
     var iconName: String {
         switch self {
+        case .deleteTrip: return "trash.fill"
         case .delete: return "trash.fill"
         case .cancel: return "xmark.circle.fill"
         case .deny: return "hand.raised.fill"
@@ -49,11 +54,13 @@ enum ConfirmActionType {
         case .add: return "person.fill.checkmark"
         case .follow: return "person.badge.plus"
         case .unfollow: return "person.badge.minus"
+        case .remove: return "arrow.down.document"
         }
     }
     
     var verb: String {
         switch self {
+        case .deleteTrip: return "delete this Trip?"
         case .delete: return "delete"
         case .cancel: return "cancel"
         case .deny: return "deny"
@@ -61,6 +68,7 @@ enum ConfirmActionType {
         case .add: return "add"
         case .follow: return "follow"
         case .unfollow: return "unfollow"
+        case .remove: return "remove this trip from the feed board?"
         }
     }
 }
@@ -76,4 +84,11 @@ struct DropdownItem {
         case normal
         case destructive
     }
+}
+
+
+enum ListTaskMode {
+    case normal
+    case edit
+    case delete
 }

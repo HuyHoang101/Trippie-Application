@@ -6,10 +6,13 @@
 //
 
 import UIKit
+import Combine
 
 class TaskDetailModalViewController: UIViewController {
     
     var task: TaskOfTrip?
+    
+    var viewModel: TaskViewModel!
     
     // MARK: - UI Components
     private let containerView: UIView = {
@@ -132,23 +135,28 @@ class TaskDetailModalViewController: UIViewController {
         descriptionLabel.text = task.description
         
         if role {
+            multipleChoiceBtn.enableSelectionMode = true
+            let status = task.status
+            let index = status == .upcoming ? 0 : status == .onGoing ? 1 : status == .completed ? 2 : 3
+            multipleChoiceBtn.selectedIndex = index
+            
             multipleChoiceBtn.items = [
                 DropdownItem(title: "Upcoming", icon: "clock", type: .normal) {
-                    
+                    self.didTapUpcoming()
                 },
                 DropdownItem(title: "On going", icon: "figure.walk", type: .normal) {
-                    
+                    self.didTapOngoing()
                 },
                 DropdownItem(title: "Completed", icon: "checkmark.seal.fill", type: .normal) {
-                    
+                    self.didTapCompleted()
                 },
-                DropdownItem(title: "Cancel", icon: "xmark.circle.fill", type: .normal) {
-                    
+                DropdownItem(title: "Cancel", icon: "xmark.circle.fill", type: .destructive) {
+                    self.didTapCancel()
                 },
             ]
         }
         // Set Status Badge
-        let status = PersonalStatus(rawValue: task.status.rawValue) ?? .onGoing
+        let status = PersonalStatus(rawValue: task.status.rawValue) ?? .upcoming
         statusBadge.configure(status: status) // Giả định TripStatusBadge có hàm setStatus
         
         // Logic hiển thị Edit By / Created At
@@ -188,6 +196,42 @@ class TaskDetailModalViewController: UIViewController {
     
     @objc private func dismissModal() {
         self.dismiss(animated: true)
+    }
+    
+    @objc private func didTapUpcoming() {
+        var task = self.task
+        task?.status = .upcoming
+        self.viewModel.editingTask.send(task)
+        self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User", isEdit: false)
+        self.task = task
+        self.renderData()
+    }
+    
+    @objc private func didTapOngoing() {
+        var task = self.task
+        task?.status = .onGoing
+        self.viewModel.editingTask.send(task)
+        self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User", isEdit: false)
+        self.task = task
+        self.renderData()
+    }
+    
+    @objc private func didTapCompleted() {
+        var task = self.task
+        task?.status = .completed
+        self.viewModel.editingTask.send(task)
+        self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User", isEdit: false)
+        self.task = task
+        self.renderData()
+    }
+    
+    @objc private func didTapCancel() {
+        var task = self.task
+        task?.status = .cancel
+        self.viewModel.editingTask.send(task)
+        self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User", isEdit: false)
+        self.task = task
+        self.renderData()
     }
 }
 

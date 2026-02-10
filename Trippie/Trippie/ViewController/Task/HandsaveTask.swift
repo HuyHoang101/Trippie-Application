@@ -15,7 +15,7 @@ class HandsaveTask: FadeBaseViewController {
     var viewModel: TaskViewModel!
     var id: String!
     var userRole: UserRole!
-    private let imagesViewModel = ImageViewModel.shared
+    private let imagesViewModel = ImageViewModel()
     private var cancellabel = Set<AnyCancellable>()
     
     // MARK: - UI Components
@@ -32,9 +32,9 @@ class HandsaveTask: FadeBaseViewController {
     
     private lazy var titleField = UIStackView.createInputGroup(labelName: "Task Title:", placeholder: "Task title...", inputHeight: 45, delegate: self)
     private lazy var dayIndexField = UIStackView.createInputGroup(labelName: "Day of the trip:", placeholder: "1, 2, 3, ...", keyboardType: .numberPad, inputHeight: 45, delegate: self)
-    private lazy var timeLineField = UIStackView.createInputGroup(labelName: "Time at:", placeholder: "7:00 AM", keyboardType: .numberPad, inputHeight: 45, delegate: self)
+    private lazy var timeLineField = UIStackView.createInputGroup(labelName: "Time at:", placeholder: "7:00", style: .time, inputHeight: 45, delegate: self)
     private lazy var taskDescriptionField = UIStackView.createInputGroup(labelName: "Description:", placeholder: "Description...", isTextView: true, inputHeight: 45, delegate: self)
-    private lazy var startDateField = UIStackView.createInputGroup(labelName: "Date:", placeholder: "01/01/1999", style: InputStyle.date, inputHeight: 45, delegate: self)
+    private lazy var startDateField = UIStackView.createInputGroup(labelName: "Date:", placeholder: "01/01/1999", style: .date, inputHeight: 45, delegate: self)
     
     private let saveButton: UIButton = {
         let btn = UIButton(type: .system)
@@ -258,6 +258,7 @@ class HandsaveTask: FadeBaseViewController {
             time: finalTime)
         
         if let t = viewModel.editingTask.value {
+            task.id = t.id
             task.status = t.status
             task.creatorId = t.creatorId
             task.userName = t.userName
@@ -288,7 +289,7 @@ class HandsaveTask: FadeBaseViewController {
         let dateString = formatter.string(from: task.date!)
         startDateField.inputValue = "\(dateString)"
         coverImageSelected.renderImages([task.coverImage])
-        
+        imagesViewModel.uploadedUrls = [task.coverImage]
         saveButton.setTitle("Update", for: .normal)
         
     }
@@ -341,8 +342,6 @@ extension HandsaveTask: StackImagePickerDelegate {
     
     func didTapDeleteAll() {
         imagesViewModel.deleteAllImages()
-        guard let task = viewModel.editingTask.value else { return }
-        self.coverImageSelected.renderImages([task.coverImage])
     }
 }
 

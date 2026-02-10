@@ -336,9 +336,11 @@ class TripService {
     // Output: Trip (đã cập nhật số lượng thành viên)
     func leaveTrip(input: TripWithStatus) async throws -> Trip {
         var updatedTrip = input.trip
-        let userId = input.participation.userId
+        guard let userId = input.participation?.userId else {
+            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "ID user not found"])
+        }
         
-        guard let tripId = updatedTrip.id, let partId = input.participation.id else {
+        guard let tripId = updatedTrip.id, let partId = input.participation?.id else {
             throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "ID not found"])
         }
         

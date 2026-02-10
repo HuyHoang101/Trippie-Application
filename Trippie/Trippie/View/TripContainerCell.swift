@@ -20,7 +20,7 @@ class TripContainerCell: UITableViewCell {
     
     private func setupUI() {
         backgroundColor = .clear
-        selectionStyle = .none // Tắt hiệu ứng xám khi click
+        contentView.backgroundColor = .clear
         
         contentView.addSubview(cardView)
         cardView.translatesAutoresizingMaskIntoConstraints = false
@@ -36,5 +36,10 @@ class TripContainerCell: UITableViewCell {
     
     func bindData(trip: TripWithStatus) {
         cardView.configure(trip: trip, isListMode: true)
+    }
+    
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        cardView.prepareForReuse()
     }
 }

@@ -180,26 +180,26 @@ class MyTripViewController: FadeBaseViewController {
     func render() {
         let tripOnFeedBoard = Array(viewModel.myTrips.value.filter {
             $0.trip.status != .completed &&
-            $0.participation.role == .owner
+            $0.participation?.role == .owner
         })
         let currentTrips = Array(viewModel.myTrips.value.filter {
-            let isActive = $0.participation.personalStatus != .cancel &&
-                           $0.participation.personalStatus != .completed
-            let role = $0.participation.role
+            let isActive = $0.participation?.personalStatus != .cancel &&
+            $0.participation?.personalStatus != .completed
+            let role = $0.participation?.role
             let isRoleMatch = (role == .owner && $0.trip.status == .completed) || (role == .member)
             
             return isActive && isRoleMatch
         })
         let myTrips = Array(viewModel.myTrips.value.filter {
-            $0.participation.personalStatus == PersonalStatus.cancel &&
-            $0.participation.personalStatus == PersonalStatus.completed &&
-            $0.participation.role == UserRole.owner &&
+            $0.participation?.personalStatus == PersonalStatus.cancel &&
+            $0.participation?.personalStatus == PersonalStatus.completed &&
+            $0.participation?.role == UserRole.owner &&
             $0.trip.status == .completed
         })
         let joinTrips = Array(viewModel.myTrips.value.filter {
-            $0.participation.personalStatus == PersonalStatus.cancel &&
-            $0.participation.personalStatus == PersonalStatus.completed &&
-            $0.participation.role == UserRole.member
+            $0.participation?.personalStatus == PersonalStatus.cancel &&
+            $0.participation?.personalStatus == PersonalStatus.completed &&
+            $0.participation?.role == UserRole.member
         })
         
         hstack.arrangedSubviews.forEach{ $0.removeFromSuperview() }
@@ -216,7 +216,7 @@ class MyTripViewController: FadeBaseViewController {
             let trip = tripOnFeedBoard.prefix(5)
             trip.forEach { t in
                 let card = TripCardView()
-                card.configure(mytrip: t)
+                card.configure(mytrip: t, isOnFeedBoard: true)
                 hstack.addArrangedSubview(card)
                 card.translatesAutoresizingMaskIntoConstraints = false
                 card.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.6).isActive = true
@@ -378,9 +378,9 @@ class MyTripViewController: FadeBaseViewController {
         case viewAllButton1:
             listVC.navigationTitle = "Current Trips"
             listVC.myTrip = viewModel.myTrips.value.filter {
-                let isActive = $0.participation.personalStatus != .cancel &&
-                               $0.participation.personalStatus != .completed
-                let role = $0.participation.role
+                let isActive = $0.participation?.personalStatus != .cancel &&
+                $0.participation?.personalStatus != .completed
+                let role = $0.participation?.role
                 let isRoleMatch = (role == .owner && $0.trip.status == .completed) || (role == .member)
                 
                 return isActive && isRoleMatch
@@ -388,22 +388,22 @@ class MyTripViewController: FadeBaseViewController {
         case viewAllButton2:
             listVC.navigationTitle = "My Trips"
             listVC.myTrip = viewModel.myTrips.value.filter {
-                $0.participation.personalStatus == .completed &&
-                $0.participation.personalStatus == .cancel &&
-                $0.participation.role == .owner &&
+                $0.participation?.personalStatus == .completed &&
+                $0.participation?.personalStatus == .cancel &&
+                $0.participation?.role == .owner &&
                 $0.trip.status == .completed
             }
         case viewAllButton3:
             listVC.navigationTitle = "Joined Trips"
             listVC.myTrip = viewModel.myTrips.value.filter {
-                $0.participation.personalStatus != .completed &&
-                $0.participation.personalStatus != .cancel &&
-                $0.participation.role == .member
+                $0.participation?.personalStatus != .completed &&
+                $0.participation?.personalStatus != .cancel &&
+                $0.participation?.role == .member
             }
         default:
             listVC.navigationTitle = "My Trips on Feed Board"
             listVC.myTrip = viewModel.myTrips.value.filter {
-                $0.participation.role == .owner &&
+                $0.participation?.role == .owner &&
                 $0.trip.status != .completed
             }
             

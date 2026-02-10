@@ -10,8 +10,6 @@ import UIKit
 
 @MainActor
 class ImageViewModel {
-    static let shared = ImageViewModel()
-    
     @Published var uploadedUrls: [String] = []
     
     let loading = CurrentValueSubject<Bool, Never>(false)

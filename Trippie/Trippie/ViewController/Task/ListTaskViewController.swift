@@ -20,6 +20,11 @@ class ListTaskViewController: FadeBaseViewController {
             }
         }
     }
+    private var currentMode: ListTaskMode = .normal {
+        didSet {
+            tableView.reloadData() // Mỗi khi đổi mode thì reload lại bảng để hiện icon
+        }
+    }
     private var cancellabel = Set<AnyCancellable>()
     
     //MARK: - UI COMPONENT
@@ -123,8 +128,14 @@ class ListTaskViewController: FadeBaseViewController {
             DropdownItem(title: "Add Task", icon: "plus", type: .normal) {
                 self.handlepushToCreateTask()
             },
+            DropdownItem(title: "Edit Task", icon: "pencil.line", type: .normal) {
+                self.currentMode = .edit
+            },
             DropdownItem(title: "Delete Task", icon: "trash", type: .destructive) {
-                print("Delete Task")
+                self.currentMode = .delete
+            },
+            DropdownItem(title: "Cancel Action", icon: "xmark", type: .normal) {
+                self.currentMode = .normal
             }
         ]
         
@@ -186,9 +197,36 @@ class ListTaskViewController: FadeBaseViewController {
     @objc private func handlepushToCreateTask() {
         let creatTaskVC = HandsaveTask()
         creatTaskVC.id = self.id
-        creatTaskVC.userRole = tripWithStatus?.participation.role
+        creatTaskVC.userRole = tripWithStatus?.participation?.role
         creatTaskVC.viewModel = taskViewModel
         self.navigationController?.pushViewController(creatTaskVC, animated: true)
+    }
+    
+    private func handleEditAction(task: TaskOfTrip) {
+        let editTaskVC = HandsaveTask()
+        editTaskVC.id = self.id
+        editTaskVC.userRole = tripWithStatus?.participation?.role
+        editTaskVC.viewModel = taskViewModel
+        
+        self.taskViewModel.editingTask.send(task)
+        
+        self.navigationController?.pushViewController(editTaskVC, animated: true)
+        
+        self.currentMode = .normal
+    }
+    
+    @MainActor
+    private func handleDeleteAction(task: TaskOfTrip) async {
+        guard let tripId = self.id, let taskId = task.id else { return }
+        
+        let confirm = await confirmAlert(type: .delete, title: "task Day \(task.dayIndex) - \(task.time)?")
+        
+        if confirm {
+            self.taskViewModel.deleteTask(tripId: tripId, taskId: taskId)
+            self.currentMode = .normal
+        } else {
+            return
+        }
     }
     
     //MARK: - BINDING
@@ -218,8 +256,28 @@ extension ListTaskViewController: UITableViewDataSource, UITableViewDelegate {
         }
         
         let item = displayData[indexPath.row]
+        let userId = AuthService.shared.currentUserId!
         
-        cell.configure(with: item, id: AuthService.shared.currentUserId!)
+        cell.configure(with: item, id: userId)
+        if currentMode == .edit || currentMode == .normal {
+            cell.updateMode(mode: currentMode)
+        } else {
+            if item.userRole == .owner || item.creatorId == userId {
+                cell.updateMode(mode: currentMode)
+            } else {
+                cell.updateMode(mode: .normal)
+            }
+        }
+        cell.onTapAction = { [weak self] in
+            guard let self = self else { return }
+            if self.currentMode == .edit {
+                self.handleEditAction(task: item)
+            } else if self.currentMode == .delete {
+                Task {
+                    await self.handleDeleteAction(task: item)
+                }
+            }
+        }
         cell.backgroundColor = .clear
         cell.selectionStyle = .none
         
@@ -227,9 +285,11 @@ extension ListTaskViewController: UITableViewDataSource, UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        if currentMode != .normal { return }
         let row = displayData[indexPath.row]
         let vc = TaskDetailModalViewController()
         vc.task = row
+        vc.viewModel = self.taskViewModel
         vc.modalTransitionStyle = .crossDissolve
         vc.modalPresentationStyle = .overFullScreen
         

@@ -12,6 +12,12 @@ class DropdownButton: UIButton {
     // Data source
     var items: [DropdownItem] = []
     
+    // chức năng "trạng thái được chọn" (false default)
+    var enableSelectionMode: Bool = false
+    
+    // số dòng đươc chọn (-1 là chưa chọn gì)
+    var selectedIndex: Int = -1
+    
     // Config giao diện Box
     private let menuWidth: CGFloat = 200
     private let rowHeight: CGFloat = 44
@@ -59,10 +65,19 @@ class DropdownButton: UIButton {
         let rect = window.convert(self.bounds, from: self)
         
         // Debug: In ra để xem toạ độ có đúng là góc trên phải không (Ví dụ: x: 340, y: 50)
-        print("📍 Button Rect: \(rect)")
+        //print("📍 Button Rect: \(rect)")
         
         // 4. Tạo Menu
         let menu = DropdownMenuView(items: items, width: menuWidth, rowHeight: rowHeight)
+        
+        // Cấu hình chế độ chọn cho Menu
+        menu.isSelectionMode = self.enableSelectionMode
+        menu.selectedIndex = self.selectedIndex
+        
+        // Callback: khi menu chọn dòng mới, cập nhập lại biến selectedIndex của Button
+        menu.didSelectItem = { [weak self] index in
+            self?.selectedIndex = index
+        }
         
         // --- TÍNH TOÁN VỊ TRÍ ---
         
@@ -102,6 +117,13 @@ private class DropdownMenuView: UIView, UITableViewDataSource, UITableViewDelega
     
     private let items: [DropdownItem]
     private let rowHeight: CGFloat
+    
+    // Các biến nhận được dropdown button
+    var isSelectionMode: Bool = false
+    var selectedIndex: Int = -1
+    
+    // CallBack: cho button biết dòng nào đang được chọn
+    var didSelectItem: ((Int) -> Void)?
     
     // Màn che trong suốt để bắt sự kiện tap ra ngoài
     private let backgroundButton: UIButton = {
@@ -205,13 +227,26 @@ private class DropdownMenuView: UIView, UITableViewDataSource, UITableViewDelega
         cell.backgroundColor = .clear
         cell.selectionStyle = .none
         
-        if let icon = item.icon {
-            cell.imageView?.image = UIImage(systemName: icon)
-            cell.imageView?.tintColor = item.type == .destructive ? .systemRed : .label
+        let isSelected = (isSelectionMode && indexPath.row == selectedIndex)
+        
+        if isSelected {
+            cell.imageView?.image = UIImage(systemName: "checkmark")
+            cell.imageView?.tintColor = item.type == .destructive ? .systemRed.withAlphaComponent(0.6) : .label.withAlphaComponent(0.6)
+            
+            cell.textLabel?.textColor = item.type == .destructive ? .systemRed.withAlphaComponent(0.6) : .label.withAlphaComponent(0.6)
+            cell.isUserInteractionEnabled = false
+        } else {
+            cell.isUserInteractionEnabled = true
+            if let icon = item.icon {
+                cell.imageView?.image = UIImage(systemName: icon)
+                cell.imageView?.tintColor = item.type == .destructive ? .systemRed : .label
+            } else {
+                cell.imageView?.image = nil
+            }
+            
+            cell.textLabel?.textColor = item.type == .destructive ? .systemRed : .label
+            
         }
-        
-        cell.textLabel?.textColor = item.type == .destructive ? .systemRed : .label
-        
         return cell
     }
     
@@ -221,6 +256,12 @@ private class DropdownMenuView: UIView, UITableViewDataSource, UITableViewDelega
         generator.impactOccurred()
         
         items[indexPath.row].action()
+        
+        if isSelectionMode {
+            self.selectedIndex = indexPath.row
+            self.didSelectItem?(indexPath.row) // Báo về Button
+        }
+        
         dismiss()
     }
     

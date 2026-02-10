@@ -112,7 +112,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "425"
             endingLineNumber = "425"
-            landmarkName = "binding()"
+            landmarkName = "showConfirmAndUpdateAvatar(newUrl:)"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -128,8 +128,8 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "461"
             endingLineNumber = "461"
-            landmarkName = "ProfileViewController"
-            landmarkType = "21">
+            landmarkName = "binding()"
+            landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
    </Breakpoints>

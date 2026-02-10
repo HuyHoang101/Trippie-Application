@@ -10,6 +10,13 @@ import UIKit
 class TaskTableViewCell: UITableViewCell {
     static let identifier = "TaskTableViewCell"
 
+    // Callback khi bấm vào nút Edit/Delete
+    var onTapAction: (() -> Void)?
+    
+    private let actionButton = UIButton.customButton(image: UIImage(systemName: "trash"), backgroundColor: .clear, tintColor: .systemRed)
+    
+    private let rootStackView = UIStackView.customStack(axis: .horizontal, alignment: .fill, distribution: .fill, stackSpacing: 0)
+    
     // --- UI Components ---
     
     // Dòng 1: Avatar + Name (Left) | Day - Time (Right)
@@ -39,6 +46,7 @@ class TaskTableViewCell: UITableViewCell {
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setupLayout()
+        actionButton.addTarget(self, action: #selector(didTapActionBtn), for: .touchUpInside)
     }
     
     required init?(coder: NSCoder) {
@@ -101,22 +109,56 @@ class TaskTableViewCell: UITableViewCell {
         mainContainer.layer.masksToBounds = false
         mainContainer.translatesAutoresizingMaskIntoConstraints = false
         
-        contentView.addSubview(mainContainer)
+        contentView.addSubview(rootStackView)
+        
+        actionButton.isHidden = true
+        rootStackView.addArrangedSubview(mainContainer)
+        rootStackView.addArrangedSubview(actionButton)
+        
         mainContainer.addSubview(mainStack)
         
         // 5. Constraint cho Main Stack (Padding)
         NSLayoutConstraint.activate([
-            mainContainer.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
-            mainContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
-            mainContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
-            mainContainer.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
+            rootStackView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
+            rootStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 20),
+            rootStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -20),
+            rootStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -12),
             
             mainStack.topAnchor.constraint(equalTo: mainContainer.topAnchor, constant: 12),
             mainStack.leadingAnchor.constraint(equalTo: mainContainer.leadingAnchor, constant: 16),
             mainStack.trailingAnchor.constraint(equalTo: mainContainer.trailingAnchor, constant: -16),
-            mainStack.bottomAnchor.constraint(equalTo: mainContainer.bottomAnchor, constant: -12)
+            mainStack.bottomAnchor.constraint(equalTo: mainContainer.bottomAnchor, constant: -12),
+            
+            actionButton.widthAnchor.constraint(equalToConstant: 44)
         ])
     }
+    
+    // Hàm cập nhật giao diện dựa theo Mode
+    func updateMode(mode: ListTaskMode) {
+        UIView.animate(withDuration: 0.3) {
+            switch mode {
+            case .normal:
+                self.actionButton.isHidden = true
+                
+            case .edit:
+                self.actionButton.isHidden = false
+                self.actionButton.configuration?.image = UIImage(systemName: "pencil.line")
+                self.actionButton.configuration?.baseBackgroundColor = .clear
+                self.actionButton.configuration?.baseForegroundColor = .authBackground2
+                
+            case .delete:
+                self.actionButton.isHidden = false
+                self.actionButton.configuration?.image = UIImage(systemName: "trash.fill")
+                self.actionButton.configuration?.baseBackgroundColor = .clear
+                self.actionButton.configuration?.baseForegroundColor = .systemRed
+            }
+            
+            // Ép layout cập nhật ngay lập tức để thấy hiệu ứng trượt
+            self.contentView.layoutIfNeeded()
+        }
+    }
+    
+    
     
     // --- Configuration (Hàm đổ dữ liệu) ---
     func configure(with task: TaskOfTrip, id: String) {
@@ -151,5 +193,10 @@ class TaskTableViewCell: UITableViewCell {
         } else {
             mainContainer.backgroundColor = .systemBackground
         }
+    }
+    
+    // Action
+    @objc private func didTapActionBtn() {
+        onTapAction?()
     }
 }

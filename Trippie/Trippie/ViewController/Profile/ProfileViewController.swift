@@ -348,7 +348,7 @@ class ProfileViewController: FadeBaseViewController {
         let isFriend = viewModel2.isMyFriend(userId: anotherId)
         
         // Hiển thị Alert xác nhận
-        let isConfirmed = await confirmAlert(type: isFriend ? .unfollow : .follow, title: "\(another.name)")
+        let isConfirmed = await confirmAlert(type: isFriend ? .unfollow : .follow, title: "\(another.name)?")
         
         if isConfirmed {
             self.viewModel2.toggleFriendship(targetUser: another)
@@ -408,7 +408,7 @@ class ProfileViewController: FadeBaseViewController {
         self.avatar.setImage(url: newUrl)
         
         // 2. Hiện Alert hỏi
-        let isConfirmed = await confirmAlert(type: .add, title: "your new avatar")
+        let isConfirmed = await confirmAlert(type: .add, title: "your new avatar?")
         
         if isConfirmed {
             // --- ĐỒNG Ý ---

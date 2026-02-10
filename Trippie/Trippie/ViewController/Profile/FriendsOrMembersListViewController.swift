@@ -21,8 +21,11 @@ class FriendsOrMembersListViewController: FadeBaseViewController {
     
     private var displayData: [User] {
         let result = isAllUser ?? false ? viewModel.allUsers.value : (memberIds != nil) ? viewModel.profiles.value : viewModel.friendProfiles.value
+        self.emptyState.isHidden = !(result.count == 0)
         return result
     }
+    
+    private let emptyState = UILabel.customLabel(text: "No member was found.", font: .systemFont(ofSize: 16), textColor: .secondaryLabel)
     
     private let tableView = UITableView()
     
@@ -53,13 +56,18 @@ class FriendsOrMembersListViewController: FadeBaseViewController {
     private func setupUI() {
         view.backgroundColor = .systemBackground
         view.addSubview(tableView)
+        view.addSubview(emptyState)
+        emptyState.isHidden = true
         tableView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
             tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            
+            emptyState.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            emptyState.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 40)
         ])
     }
     

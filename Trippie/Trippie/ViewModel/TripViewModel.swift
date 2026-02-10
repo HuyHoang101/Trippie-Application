@@ -252,7 +252,7 @@ class TripViewModel {
                
                 if let resultId = result.id {
                     if let index = currentList.firstIndex(where: { item in
-                        return item.participation.id == resultId
+                        return item.participation?.id == resultId
                     }) {
                         currentList[index].participation = result
                         myTrips.send(currentList)

@@ -145,6 +145,32 @@ extension UITextField {
     @objc private func donePressed() {
         self.resignFirstResponder()
     }
+    
+    func setupTimePicker() {
+        let datePicker = UIDatePicker()
+        datePicker.datePickerMode = .time // Chế độ chỉ chọn giờ
+        datePicker.preferredDatePickerStyle = .wheels // Bắt buộc dùng wheels để chọn giờ dễ hơn
+        datePicker.locale = Locale(identifier: "en_GB") // Để ép kiểu 24h (00:00 - 23:59) thay vì AM/PM
+        
+        // Gán picker vào inputView
+        self.inputView = datePicker
+        
+        // Toolbar (Giống hệt DatePicker)
+        let toolbar = UIToolbar()
+        toolbar.sizeToFit()
+        let doneBtn = UIBarButtonItem(title: "Done", style: .plain, target: self, action: #selector(donePressed))
+        toolbar.setItems([UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil), doneBtn], animated: true)
+        self.inputAccessoryView = toolbar
+        
+        // Lắng nghe sự kiện đổi giờ
+        let action = UIAction { [weak self] _ in
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm" // Định dạng 24h (07:00, 13:00)
+            self?.text = formatter.string(from: datePicker.date)
+            self?.sendActions(for: .editingChanged)
+        }
+        datePicker.addAction(action, for: .valueChanged)
+    }
 }
 
 extension UITextView {
@@ -379,6 +405,9 @@ extension UIStackView {
             case .phoneNumber:
                 tf.keyboardType = .numberPad
             case .country:
+                tf.placeholder = placeholder
+            case .time:
+                tf.setupTimePicker()
                 tf.placeholder = placeholder
             }
             

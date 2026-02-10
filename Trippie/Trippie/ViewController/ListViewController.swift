@@ -13,16 +13,15 @@ class ListViewController: FadeBaseViewController {
     // MARK: - DATA
     var trip: [Trip]? {
         didSet {
-            DispatchQueue.main.async { [weak self] in
-                self?.tableView.reloadData()
-            }
+            self.formatData(from: trip)
         }
     }
     
     var myTrip: [TripWithStatus]? {
         didSet {
-            DispatchQueue.main.async { [weak self] in
-                self?.tableView.reloadData()
+            self.displayData = myTrip ?? []
+            if isViewLoaded {
+                self.tableView.reloadData()
             }
         }
     }
@@ -33,16 +32,7 @@ class ListViewController: FadeBaseViewController {
     private var cancellable = Set<AnyCancellable>()
     
     // Đã chỉnh lại để luôn trả về kiểu TripWithStatus
-    private var displayData: [TripWithStatus] {
-        if let myTrip = myTrip, !myTrip.isEmpty {
-            return myTrip
-        }
-        
-        // Nếu chỉ có Trip thường, ta bọc nó lại thành TripWithStatus để đồng nhất kiểu dữ liệu
-        return trip?.map {
-            TripWithStatus(trip: $0, participation: Participation(id: "", userId: "", tripId: "", personalStatus: .upcoming, role: .member))
-        } ?? []
-    }
+    private var displayData: [TripWithStatus] = []
     
     private let backBtn = UIButton.customButton(image: UIImage(systemName: "arrow.left"), backgroundColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.5) ?? .systemGray.withAlphaComponent(0.5))
     
@@ -106,10 +96,11 @@ class ListViewController: FadeBaseViewController {
     
     private func binding() {
         TripViewModel.shared.didTapChange
-            .receive(on: DispatchQueue.main)
             .sink { [weak self] changedID in
-                guard let self = self else { return }
-                self.syncData(with: changedID)
+                RunLoop.main.perform {
+                    self?.syncData(with: changedID)
+                    self?.tableView.reloadData()
+                }
             }
             .store(in: &cancellable)
     }
@@ -133,6 +124,15 @@ class ListViewController: FadeBaseViewController {
             } else {
                 self.trip?.remove(at: index)
             }
+        }
+    }
+    
+    private func formatData(from trip: [Trip]?) {
+        self.displayData = trip?.map {
+            TripWithStatus(trip: $0, participation: Participation(id: "", userId: "", tripId: "", personalStatus: .upcoming, role: .member))
+        } ?? []
+        if isViewLoaded {
+            self.tableView.reloadData()
         }
     }
 }
@@ -163,7 +163,7 @@ extension ListViewController: UITableViewDataSource, UITableViewDelegate {
         let detailVC = DetailViewController()
         detailVC.id = selectedTrip.trip.id
         detailVC.navigationTitle = "Detail: \(navigationTitle ?? selectedTrip.trip.location)"
-        if let partId = selectedTrip.participation.id, !partId.isEmpty {
+        if let partId = selectedTrip.participation?.id, !partId.isEmpty {
             detailVC.isFeedBoard = false
         } else {
             detailVC.isFeedBoard = true

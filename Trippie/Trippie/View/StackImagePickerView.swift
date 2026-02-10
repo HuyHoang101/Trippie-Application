@@ -83,23 +83,38 @@ class StackImagePickerView: UIView {
         
         let displayLimit = min(images.count, 3)
         
-        for (index, image) in images.prefix(displayLimit).enumerated() {
+        for (index, image) in images.prefix(displayLimit).enumerated().reversed() {
             let iv = TrippieImageView(style: .rounded(radius: 8, corners: [.layerMaxXMaxYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMinXMinYCorner]), isShadow: true)
             iv.setImage(url: image)
             iv.translatesAutoresizingMaskIntoConstraints = false
             containerView.addSubview(iv)
             NSLayoutConstraint.activate([
                 iv.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
-                iv.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
+                iv.centerYAnchor.constraint(equalTo: containerView.centerYAnchor, constant: displayLimit == 1 ? 0 : -5),
                 
                 iv.widthAnchor.constraint(equalTo: containerView.widthAnchor, multiplier: 0.9),
                 iv.heightAnchor.constraint(equalTo: iv.widthAnchor, multiplier: 0.6)
             ])
             
-            let scale = 1.0 - CGFloat(displayLimit - 1 - index) * 0.05
-            let rotation = CGFloat.random(in: -0.1...0.1)
-            
-            iv.transform = CGAffineTransform(rotationAngle: rotation).scaledBy(x: scale, y: scale)
+            if index != 0 {
+                // Tỷ lệ thu nhỏ: Mỗi tấm sau nhỏ hơn tấm trước 5%
+                let scale = 1.0 - (CGFloat(index) * 0.08)
+                
+                // Độ dịch xuống: Mỗi tấm sau tụt xuống 15pt so với tâm
+                // (chỉnh số 12 thành số khác để giãn khoảng cách tuỳ ý)
+                let translationY = CGFloat(index) * 12.0
+                
+                // Áp dụng Transform: Dịch xuống trước -> sau đó mới Thu nhỏ
+                iv.transform = CGAffineTransform(translationX: 0, y: translationY)
+                                .scaledBy(x: scale, y: scale)
+                
+                // (Optional) Làm mờ nhẹ các tấm sau để tạo chiều sâu
+                iv.alpha = 1.0 - (CGFloat(index) * 0.2)
+            } else {
+                // Tấm index 0: Giữ nguyên, không transform, rõ nét nhất
+                iv.transform = .identity
+                iv.alpha = 1.0
+            }
         }
         
         if images.count > displayLimit {

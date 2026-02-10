@@ -32,6 +32,9 @@ class MediaService {
     // MARK: - 2. Delete Function
     /// Xóa file dựa trên Link URL
     func deleteMedia(url: String) async throws {
+        guard url.contains("firebasestorage.googleapis.com") || url.hasPrefix("gs://") else {
+            return
+        }
         // Firebase hỗ trợ tạo reference trực tiếp từ link URL cực tiện
         let fileRef = Storage.storage().reference(forURL: url)
         try await fileRef.delete()

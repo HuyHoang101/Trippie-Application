@@ -12,10 +12,12 @@ class DetailViewController: FadeBaseViewController {
     
     //MARK: - Property
     private let viewModel = TripViewModel.shared
+    private let imagesViewModel = ImageViewModel()
     private var cancellable = Set<AnyCancellable>()
     var id: String?
     var isFeedBoard: Bool?
     var navigationTitle: String?
+    private var tripDetailWithStatus: TripWithStatus?
     
     //MARK: - UI COMPONENT
     private let coverImage = TrippieImageView(style: .rounded(radius: 14, corners: [.layerMaxXMaxYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMinXMinYCorner]), isShadow: false, borderColor: .clear)
@@ -42,6 +44,8 @@ class DetailViewController: FadeBaseViewController {
     
     private let backBtn = UIButton.customButton(image: UIImage(systemName: "arrow.left"), backgroundColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.5) ?? .systemGray.withAlphaComponent(0.5))
     private let questionBtn = UIButton.customButton(image: UIImage(systemName: "questionmark"), backgroundColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.5) ?? .systemGray.withAlphaComponent(0.5))
+    private let menuBtn = DropdownButton()
+    
         //MARK: - LIFE CYCLE
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -137,7 +141,7 @@ class DetailViewController: FadeBaseViewController {
             print("DEBUG: Trip not found with ID: \(self.id ?? "nil")")
             return
         }
-        
+        self.tripDetailWithStatus = TripWithStatus(trip: trip, participation: participation)
         // 3. Hiển thị các thành phần dùng chung
         titleLabel.text = trip.title
         locationLabel.text = "\(trip.location), \(trip.country)"
@@ -152,6 +156,8 @@ class DetailViewController: FadeBaseViewController {
         let formatter = DateFormatter()
         formatter.dateFormat = "dd/MM/yyyy"
         startDateLabel.text = "Start: \(formatter.string(from: trip.startTime))"
+        
+        guard let id = AuthService.shared.currentUserId else {return}
         
         // 4. Hiển thị các thành phần đặc thù (Status & Role)
         if let part = participation {
@@ -179,7 +185,6 @@ class DetailViewController: FadeBaseViewController {
             container.font = UIFont.systemFont(ofSize: 13)
             appliedLabel.numberOfLines = 0
             
-            guard let id = AuthService.shared.currentUserId else {return}
             if id == trip.ownerId {
                 containerAppliedButton.isHidden = true
             } else if trip.pendingRequests.contains(id) {
@@ -209,6 +214,42 @@ class DetailViewController: FadeBaseViewController {
                 appliedLabel.text = "This trip would be even better with you. Join the trip now!"
             }
         }
+        var dropDownMenus: [DropdownItem] = []
+        
+        if id == trip.ownerId {
+            dropDownMenus.append(DropdownItem(title: "All images", icon: "photo.on.rectangle.angled", type: .normal) {
+                self.pushToAllImage(isOwner: true)
+            })
+            if trip.status != .completed {
+                dropDownMenus.append(DropdownItem(title: "Remove from Feed", icon: "arrow.down.document", type: .normal) {
+                    Task {
+                        await self.didTapRemoveFormFeed()
+                    }
+                })
+            }
+            dropDownMenus.append(DropdownItem(title: "Edit Trip", icon: "pencil.line", type: .normal) {
+                self.pushToHandSaveTrip()
+            })
+            dropDownMenus.append(DropdownItem(title: "Members Joined", icon: "person.2.badge.gearshape", type: .normal) {
+                self.pushToMembers(isOwner: true)
+            })
+            dropDownMenus.append(DropdownItem(title: "Pending Requests", icon: "person.checkmark.and.xmark", type: .normal) {
+                self.pushToPendingRequests()
+            })
+            dropDownMenus.append(DropdownItem(title: "Delete the trip", icon: "trash", type: .destructive) {
+                Task {
+                    await self.didTapDeleteTheTrip()
+                }
+            })
+        } else {
+            dropDownMenus.append(DropdownItem(title: "All images", icon: "photo.on.rectangle.angled", type: .normal) {
+                self.pushToAllImage(isOwner: false)
+            })
+            dropDownMenus.append(DropdownItem(title: "Members Joined", icon: "person.3.sequence", type: .normal) {
+                self.pushToMembers(isOwner: false)
+            })
+        }
+        self.menuBtn.items = dropDownMenus
     }
     
     private func setupNavBar() {
@@ -217,8 +258,9 @@ class DetailViewController: FadeBaseViewController {
         
         let leftItem = UIBarButtonItem(customView: backBtn)
         let rightItem = UIBarButtonItem(customView: questionBtn)
+        let rightItem2 = UIBarButtonItem(customView: menuBtn)
         self.navigationItem.leftBarButtonItem = leftItem
-        self.navigationItem.rightBarButtonItem = rightItem
+        self.navigationItem.rightBarButtonItems = [rightItem2, rightItem]
         
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
@@ -260,6 +302,60 @@ class DetailViewController: FadeBaseViewController {
         taskVC.id = self.id
         taskVC.navigationTitle = self.locationLabel.text
         self.navigationController?.pushViewController(taskVC, animated: true)
+    }
+    
+    @objc private func pushToPendingRequests() {
+        let userListVC = FriendsOrMembersListViewController()
+        userListVC.navigationTitle = "Pending Requests"
+        userListVC.isPendingRequest = true
+        userListVC.memberIds = self.tripDetailWithStatus?.trip.pendingRequests
+        self.navigationController?.pushViewController(userListVC, animated: true)
+    }
+    
+    @objc private func pushToMembers(isOwner: Bool) {
+        let userListVC = FriendsOrMembersListViewController()
+        userListVC.navigationTitle = "All Members"
+        if isOwner {
+            userListVC.isPendingRequest = false
+        }
+        userListVC.memberIds = self.tripDetailWithStatus?.trip.members
+        self.navigationController?.pushViewController(userListVC, animated: true)
+    }
+    
+    @objc private func didTapRemoveFormFeed() async {
+        guard var trip = tripDetailWithStatus else { return }
+        viewModel.editingTrip.send(trip)
+        trip.trip.status = .completed
+        let confirmAlert = await confirmAlert(type: .remove, title: "This action cannot be undone!")
+        if confirmAlert {
+            self.viewModel.handleSave(trip: trip.trip)
+        }
+    }
+    
+    @objc private func didTapDeleteTheTrip() async {
+        guard let trip = tripDetailWithStatus else { return }
+        let confirmAlert = await confirmAlert(type: .deleteTrip, title: "This action cannot be undone!")
+        if confirmAlert {
+            self.imagesViewModel.uploadedUrls = trip.trip.coverImage
+            self.viewModel.deleteTrip(tripId: trip.trip.id!)
+            self.imagesViewModel.deleteAllImages()
+            self.handleBack()
+        }
+    }
+    
+    @objc private func pushToHandSaveTrip() {
+        let vc = HandSaveTrip()
+        vc.viewModel = viewModel
+        self.viewModel.editingTrip.send(tripDetailWithStatus)
+        self.navigationController?.pushViewController(vc, animated: true)
+    }
+    
+    @objc private func pushToAllImage(isOwner: Bool) {
+        let vc = AllPhotosViewController()
+        vc.imageUrls = (self.tripDetailWithStatus?.trip.coverImage)!
+        vc.isOwnerOpen = isOwner
+        vc.trip = self.tripDetailWithStatus
+        self.navigationController?.pushViewController(vc, animated: true)
     }
     
     //MARK: - BINDING

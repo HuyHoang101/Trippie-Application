@@ -51,14 +51,14 @@ class TaskViewModel {
     }
     
     //2. CREATE/EDIT TASK
-    func handSaveTask(task: TaskOfTrip, name: String) {
+    func handSaveTask(task: TaskOfTrip, name: String, isEdit: Bool = true) {
         self.loading.send(true)
         
         Task {
             do {
                 if let tripId = editingTask.value?.tripId {
                     
-                    let result = try await taskService.updateTask(tripId: tripId, task: task, name: name)
+                    let result = try await taskService.updateTask(tripId: tripId, task: task, name: name, isEdit: isEdit)
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                         NotificationCenter.default.post(
                             name: .showGlobalToast,
@@ -136,9 +136,29 @@ class TaskViewModel {
                 updatedTask.removeAll(where: {$0.id == taskId})
                 tasks.send(updatedTask)
                 self.loading.send(false)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.post(
+                        name: .showGlobalToast,
+                        object: nil,
+                        userInfo: [
+                            "message": "Delete Task Successfully!",
+                            "isSuccess": true
+                        ]
+                    )
+                }
             } catch {
                 self.loading.send(false)
                 self.errorMessage.send(error.localizedDescription)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.post(
+                        name: .showGlobalToast,
+                        object: nil,
+                        userInfo: [
+                            "message": "Delete Task failed: \(error.localizedDescription)",
+                            "isSuccess": false
+                        ]
+                    )
+                }
             }
         }
     }
