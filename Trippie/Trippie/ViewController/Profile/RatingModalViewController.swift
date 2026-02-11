@@ -9,7 +9,9 @@ import UIKit
 import Combine
 
 class RatingModalViewController: UIViewController {
-
+    deinit {
+        print("\(String(describing: self)) đã bị hủy (Deallocated)!")
+    }
     // MARK: - Data
     var otherUserId: String?
     private let viewModel = UserViewModel.shared

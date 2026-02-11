@@ -239,12 +239,12 @@ private class DropdownMenuView: UIView, UITableViewDataSource, UITableViewDelega
             cell.isUserInteractionEnabled = true
             if let icon = item.icon {
                 cell.imageView?.image = UIImage(systemName: icon)
-                cell.imageView?.tintColor = item.type == .destructive ? .systemRed : .label
+                cell.imageView?.tintColor = item.type == .destructive ? .systemRed : item.type == .clear ? .systemGreen : .label
             } else {
                 cell.imageView?.image = nil
             }
             
-            cell.textLabel?.textColor = item.type == .destructive ? .systemRed : .label
+            cell.textLabel?.textColor = item.type == .destructive ? .systemRed : item.type == .clear ? .systemGreen : .label
             
         }
         return cell

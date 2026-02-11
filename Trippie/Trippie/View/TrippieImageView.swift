@@ -6,77 +6,99 @@
 //
 
 import UIKit
+
+// MARK: - GLOBAL CACHE (Thread-Safe)
 class GlobalCacheForApplication {
-    // 1. Tạo cache toàn cục (nằm ngoài class) để dùng chung cho mọi ảnh
+    
+    // 1. Dùng NSLock để bảo vệ biến allKeys khi nhiều luồng truy cập cùng lúc
+    private static let lock = NSLock()
+    
     static let globalImageCache: NSCache<NSString, UIImage> = {
         let cache = NSCache<NSString, UIImage>()
-            // giới hạn 200MB (1024 * 1024 * 200)
-            cache.totalCostLimit = 200 * 1024 * 1024
-            return cache
+        cache.totalCostLimit = 200 * 1024 * 1024 // 200MB
+        return cache
     }()
     
+    // Set không phải là thread-safe, bắt buộc phải dùng Lock
     private static var allKeys = Set<NSString>()
 
     static func cacheImage(_ image: UIImage, for url: String, cost: Int) {
         let key = url as NSString
         globalImageCache.setObject(image, forKey: key, cost: cost)
+        
+        // Lock trước khi ghi vào Set
+        lock.lock()
         allKeys.insert(key)
+        lock.unlock()
     }
     
-    // Hàm lấy ảnh từ cache (cập nhật lại Set nếu ảnh bị hệ thống tự xóa)
     static func getCachedImage(for url: String) -> UIImage? {
         let key = url as NSString
-        guard let image = globalImageCache.object(forKey: key) else {
-            allKeys.remove(key) // Nếu cache tự xóa thì ta cũng xóa key
-            return nil
+        // Kiểm tra nhanh, nếu có trả về luôn
+        if let image = globalImageCache.object(forKey: key) {
+            return image
         }
-        return image
+        
+        // Nếu không có trong cache (đã bị evict), xóa key khỏi Set cho đồng bộ
+        // (Cần lock vì remove cũng là ghi đổi dữ liệu)
+        lock.lock()
+        if allKeys.contains(key) {
+            allKeys.remove(key)
+        }
+        lock.unlock()
+        
+        return nil
     }
     
     static func clearAllCache() {
         globalImageCache.removeAllObjects()
+        lock.lock()
         allKeys.removeAll()
+        lock.unlock()
     }
     
+    // Tính toán size cũng cần Lock để tránh crash khi đang for-loop mà mảng bị thay đổi
     static func calculateCurrentCacheSize() -> Double {
         var totalBytes = 0
-        let keys = allKeys // Tạo bản sao để tránh lỗi crash khi thay đổi mảng lúc đang lặp
         
-        for key in keys {
+        lock.lock()
+        let keysSnapshot = allKeys // Tạo bản sao snapshot trong vùng an toàn
+        lock.unlock()
+        
+        for key in keysSnapshot {
             if let image = globalImageCache.object(forKey: key) {
                 let bytesPerPixel = 4
-                // 💡 Quan trọng: Phải nhân với scale^2 vì ảnh Retina chiếm nhiều RAM hơn
                 let sizeInBytes = Int(image.size.width * image.size.height * image.scale * image.scale) * bytesPerPixel
                 totalBytes += sizeInBytes
             } else {
-                // Nếu ảnh không còn trong NSCache, dọn dẹp luôn cái key này cho sạch
+                // Dọn dẹp key rác (cần lock lại khi remove)
+                lock.lock()
                 allKeys.remove(key)
+                lock.unlock()
             }
         }
         return Double(totalBytes) / (1024 * 1024)
     }
 }
 
+// MARK: - IMAGE VIEW
 class TrippieImageView: UIView {
     
-    // MARK: - SUBVIEW
     private let imageView: UIImageView = {
         let iv = UIImageView()
-        iv.contentMode = .scaleAspectFill // Mặc định fill đầy
+        iv.contentMode = .scaleAspectFill
         iv.clipsToBounds = true
         iv.translatesAutoresizingMaskIntoConstraints = false
-        // Màu mặc định cho icon placeholder (màu xám nhạt cho tinh tế)
         iv.tintColor = .systemGray4
         return iv
     }()
     
-    // MARK: - PROPERTIES
     private var style: TrippieImageStyle = .circle
-    
-    // Biến lưu task tải ảnh hiện tại (để có thể cancel)
     private var currentTask: URLSessionDataTask?
     
-    // MARK: - INIT
+    // 💡 QUAN TRỌNG: Lưu URL hiện tại để so sánh khi tải xong
+    private var currentURLString: String?
+    
     init(style: TrippieImageStyle, isShadow: Bool = false, borderColor: UIColor? = nil) {
         self.style = style
         super.init(frame: .zero)
@@ -89,14 +111,9 @@ class TrippieImageView: UIView {
         setupLayout()
     }
     
-    // MARK: - SETUP
     private func setupLayout() {
         self.backgroundColor = .clear
-        
-        // Add ảnh vào trong view container
         addSubview(imageView)
-        
-        // Pin 4 cạnh của ảnh dính chặt vào Container
         NSLayoutConstraint.activate([
             imageView.topAnchor.constraint(equalTo: self.topAnchor),
             imageView.bottomAnchor.constraint(equalTo: self.bottomAnchor),
@@ -106,13 +123,10 @@ class TrippieImageView: UIView {
     }
     
     private func configureStyle(isShadow: Bool, borderColor: UIColor?) {
-        // 1. Setup Border
         if let border = borderColor {
             imageView.layer.borderWidth = 1.5
             imageView.layer.borderColor = border.cgColor
         }
-        
-        // 2. Setup Shadow
         if isShadow {
             self.layer.shadowColor = UIColor.black.cgColor
             self.layer.shadowOpacity = 0.2
@@ -122,10 +136,8 @@ class TrippieImageView: UIView {
         }
     }
     
-    // MARK: - LIFECYCLE (Xử lý bo tròn động)
     override func layoutSubviews() {
         super.layoutSubviews()
-        
         switch style {
         case .circle:
             let radius = bounds.width / 2
@@ -134,7 +146,6 @@ class TrippieImageView: UIView {
             if layer.shadowOpacity > 0 {
                 layer.shadowPath = UIBezierPath(ovalIn: bounds).cgPath
             }
-            
         case .rounded(let radius, let corners):
             imageView.layer.cornerRadius = radius
             if let specificCorners = corners {
@@ -146,81 +157,85 @@ class TrippieImageView: UIView {
         }
     }
     
-    // MARK: - PUBLIC METHOD (LOAD ẢNH NATIVE)
-    
-    func setImage(url: String?, placeholderSystemName: String = "photo.on.rectangle.angled") {
-        // 1. Hủy task cũ đang chạy (nếu có) để tránh nhảy ảnh lung tung
+    // MARK: - LOGIC LOAD ẢNH
+    func setImage(url: String?, placeholderSystemName: String = "photo.on.rectangle.angled", pixel: CGFloat = 1024) {
+        // 1. Hủy task cũ ngay lập tức
         currentTask?.cancel()
         
-        // 2. Setup Placeholder (System Icon)
-        let config = UIImage.SymbolConfiguration(pointSize: 30, weight: .light)
-        let placeholder = UIImage(systemName: placeholderSystemName, withConfiguration: config)
+        // 2. Lưu lại URL mới nhất mà view này CẦN hiển thị
+        currentURLString = url
         
-        // 2.1. Đặt ảnh placeholder
-        self.imageView.image = placeholder
-
-        // 2.2. Chỉnh màu cho icon (SF Symbol) thành màu xám đậm
-        self.imageView.tintColor = .systemGray5.withAlphaComponent(0.25)
-
-        // 2.3. Đặt màu nền cho ImageView
-        // Cậu dùng .systemGray6 hoặc tự pha màu gray đậm một chút
-        self.backgroundColor = UIColor(white: 0.9, alpha: 1.0)
-        self.clipsToBounds = true
-
-        // 2.4. Căn giữa icon
-        self.imageView.contentMode = .scaleAspectFit
-        
-        // 3. Kiểm tra URL hợp lệ
-        self.imageView.backgroundColor = .white
-        self.backgroundColor = .clear
-        self.clipsToBounds = false
-        guard let urlString = url, let validUrl = URL(string: urlString) else { return }
-        
-        // 4. KIỂM TRA CACHE: Nếu có ảnh rồi thì lấy ra dùng luôn
-        if let cachedImage = GlobalCacheForApplication.globalImageCache.object(forKey: urlString as NSString) {
-            self.imageView.image = cachedImage
-            self.imageView.contentMode = .scaleAspectFill
+        // 3. Validate URL
+        guard let urlString = url, !urlString.isEmpty, let validUrl = URL(string: urlString) else {
+            self.setPlaceholderImmediately(name: placeholderSystemName)
             return
         }
         
-        // 5. TẢI ẢNH và down size
-        currentTask = URLSession.shared.dataTask(with: validUrl) { [weak self] data, response, error in
-                guard let self = self, let data = data, error == nil else { return }
+        // 4. CHECK CACHE (Dùng hàm getCachedImage đã sửa ở trên)
+        if let cachedImage = GlobalCacheForApplication.getCachedImage(for: urlString) {
+            self.imageView.image = cachedImage
+            self.imageView.contentMode = .scaleAspectFill
+            self.imageView.backgroundColor = .white
+            return
+        }
+        
+        // 5. Nếu chưa có cache -> Set Placeholder NGAY LẬP TỨC (không dùng async để tránh nháy)
+        self.setPlaceholderImmediately(name: placeholderSystemName)
+        
+        // 6. Tải ảnh
+        let request = URLRequest(url: validUrl, cachePolicy: .returnCacheDataElseLoad, timeoutInterval: 30)
+        
+        currentTask = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            guard let self = self else { return }
+            
+            // Nếu lỗi hoặc không có data
+            guard let data = data, error == nil else {
+                return // Giữ nguyên placeholder
+            }
+            
+            // Xử lý Downsample trên Background Thread
+            DispatchQueue.global(qos: .userInitiated).async {
+                guard let downsampledImage = ImageUtils.downsample(imageData: data, maxDimension: pixel) else { return }
                 
-                // --- TÍNH TOÁN KÍCH THƯỚC CỐ ĐỊNH (FIXED SIZE) ---
-                
-                let screenWidth = UIScreen.main.bounds.width
-                let targetWidth = screenWidth - 40 // Trừ hao padding an toàn
-                let scale = UIScreen.main.scale
-                
-                // Đây là con số Max Pixel (cạnh lớn nhất của ảnh sẽ không vượt quá số này)
-                let maxDimension = targetWidth * scale
-                
-                // --- DOWNSAMPLE ---
-                guard let downsampledImage = ImageUtils.downsample(imageData: data, maxDimension: maxDimension) else { return }
-                
-                // --- LƯU CACHE ---
-                // Tính cost chuẩn xác
+                // Lưu cache (Thread-safe)
                 let cost = Int(downsampledImage.size.width * downsampledImage.size.height * 4)
                 GlobalCacheForApplication.cacheImage(downsampledImage, for: urlString, cost: cost)
                 
+                // Về Main Thread để hiển thị
                 DispatchQueue.main.async {
-                    self.imageView.contentMode = .scaleAspectFill
-                    // Animation hiện ảnh
-                    UIView.transition(with: self.imageView,
-                                      duration: 0.3,
-                                      options: .transitionCrossDissolve,
-                                      animations: {
-                        self.imageView.image = downsampledImage
-                    }, completion: nil)
+                    // 💡 CỰC KỲ QUAN TRỌNG: Kiểm tra xem Cell này còn cần URL này không?
+                    // Nếu người dùng đã lướt đi chỗ khác (currentURLString đã thay đổi), thì bỏ qua ảnh này.
+                    if self.currentURLString == urlString {
+                        self.imageView.contentMode = .scaleAspectFill
+                        self.imageView.backgroundColor = .white
+                        
+                        UIView.transition(with: self.imageView,
+                                          duration: 0.25,
+                                          options: .transitionCrossDissolve,
+                                          animations: {
+                            self.imageView.image = downsampledImage
+                        }, completion: nil)
+                    }
                 }
             }
-            currentTask?.resume()
+        }
+        currentTask?.resume()
     }
     
-    // Hàm set ảnh local
     func setLocalImage(name: String) {
+        currentURLString = nil // Reset URL string để tránh xung đột
         imageView.image = UIImage(named: name)
         imageView.contentMode = .scaleAspectFill
+    }
+    
+    // Hàm set placeholder không cần async để tránh delay 1 frame
+    private func setPlaceholderImmediately(name: String) {
+        let config = UIImage.SymbolConfiguration(pointSize: 30, weight: .light)
+        let placeholder = UIImage(systemName: name, withConfiguration: config)
+        
+        self.imageView.image = placeholder
+        self.imageView.tintColor = .systemGray5.withAlphaComponent(0.25)
+        self.imageView.backgroundColor = .white // Hoặc .systemGray6
+        self.imageView.contentMode = .scaleAspectFit
     }
 }

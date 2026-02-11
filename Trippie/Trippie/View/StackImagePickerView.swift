@@ -191,8 +191,7 @@ class StackImagePickerView: UIView {
         } else {
             self.loadingView.isHidden = true
             self.loadingView.stop()
-            self.actionButton.isEnabled = false
-            self.actionButton.configuration?.baseBackgroundColor = .authBackground1
+            self.actionButton.isEnabled = true
         }
     }
 }

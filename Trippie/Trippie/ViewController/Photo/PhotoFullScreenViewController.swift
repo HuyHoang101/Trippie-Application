@@ -9,6 +9,9 @@ import UIKit
 import SDWebImage
 
 class PhotoFullScreenViewController: UIViewController {
+    deinit {
+        print("\(String(describing: self)) đã bị hủy (Deallocated)!")
+    }
     
     var imageUrls: [String] = []
     var currentIndex: Int = 0

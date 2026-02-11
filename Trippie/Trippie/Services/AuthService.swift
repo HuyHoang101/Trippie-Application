@@ -158,17 +158,51 @@ class AuthService {
             let credential = FacebookAuthProvider.credential(withAccessToken: token)
             
             // 4. Đăng nhập vào Firebase Auth
-            let authResult = try await Auth.auth().signIn(with: credential)
-            
-            // 5. Check logic User cũ/mới
-            let trippieUser = try await handleCheckFirstLogin(firebaseUser: authResult.user)
-            
-            // 6. Lưu Cache
-            saveUserToCache(uid: trippieUser.id ?? "")
-            saveUserNameToCache(name: trippieUser.name)
-            saveUserAvatarToCache(avatarUrl: trippieUser.avatarUrl)
-            
-            return trippieUser
+            do {
+                let authResult = try await Auth.auth().signIn(with: credential)
+                // Nếu thành công (chưa có Google, hoặc đã link rồi) -> Vào luôn
+                let trippieUser = try await handleCheckFirstLogin(firebaseUser: authResult.user)
+                
+                // 6. Lưu Cache
+                saveUserToCache(uid: trippieUser.id ?? "")
+                saveUserNameToCache(name: trippieUser.name)
+                saveUserAvatarToCache(avatarUrl: trippieUser.avatarUrl)
+                
+                return trippieUser
+                
+            } catch let error as NSError {
+                // 4. BẮT LỖI: TÀI KHOẢN ĐÃ TỒN TẠI
+                if error.code == AuthErrorCode.accountExistsWithDifferentCredential.rawValue {
+                    
+                    print("⚠️ Email này đã tồn tại ở phương thức khác. Đang thử liên kết với Google...")
+                    
+                    // --- THAY ĐỔI Ở ĐÂY ---
+                    // Không dùng fetchSignInMethods nữa.
+                    // Ta mặc định thử đăng nhập Google để xác minh chủ sở hữu (Vì cậu chỉ có Google và FB là chính).
+                    // Nếu App cậu có cả Password, cậu nên hiện Alert cho user chọn: "Bạn muốn xác minh bằng Google hay Mật khẩu?"
+                    
+                    do {
+                        // 1. Yêu cầu đăng nhập Google để chứng minh là chủ tài khoản
+                        // (Hàm này sẽ trả về User Google đang active)
+                        let _ = try await signInWithGoogle(presenting: presenting)
+                        
+                        // 2. Nếu đăng nhập Google thành công -> Lấy User đó ra
+                        if let currentUser = Auth.auth().currentUser {
+                            
+                            // 3. Nối cái Facebook Credential (biến 'credential' ở trên) vào tài khoản Google này
+                            let linkResult = try await currentUser.link(with: credential)
+                            
+                            print("✅ Đã liên kết Facebook vào Google thành công!")
+                            return try await handleCheckFirstLogin(firebaseUser: linkResult.user)
+                        }
+                    } catch {
+                        // Nếu login Google cũng thất bại (User tắt popup hoặc không phải acc Google)
+                        throw NSError(domain: "Auth", code: -1, userInfo: [NSLocalizedDescriptionKey: "Vui lòng đăng nhập bằng phương thức gốc (Google/Email) trước để liên kết."])
+                    }
+                }
+                
+                throw error
+            }
         }
     
     

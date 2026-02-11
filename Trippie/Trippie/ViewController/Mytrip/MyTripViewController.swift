@@ -9,7 +9,9 @@ import UIKit
 import Combine
 
 class MyTripViewController: FadeBaseViewController {
-    
+    deinit {
+        print("\(String(describing: self)) đã bị hủy (Deallocated)!")
+    }
     private var viewModel = TripViewModel.shared
     private var cancellable = Set<AnyCancellable>()
     

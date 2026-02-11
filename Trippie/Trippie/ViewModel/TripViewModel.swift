@@ -21,6 +21,7 @@ class TripViewModel {
     let myTrips = CurrentValueSubject<[TripWithStatus], Never>([])
     let loading = CurrentValueSubject<Bool, Never>(false)
     let errorMessage = PassthroughSubject<String, Never>()
+    let successMessage = PassthroughSubject<String, Never>()
     let editingTrip = CurrentValueSubject<TripWithStatus?, Never>(nil)
     let didTapChange = PassthroughSubject<String, Never>()
     
@@ -100,34 +101,14 @@ class TripViewModel {
                     let result = try await tripService.updateTrip(trip: trip)
                    
                     self.updateLocalLists(updatedTrip: result.trip)
-                    
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        NotificationCenter.default.post(
-                            name: .showGlobalToast,
-                            object: nil,
-                            userInfo: [
-                                "message": "Update Trip Successfully!",
-                                "isSuccess": true
-                            ]
-                        )
-                    }
+                    self.successMessage.send("Update Trip Successfully!")
                    
                 } else {
                     // --- CASE: CREATE ---
                     let result = try await tripService.createTrip(trip: trip)
                    
                     self.updateLocalLists(updatedTrip: result.trip)
-                    
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        NotificationCenter.default.post(
-                            name: .showGlobalToast,
-                            object: nil,
-                            userInfo: [
-                                "message": "Create Trip Successfully!",
-                                "isSuccess": true
-                            ]
-                        )
-                    }
+                    self.successMessage.send("Create Trip Successfully!")
                 }
               
                 self.loading.send(false)
@@ -135,17 +116,7 @@ class TripViewModel {
               
             } catch {
                 self.loading.send(false)
-                self.errorMessage.send("Lưu thất bại: \(error.localizedDescription)")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    NotificationCenter.default.post(
-                        name: .showGlobalToast,
-                        object: nil,
-                        userInfo: [
-                            "message": "Save trip failed!",
-                            "isSuccess": false
-                        ]
-                    )
-                }
+                self.errorMessage.send("Save failed: \(error.localizedDescription)")
             }
         }
     }
@@ -205,6 +176,7 @@ class TripViewModel {
             do {
                 let updatedTrip = try await tripService.acceptJoinTrip(userId: userId, trip: trip)
                 self.updateLocalLists(updatedTrip: updatedTrip)
+                self.successMessage.send("Accept member successfully!")
                 self.loading.send(false)
             } catch {
                 self.loading.send(false)
@@ -219,10 +191,11 @@ class TripViewModel {
             do {
                 let updatedTrip = try await tripService.denyJoinTrip(userId: userId, trip: trip)
                 self.updateLocalLists(updatedTrip: updatedTrip)
+                self.successMessage.send("Deny member successfully!")
                 self.loading.send(false)
             } catch {
                 self.loading.send(false)
-                self.errorMessage.send("Lỗi: \(error.localizedDescription)")
+                self.errorMessage.send("Error: \(error.localizedDescription)")
             }
         }
     }
@@ -233,10 +206,11 @@ class TripViewModel {
             do {
                 let updatedTrip = try await tripService.kickMemberInTrip(userId: userId, trip: trip)
                 self.updateLocalLists(updatedTrip: updatedTrip)
+                self.successMessage.send("Kick member successfully!")
                 self.loading.send(false)
             } catch {
                 self.loading.send(false)
-                self.errorMessage.send("Xoá thành viên thất bại: \(error.localizedDescription)")
+                self.errorMessage.send("Delete failed: \(error.localizedDescription)")
             }
         }
     }
@@ -259,7 +233,7 @@ class TripViewModel {
                         didTapChange.send(result.tripId)
                     }
                 }
-              
+                self.successMessage.send("Update personal status successfully!")
                 self.loading.send(false)
               
             } catch {
@@ -270,15 +244,24 @@ class TripViewModel {
     }
     
     // MARK: - LEAVE TRIP
-    func leaveTrip(tripWithStatus: TripWithStatus) {
+    func leaveTrip(trip: Trip) {
         self.loading.send(true)
        
         Task {
             do {
-                let updatedTrip = try await tripService.leaveTrip(input: tripWithStatus)
+                let updatedTrip = try await tripService.leaveTrip(input: trip)
               
-                updateLocalLists(updatedTrip: updatedTrip)
-              
+                var currentMyTrips = myTrips.value
+                currentMyTrips.removeAll(where: {$0.trip.id == updatedTrip.id})
+               
+                var currentFeedTrips = trips.value
+                if let index = currentFeedTrips.firstIndex(where: { $0.id == updatedTrip.id }) {
+                    currentFeedTrips[index] = updatedTrip
+                    trips.send(currentFeedTrips)
+                }
+                
+                didTapChange.send(updatedTrip.id!)
+                self.successMessage.send("Leave trip successfully!")
                 self.loading.send(false)
               
             } catch {
@@ -290,26 +273,36 @@ class TripViewModel {
     
     // MARK: - CANCEL REQUEST
     func cancelJoinRequest(trip: Trip) {
-        guard let userId = authService.currentUserId, let tripId = trip.id else { return }
+        guard let tripId = trip.id else { return }
        
         self.loading.send(true)
        
         Task {
             do {
-                let updatedTrip = try await tripService.cancelJoinRequest(tripId: tripId, userId: userId)
+                let updatedTrip = try await tripService.cancelJoinRequest(tripId: tripId)
               
-                var currentFeedTrips = trips.value
-                if let index = currentFeedTrips.firstIndex(where: { $0.id == updatedTrip.id }) {
-                    currentFeedTrips[index] = updatedTrip
-                    trips.send(currentFeedTrips)
-                    didTapChange.send(updatedTrip.id!)
-                }
-              
+                self.updateLocalLists(updatedTrip: updatedTrip)
                 self.loading.send(false)
               
             } catch {
                 self.loading.send(false)
                 self.errorMessage.send("Cancel request failed: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    //MARK: - JOIN TRIP
+    func joinTrip(trip: Trip) {
+        self.loading.send(true)
+        
+        Task {
+            do {
+                let updatedTrip = try await tripService.joinTrip(trip: trip)
+                
+                self.updateLocalLists(updatedTrip: updatedTrip)
+                self.successMessage.send("Send join request successfully!")
+              
+                self.loading.send(false)
             }
         }
     }
@@ -326,25 +319,57 @@ class TripViewModel {
                 }
                 .store(in: &cancellable)
 
-            // Filter Local
-            Publishers.CombineLatest(randomTrips, titleFilter)
-                .removeDuplicates { prev, current in
-                    let isArraySame = prev.0.map { $0.id } == current.0.map { $0.id }
-                    let isStringSame = prev.1 == current.1
-                    return isArraySame && isStringSame
+        // Filter Local
+        Publishers.CombineLatest(randomTrips, titleFilter)
+            .removeDuplicates { prev, current in
+                let isArraySame = prev.0.map { $0.id } == current.0.map { $0.id }
+                let isStringSame = prev.1 == current.1
+                return isArraySame && isStringSame
+            }
+            .map { (allTrips, filter) -> [Trip] in
+               
+                switch filter {
+                case "Earliest":
+                    return allTrips.sorted { $0.startTime < $1.startTime }
+                case "Vietnam":
+                    return allTrips.filter { $0.country == "Vietnam" }
+                default:
+                    return allTrips.shuffled()
                 }
-                .map { (allTrips, filter) -> [Trip] in
-                   
-                    switch filter {
-                    case "Earliest":
-                        return allTrips.sorted { $0.startTime < $1.startTime }
-                    case "Vietnam":
-                        return allTrips.filter { $0.country == "Vietnam" }
-                    default:
-                        return allTrips.shuffled()
-                    }
+            }
+            .assign(to: &$tripForFilter)
+        errorMessage
+            .compactMap { $0 }
+            .receive(on: DispatchQueue.main)
+            .sink { error in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.post(
+                        name: .showGlobalToast,
+                        object: nil,
+                        userInfo: [
+                            "message": "Failed: \(error)",
+                            "isSuccess": false
+                        ]
+                    )
                 }
-                .assign(to: &$tripForFilter)
+            }
+            .store(in: &cancellable)
+        successMessage
+            .compactMap { $0 }
+            .receive(on: DispatchQueue.main)
+            .sink { success in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.post(
+                        name: .showGlobalToast,
+                        object: nil,
+                        userInfo: [
+                            "message": "\(success)",
+                            "isSuccess": true
+                        ]
+                    )
+                }
+            }
+            .store(in: &cancellable)
     }
     
     // MARK: - PRIVATE HELPER (DELAY)

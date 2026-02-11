@@ -8,7 +8,9 @@
 import UIKit
 
 class TripStyleExplaination: UIViewController {
-    
+    deinit {
+        print("\(String(describing: self)) đã bị hủy (Deallocated)!")
+    }
     //MARK: - UI COMPONENT
     private let mainStack = UIStackView.customStack(
         xPadding: 20,

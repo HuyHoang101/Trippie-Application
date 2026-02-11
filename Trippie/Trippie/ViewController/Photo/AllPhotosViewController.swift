@@ -10,6 +10,9 @@ import PhotosUI
 import Combine
 
 class AllPhotosViewController: FadeBaseViewController {
+    deinit {
+        print("\(String(describing: self)) đã bị hủy (Deallocated)!")
+    }
     
     private var startingDelete: Bool = false {
         didSet {
@@ -320,27 +323,30 @@ extension AllPhotosViewController: PHPickerViewControllerDelegate {
         guard !results.isEmpty else { return }
         
         Task {
-            // Sử dụng TaskGroup để xử lý song song (Nhanh hơn Loop thường)
-            let processedImages = await withTaskGroup(of: UIImage?.self) { group -> [UIImage] in
+            // 1. Xử lý song song để lấy mảng DATA
+            let optimizedDataArray = await withTaskGroup(of: Data?.self) { group -> [Data] in
                 for result in results {
                     group.addTask {
-                        // Gọi hàm vừa fix ở trên
+                        // Gọi hàm mới trả về Data
                         return await result.loadResizedImage(targetSize: 1024)
                     }
                 }
                 
-                var images: [UIImage] = []
-                for await image in group {
-                    if let img = image { images.append(img) }
+                var dataList: [Data] = []
+                for await data in group {
+                    if let validData = data {
+                        dataList.append(validData)
+                    }
                 }
-                return images
+                return dataList
             }
             
-            // Upload mảng ảnh đã được resize
+            // 2. Upload (Lúc này cậu cần đảm bảo ViewModel có hàm nhận [Data])
+            // Không cần chuyển đổi gì nữa, tiết kiệm rất nhiều bộ nhớ!
             let confirmed = await self.confirmAlert(type: .add, title: "these Images?")
             
             if confirmed {
-                self.imagesViewModel.uploadImages(processedImages, folder: "trips")
+                self.imagesViewModel.uploadImages(optimizedDataArray, folder: "trips")
             }
         }
     }

@@ -9,20 +9,30 @@ import UIKit
 import Combine
 
 class FriendsOrMembersListViewController: FadeBaseViewController {
-    
+    deinit {
+        print("\(String(describing: self)) đã bị hủy (Deallocated)!")
+    }
+    private var currentMode: ActionAceptPersonJoinTrip = .normal {
+        didSet {
+            tableView.reloadData() // Mỗi khi đổi mode thì reload lại bảng để hiện icon
+        }
+    }
 
     var memberIds: [String]?
-    var isPendingRequest: Bool?
-    var isAllUser: Bool?
+    var tripId: String?
     var navigationTitle: String?
+    var listType: UserListType?
     
+    private let tripViewModel = TripViewModel.shared
     private let viewModel = UserViewModel.shared
     private var cancellables = Set<AnyCancellable>()
     
-    private var displayData: [User] {
-        let result = isAllUser ?? false ? viewModel.allUsers.value : (memberIds != nil) ? viewModel.profiles.value : viewModel.friendProfiles.value
-        self.emptyState.isHidden = !(result.count == 0)
-        return result
+    private var displayData: [User] = [] {
+        didSet {
+            // Tự động check empty state và reload mỗi khi data thay đổi
+            self.emptyState.isHidden = !displayData.isEmpty
+            self.tableView.reloadData()
+        }
     }
     
     private let emptyState = UILabel.customLabel(text: "No member was found.", font: .systemFont(ofSize: 16), textColor: .secondaryLabel)
@@ -39,7 +49,7 @@ class FriendsOrMembersListViewController: FadeBaseViewController {
         bindLoading(to: viewModel.loading)
         
         let targetIds = memberIds ?? viewModel.myProfile.value?.friendIds ?? []
-        if let i = self.isAllUser, i {
+        if let i = self.listType, i == .allUsers {
             viewModel.fetchAlluser()
         } else {
             viewModel.fetchUsers(ids: targetIds, isFriend: (memberIds == nil))
@@ -119,6 +129,33 @@ class FriendsOrMembersListViewController: FadeBaseViewController {
         self.navigationController?.popViewController(animated: true)
     }
     
+    @MainActor
+    private func handleKickPerson(trip: Trip, userId: String, name: String) async {
+        let confirm = await confirmAlert(type: .kick, title: "\(name)?")
+        
+        if confirm {
+            self.tripViewModel.kickMember(userId: userId, trip: trip)
+        }
+    }
+    
+    @MainActor
+    private func handleAceptPerson(trip: Trip, userId: String, name: String) async {
+        let confirm = await confirmAlert(type: .add, title: "\(name)?")
+        
+        if confirm {
+            self.tripViewModel.acceptJoinRequest(userId: userId, trip: trip)
+        }
+    }
+    
+    @MainActor
+    private func handleDenyPerson(trip: Trip, userId: String, name: String) async {
+        let confirm = await confirmAlert(type: .deny, title: "\(name)?")
+        
+        if confirm {
+            self.tripViewModel.denyJoinRequest(userId: userId, trip: trip)
+        }
+    }
+    
     // MARK: - BINDING
     private func setupBindings() {
         // 1. Xác định xem màn hình này đang cần data nào
@@ -159,6 +196,36 @@ extension FriendsOrMembersListViewController: UITableViewDataSource, UITableView
         
         let user = displayData[indexPath.row]
         cell.configure(user: user)
+        
+        cell.updateMode(mode: currentMode)
+        
+        guard let userId = user.id, let id = self.tripId, let trip = tripViewModel.trips.value.first(where: { $0.id == id }) else {
+            print("trip was not found")
+            return cell
+        }
+        
+        cell.onTapAction = { [weak self] in
+            guard let self = self else { return }
+            if self.currentMode == .acept {
+                Task {
+                    do {
+                        await self.handleAceptPerson(trip: trip, userId: userId, name: user.name)
+                    }
+                }
+            } else if self.currentMode == .deny {
+                Task {
+                    do {
+                        await self.handleDenyPerson(trip: trip, userId: userId, name: user.name)
+                    }
+                }
+            } else if self.currentMode == .kick {
+                Task {
+                    do {
+                        await self.handleKickPerson(trip: trip, userId: userId, name: user.name)
+                    }
+                }
+            }
+        }
         
         return cell
     }

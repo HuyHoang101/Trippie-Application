@@ -9,7 +9,9 @@ import UIKit
 import Combine
 
 class DetailViewController: FadeBaseViewController {
-    
+    deinit {
+        print("\(String(describing: self)) đã bị hủy (Deallocated)!")
+    }
     //MARK: - Property
     private let viewModel = TripViewModel.shared
     private let imagesViewModel = ImageViewModel()
@@ -18,6 +20,7 @@ class DetailViewController: FadeBaseViewController {
     var isFeedBoard: Bool?
     var navigationTitle: String?
     private var tripDetailWithStatus: TripWithStatus?
+    private var applyAction: ApplyTripAction = .join
     
     //MARK: - UI COMPONENT
     private let coverImage = ContainCoverImageOfTrip()
@@ -53,6 +56,7 @@ class DetailViewController: FadeBaseViewController {
         setupUI()
         action()
         binding()
+        bindLoading(to: viewModel.loading)
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -181,38 +185,38 @@ class DetailViewController: FadeBaseViewController {
             pendingRequests.isHidden = true
             planBtn.isHidden = true
             
-            var config = UIButton.Configuration.filled()
-            var container = AttributeContainer()
-            container.font = UIFont.systemFont(ofSize: 13)
             appliedLabel.numberOfLines = 0
             
             if id == trip.ownerId {
                 containerAppliedButton.isHidden = true
             } else if trip.pendingRequests.contains(id) {
                 containerAppliedButton.isHidden = false
-                config.attributedTitle = AttributedString("Cancel", attributes: container)
-                config.baseBackgroundColor = #colorLiteral(red: 0.9411764741, green: 0.4980392158, blue: 0.3529411852, alpha: 1)
-                applyButton.configuration = config
-                appliedLabel.text = "You was send the request for planner of this trip, waiting for their replied."
+                applyButton.configuration?.title = "Cancel"
+                applyButton.configuration?.baseBackgroundColor = #colorLiteral(red: 0.9411764741, green: 0.4980392158, blue: 0.3529411852, alpha: 1)
+                applyButton.isEnabled = true
+                appliedLabel.text = "You had sent the request for planner of this trip, waiting for their replied."
+                applyAction = .cancelJoin
             } else if trip.members.contains(id) {
                 containerAppliedButton.isHidden = false
-                config.attributedTitle = AttributedString("Leave trip", attributes: container)
-                config.baseBackgroundColor = #colorLiteral(red: 0.9254902005, green: 0.2352941185, blue: 0.1019607857, alpha: 1)
-                applyButton.configuration = config
+                applyButton.configuration?.title = "Leave Trip"
+                applyButton.configuration?.baseBackgroundColor = #colorLiteral(red: 0.9254902005, green: 0.2352941185, blue: 0.1019607857, alpha: 1)
+                applyButton.isEnabled = true
                 appliedLabel.text = "You are already a member of this trip."
+                applyAction = .leave
             } else if trip.maxMember == trip.currentMember {
                 containerAppliedButton.isHidden = false
-                config.attributedTitle = AttributedString("Apply", attributes: container)
-                config.baseBackgroundColor = .button
-                applyButton.configuration = config
+                applyButton.configuration?.title = "Apply"
+                applyButton.configuration?.baseBackgroundColor = .button.withAlphaComponent(0.5)
                 applyButton.isEnabled = false
                 appliedLabel.text = "Unfortunately, all slots are filled! See you on the next trip!"
+                applyAction = .full
             } else {
                 containerAppliedButton.isHidden = false
-                config.attributedTitle = AttributedString("Apply", attributes: container)
-                config.baseBackgroundColor = .button
-                applyButton.configuration = config
+                applyButton.configuration?.title = "Apply"
+                applyButton.configuration?.baseBackgroundColor = .button
+                applyButton.isEnabled = true
                 appliedLabel.text = "This trip would be even better with you. Join the trip now!"
+                applyAction = .join
             }
         }
         var dropDownMenus: [DropdownItem] = []
@@ -289,10 +293,34 @@ class DetailViewController: FadeBaseViewController {
     private func action() {
         questionBtn.addTarget(self, action: #selector(openExplainationSheet), for: .touchUpInside)
         planBtn.addTarget(self, action: #selector(pushToTask), for: .touchUpInside)
+        applyButton.addTarget(self, action: #selector(appliedAction), for: .touchUpInside)
     }
     
-    private func appliedAction() {
+    @objc private func appliedAction() {
+        guard let id = self.id, let trip = viewModel.trips.value.first(where: {$0.id == id}) else { return }
+        switch applyAction {
+        case .join:
+            viewModel.joinTrip(trip: trip)
+        case .full:
+            return
+        case .cancelJoin:
+            viewModel.cancelJoinRequest(trip: trip)
+        case .leave:
+            Task {
+                do {
+                    await doLeaveTrip(trip: trip)
+                }
+            }
+        }
+    }
+    
+    @MainActor
+    private func doLeaveTrip(trip: Trip) async {
+        let confirmAlert = await self.confirmAlert(type: .leave, title: "this Trip?")
         
+        if confirmAlert {
+            self.viewModel.leaveTrip(trip: trip)
+        }
     }
     
     @objc private func openExplainationSheet() {
@@ -369,13 +397,7 @@ class DetailViewController: FadeBaseViewController {
     
     //MARK: - BINDING
     private func binding() {
-        viewModel.trips
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in
-                self?.renderDetail()
-            }
-            .store(in: &cancellable)
-        viewModel.myTrips
+        viewModel.didTapChange
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
                 self?.renderDetail()

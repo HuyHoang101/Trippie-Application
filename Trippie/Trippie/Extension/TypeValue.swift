@@ -29,23 +29,24 @@ extension String {
 
 extension PHPickerResult {
     // Hàm này tự động load ảnh VÀ resize luôn, trả về ảnh đã nhỏ gọn
-    func loadResizedImage(targetSize: CGFloat = 1024) async -> UIImage? {
-        return await withCheckedContinuation { continuation in
+    func loadResizedImage(targetSize: CGFloat = 1024) async -> Data? {
+        return await withCheckedContinuation { (continuation: CheckedContinuation<Data?, Never>) in
             if itemProvider.canLoadObject(ofClass: UIImage.self) {
                 itemProvider.loadObject(ofClass: UIImage.self) { (image, error) in
-                    guard let originalImage = image as? UIImage else {
+                    guard let originalImage = image as? UIImage,
+                          // Chuyển sang Data gốc để chuẩn bị xử lý
+                          let originalData = originalImage.jpegData(compressionQuality: 1.0) else {
                         continuation.resume(returning: nil)
                         return
                     }
                     
-                    // 🟢 RESIZE NGAY TẠI ĐÂY (Dùng hàm trong ImageUtils tớ gửi bài trước)
-                    // Chuyển sang data để downsample rồi chuyển lại image
-                    if let data = originalImage.jpegData(compressionQuality: 1.0),
-                       let resized = ImageUtils.downsample(imageData: data, maxDimension: targetSize) {
-                        continuation.resume(returning: resized)
+                    // Resize và Nén
+                    // Nếu thành công thì trả về data đã tối ưu, nếu lỗi thì trả về data gốc (đã nén nhẹ)
+                    if let optimizedData = ImageUtils.downsampleToData(imageData: originalData, maxDimension: targetSize, compressionQuality: 0.7) {
+                        continuation.resume(returning: optimizedData)
                     } else {
-                        // Fallback nếu resize lỗi thì lấy ảnh gốc (hoặc nil tuỳ cậu)
-                        continuation.resume(returning: originalImage)
+                        // Fallback: Nén ảnh gốc 0.7 nếu downsample thất bại
+                        continuation.resume(returning: originalImage.jpegData(compressionQuality: 0.7))
                     }
                 }
             } else {

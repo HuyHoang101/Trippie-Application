@@ -218,7 +218,7 @@ class LoginViewController: AuthBaseViewController {
         viewModel.generalErrorMessage
             .receive(on: RunLoop.main)
             .sink { [weak self] msg in
-                self?.showToast(message: "Register failed: \(msg)", isSuccess: false)
+                self?.showToast(message: "Login failed: \(msg)", isSuccess: false)
             }
             .store(in: &cancellable)
         

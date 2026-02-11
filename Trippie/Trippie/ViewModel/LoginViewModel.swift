@@ -168,11 +168,12 @@ class LoginViewModel {
     
     private func handleError(_ error: Error) {
         let nsError = error as NSError
+        
         let message = nsError.localizedDescription
         
-        // Map lỗi
-        if message.contains("invalid-credential") || message.contains("wrong-password") {
-            passwordError = "Invalid email or password."
+        // 1. Kiểm tra các lỗi phổ biến
+        if message.contains("malformed") || message.contains("expired") {
+            generalErrorMessage.send("Email or password incorrect.")
         } else {
             generalErrorMessage.send(message)
         }

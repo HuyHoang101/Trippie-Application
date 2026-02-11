@@ -11,6 +11,12 @@ import CountryPickerView
 import PhotosUI
 
 class HandSaveTrip: FadeBaseViewController {
+    // Hủy đăng ký khi thoát màn hình (Clean memory)
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        print("\(String(describing: self)) đã bị hủy (Deallocated)!")
+    }
+
     // MARK: - Dependency
     var viewModel: TripViewModel!
     private let imagesViewModel = ImageViewModel()
@@ -89,11 +95,6 @@ class HandSaveTrip: FadeBaseViewController {
             countryTF.tintColor = .clear
             countryTF.inputView = UIView() 
         }
-    }
-    
-    // Hủy đăng ký khi thoát màn hình (Clean memory)
-    deinit {
-        NotificationCenter.default.removeObserver(self)
     }
     
     override func viewDidDisappear(_ animated: Bool) {
@@ -474,24 +475,27 @@ extension HandSaveTrip: PHPickerViewControllerDelegate {
         guard !results.isEmpty else { return }
         
         Task {
-            // Sử dụng TaskGroup để xử lý song song (Nhanh hơn Loop thường)
-            let processedImages = await withTaskGroup(of: UIImage?.self) { group -> [UIImage] in
+            // 1. Xử lý song song để lấy mảng DATA
+            let optimizedDataArray = await withTaskGroup(of: Data?.self) { group -> [Data] in
                 for result in results {
                     group.addTask {
-                        // Gọi hàm vừa fix ở trên
+                        // Gọi hàm mới trả về Data
                         return await result.loadResizedImage(targetSize: 1024)
                     }
                 }
                 
-                var images: [UIImage] = []
-                for await image in group {
-                    if let img = image { images.append(img) }
+                var dataList: [Data] = []
+                for await data in group {
+                    if let validData = data {
+                        dataList.append(validData)
+                    }
                 }
-                return images
+                return dataList
             }
             
-            // Upload mảng ảnh đã được resize
-            self.imagesViewModel.uploadImages(processedImages, folder: "trips")
+            // 2. Upload (Lúc này cậu cần đảm bảo ViewModel có hàm nhận [Data])
+            // Không cần chuyển đổi gì nữa, tiết kiệm rất nhiều bộ nhớ!
+            self.imagesViewModel.uploadImages(optimizedDataArray, folder: "tasks")
         }
     }
 }

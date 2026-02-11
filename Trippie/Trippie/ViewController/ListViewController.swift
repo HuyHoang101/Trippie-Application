@@ -9,7 +9,9 @@ import UIKit
 import Combine
 
 class ListViewController: FadeBaseViewController {
-    
+    deinit {
+        print("\(String(describing: self)) đã bị hủy (Deallocated)!")
+    }
     // MARK: - DATA
     var trip: [Trip]? {
         didSet {

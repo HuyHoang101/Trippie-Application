@@ -22,4 +22,12 @@ struct ImageUtils {
         guard let downsampledImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, downsampleOptions) else { return nil }
         return UIImage(cgImage: downsampledImage)
     }
+    
+    static func downsampleToData(imageData: Data, maxDimension: CGFloat, compressionQuality: CGFloat = 0.7) -> Data? {
+        // 1. Tận dụng logic của hàm trên để lấy ảnh UIImage đã resize
+        guard let resizedImage = downsample(imageData: imageData, maxDimension: maxDimension) else { return nil }
+        
+        // 2. Nén ngay lập tức thành Data
+        return resizedImage.jpegData(compressionQuality: compressionQuality)
+    }
 }

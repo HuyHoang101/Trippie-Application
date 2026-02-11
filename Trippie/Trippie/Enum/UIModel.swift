@@ -35,10 +35,11 @@ enum ConfirmActionType {
     case unfollow
     case remove
     case clear
+    case leave
     
     var color: UIColor {
         switch self {
-        case .deleteTrip, .delete, .kick, .deny, .unfollow, .remove : return #colorLiteral(red: 0.9254902005, green: 0.2352941185, blue: 0.1019607857, alpha: 1)
+        case .leave, .deleteTrip, .delete, .kick, .deny, .unfollow, .remove : return #colorLiteral(red: 0.9254902005, green: 0.2352941185, blue: 0.1019607857, alpha: 1)
         case .cancel: return #colorLiteral(red: 0.9529411793, green: 0.5595523814, blue: 0.2865278571, alpha: 1)
         case .add: return UIColor.button
         case .follow: return UIColor.authBackground2
@@ -58,6 +59,7 @@ enum ConfirmActionType {
         case .unfollow: return "person.badge.minus"
         case .remove: return "arrow.down.document"
         case .clear: return "sparkles.rectangle.stack.fill"
+        case .leave: return "figure.walk.departure"
         }
     }
     
@@ -73,6 +75,7 @@ enum ConfirmActionType {
         case .unfollow: return "unfollow"
         case .remove: return "remove this trip from the feed board?"
         case .clear: return "clear cache of the app?"
+        case .leave: return "leave"
         }
     }
 }
@@ -96,4 +99,27 @@ enum ListTaskMode {
     case normal
     case edit
     case delete
+}
+
+enum ApplyTripAction {
+    case join
+    case full
+    case cancelJoin
+    case leave
+}
+
+
+enum ActionAceptPersonJoinTrip {
+    case acept
+    case deny
+    case kick
+    case normal
+}
+
+
+enum UserListType {
+    case allUsers       // Tìm kiếm tất cả user
+    case tripMembers    // Thành viên trong chuyến đi
+    case friends        // Bạn bè
+    case pendingRequest
 }

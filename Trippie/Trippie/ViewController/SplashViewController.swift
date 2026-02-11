@@ -7,7 +7,7 @@
 import UIKit
 
 class SplashViewController: AuthBaseViewController {
-    
+
     var onAnimationCompleted: (() -> Void)?
     
     

@@ -11,6 +11,9 @@ import PhotosUI
 
 
 class ProfileViewController: FadeBaseViewController {
+    deinit {
+        print("\(String(describing: self)) đã bị hủy (Deallocated)!")
+    }
     
     var anotherUserProfile: User?
     
@@ -89,7 +92,6 @@ class ProfileViewController: FadeBaseViewController {
     //MARK: - SETUP UI
     private func setupUI() {
         setupBackground()
-        
         iconFriend.setLocalImage(name: "friend")
         iconRating.setLocalImage(name: "rating")
         iconRating.translatesAutoresizingMaskIntoConstraints = false
@@ -121,7 +123,7 @@ class ProfileViewController: FadeBaseViewController {
             avatar.addSubview(editViewContainer)
             editViewContainer.trailingAnchor.constraint(equalTo: avatar.trailingAnchor, constant: 0).isActive = true
             editViewContainer.bottomAnchor.constraint(equalTo: avatar.bottomAnchor, constant: 0).isActive = true
-            editAvatarButton.widthAnchor.constraint(equalTo: avatar.widthAnchor, multiplier: 0.25).isActive = true
+            editAvatarButton.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.35 * 0.25).isActive = true
             editAvatarButton.heightAnchor.constraint(equalTo: editAvatarButton.widthAnchor).isActive = true
             viewModel2.fetchMyProfile()
         }
@@ -251,11 +253,19 @@ class ProfileViewController: FadeBaseViewController {
     }
     
     private func renderProfile() {
-        guard var user = viewModel2.myProfile.value else { return }
+        // 1. Tạo biến user tạm thời
+        var userToDisplay: User?
         
-        if let p = anotherUserProfile {
-            user = p
+        // 2. Ưu tiên lấy Profile người khác nếu có
+        if let anotherUser = anotherUserProfile {
+            userToDisplay = anotherUser
+        } else {
+            // 3. Nếu không thì lấy Profile của mình
+            userToDisplay = viewModel2.myProfile.value
         }
+        
+        // 4. Nếu cả 2 đều nil thì return (chưa có gì để hiện)
+        guard let user = userToDisplay else { return }
         
         let name = (user.name.isEmpty == true) ? "Unknown User" : user.name
         nameLabel.text = name
@@ -264,12 +274,8 @@ class ProfileViewController: FadeBaseViewController {
         let phone = (user.phone.isEmpty == true) ? "+1 234 567 89" : user.phone
         emailAndPhoneLabel.text = "\(email) | \(phone)"
         
-        if  user.avatarUrl.isEmpty {
-            avatar.setLocalImage(name: "UserDefault")
-        } else {
-            avatar.setImage(url: user.avatarUrl, placeholderSystemName: "person.fill")
-        }
-        
+        avatar.setImage(url: user.avatarUrl, placeholderSystemName: "person.fill", pixel: 350)
+
         friendNumber.text = "\(user.friendIds.count)"
         
         ratingNumber.text = "\(user.rating)/5.0"
@@ -528,17 +534,17 @@ extension ProfileViewController: UIImagePickerControllerDelegate, UINavigationCo
         }
         
         picker.dismiss(animated: true)
-        
+        guard let imageData = editedImage.jpegData(compressionQuality: 0.8) else {
+            print("can't change it to data")
+            return
+        }
         // 2. Xử lý Resize và Upload
         Task {
-            // Chuyển UIImage sang Data để dùng hàm downsample tối ưu RAM
-            guard let imageData = editedImage.jpegData(compressionQuality: 1.0) else { return }
-            
             // Gọi hàm resize targetSize: 1024
-            if let resizedImage = ImageUtils.downsample(imageData: imageData, maxDimension: 1024) {
+            if let resizedImage = ImageUtils.downsampleToData(imageData: imageData, maxDimension: 512) {
                 self.imagesViewModel.uploadImages([resizedImage], folder: "avatars")
             } else {
-                self.imagesViewModel.uploadImages([editedImage], folder: "avatars")
+                self.imagesViewModel.uploadImages([imageData], folder: "avatars")
             }
         }
     }

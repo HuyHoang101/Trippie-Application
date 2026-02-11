@@ -11,6 +11,12 @@ import CountryPickerView
 import PhotosUI
 
 class HandSaveProfile: FadeBaseViewController {
+    // Hủy đăng ký khi thoát màn hình (Clean memory)
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+        print("\(String(describing: self)) đã bị hủy (Deallocated)!")
+    }
+    
     // MARK: - Dependency
     var viewModel: UserViewModel!
     private var cancellabel = Set<AnyCancellable>()
@@ -64,11 +70,6 @@ class HandSaveProfile: FadeBaseViewController {
         checkEditMode()
         setupNavBar()
         bindLoading(to: viewModel.loading)
-    }
-    
-    // Hủy đăng ký khi thoát màn hình (Clean memory)
-    deinit {
-        NotificationCenter.default.removeObserver(self)
     }
     
     override func viewDidDisappear(_ animated: Bool) {

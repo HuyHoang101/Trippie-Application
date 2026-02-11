@@ -20,8 +20,8 @@ class ImageViewModel {
     
     
     // MARK: - LOGIC
-    func uploadImages(_ images: [UIImage], folder: String = "trips") {
-        guard !images.isEmpty else { return }
+    func uploadImages(_ imagesData: [Data], folder: String = "trips") {
+        guard !imagesData.isEmpty else { return }
         
         loading.send(true)
         var tempUrls: [String] = [] // Mảng tạm để hứng link
@@ -30,10 +30,10 @@ class ImageViewModel {
             do {
                 // Dùng TaskGroup để upload song song (Nhanh gấp N lần)
                 try await withThrowingTaskGroup(of: String.self) { group in
-                    for image in images {
+                    for imageData in imagesData {
                         group.addTask {
                             // Gọi lại logic upload đơn lẻ, nhưng chờ kết quả
-                            return try await self.uploadSingleImage(image, folder: folder)
+                            return try await self.uploadSingleImage(imageData, folder: folder)
                         }
                     }
                     
@@ -45,7 +45,7 @@ class ImageViewModel {
                 
                 // Sau khi TẤT CẢ đã xong
                 self.uploadedUrls = tempUrls
-                print("DEBUG: Đã upload xong toàn bộ: \(self.uploadedUrls)")
+                //print("DEBUG: Đã upload xong toàn bộ: \(self.uploadedUrls)")
                 
             } catch {
                 self.errorMessage.send("Lỗi upload batch: \(error.localizedDescription)")
@@ -68,24 +68,19 @@ class ImageViewModel {
                         do {
                             try await self.imageService.deleteMedia(url: url)
                         } catch {
-                            print("Delete file failed \(url): \(error)")
+                            //print("Delete file failed \(url): \(error)")
                         }
                     }
                 }
             }
             self.uploadedUrls = []
-            print("DEBUG: Đã xóa toàn bộ ảnh")
             self.loading.send(false)
         }
     }
     
     
     // MARK: - Helper: Logic Upload Đơn
-    private func uploadSingleImage(_ image: UIImage, folder: String) async throws -> String {
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-            throw NSError(domain: "ImageError", code: -1, userInfo: [NSLocalizedDescriptionKey: "Cannot process image data"])
-        }
-        
+    private func uploadSingleImage(_ imageData: Data, folder: String) async throws -> String {
         let fileName = "\(folder)/\(UUID().uuidString).jpg"
         
         return try await imageService.uploadMedia(
