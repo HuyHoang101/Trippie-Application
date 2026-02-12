@@ -409,12 +409,13 @@ class ProfileViewController: FadeBaseViewController {
     @objc private func pushToFriendList() {
         let userListVC = FriendsOrMembersListViewController()
         userListVC.navigationTitle = "Friends"
+        userListVC.listType = .friends
         self.navigationController?.pushViewController(userListVC, animated: true)
     }
     
     @objc private func pushToAllUsersList() {
         let userListVC = FriendsOrMembersListViewController()
-        userListVC.isAllUser = true
+        userListVC.listType = .allUsers
         userListVC.navigationTitle = "All Users"
         self.navigationController?.pushViewController(userListVC, animated: true)
     }
@@ -423,7 +424,7 @@ class ProfileViewController: FadeBaseViewController {
         let picker = UIImagePickerController()
         picker.sourceType = .photoLibrary
         picker.delegate = self
-        // 🟢 QUAN TRỌNG: Cho phép chỉnh sửa (Cắt hình vuông)
+        
         picker.allowsEditing = true
         present(picker, animated: true)
     }

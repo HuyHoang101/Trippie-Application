@@ -344,7 +344,8 @@ class DetailViewController: FadeBaseViewController {
     @objc private func pushToPendingRequests() {
         let userListVC = FriendsOrMembersListViewController()
         userListVC.navigationTitle = "Pending Requests"
-        userListVC.isPendingRequest = true
+        userListVC.listType = .pendingRequest
+        userListVC.tripDetail = self.tripDetailWithStatus?.trip
         userListVC.memberIds = self.tripDetailWithStatus?.trip.pendingRequests
         self.navigationController?.pushViewController(userListVC, animated: true)
     }
@@ -353,8 +354,11 @@ class DetailViewController: FadeBaseViewController {
         let userListVC = FriendsOrMembersListViewController()
         userListVC.navigationTitle = "All Members"
         if isOwner {
-            userListVC.isPendingRequest = false
+            userListVC.listType = .tripMembers
+        } else {
+            userListVC.listType = .tripMemberForAnotherLooking
         }
+        userListVC.tripDetail = self.tripDetailWithStatus?.trip
         userListVC.memberIds = self.tripDetailWithStatus?.trip.members
         self.navigationController?.pushViewController(userListVC, animated: true)
     }

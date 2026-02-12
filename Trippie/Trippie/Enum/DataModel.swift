@@ -32,3 +32,7 @@ enum TaskStatus: String, Codable {
     case completed
     case cancel
 }
+
+enum Section: Hashable, Sendable {
+    case main
+}

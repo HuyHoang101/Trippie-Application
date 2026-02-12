@@ -11,6 +11,7 @@ class PaddingLabel: UILabel {
     var bottomInset: CGFloat = 5
     var leftInset: CGFloat = 10
     var rightInset: CGFloat = 10
+    var isCircle: Bool = true
 
     override func drawText(in rect: CGRect) {
         let insets = UIEdgeInsets(top: topInset, left: leftInset, bottom: bottomInset, right: rightInset)
@@ -27,6 +28,10 @@ class PaddingLabel: UILabel {
     override func layoutSubviews() {
         super.layoutSubviews()
         // CornerRadius Full (Hình viên thuốc)
-        self.layer.cornerRadius = self.bounds.height / 2
+        if isCircle {
+            self.layer.cornerRadius = self.bounds.height / 2
+        } else {
+            self.layer.cornerRadius = 12
+        }
     }
 }

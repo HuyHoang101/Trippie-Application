@@ -14,26 +14,23 @@ class FriendsOrMembersListViewController: FadeBaseViewController {
     }
     private var currentMode: ActionAceptPersonJoinTrip = .normal {
         didSet {
-            tableView.reloadData() // Mỗi khi đổi mode thì reload lại bảng để hiện icon
+            for cell in tableView.visibleCells {
+                if let userCell = cell as? UserCell {
+                    userCell.updateMode(mode: currentMode)
+                }
+            }
         }
     }
 
     var memberIds: [String]?
-    var tripId: String?
+    var tripDetail: Trip?
     var navigationTitle: String?
     var listType: UserListType?
     
     private let tripViewModel = TripViewModel.shared
     private let viewModel = UserViewModel.shared
     private var cancellables = Set<AnyCancellable>()
-    
-    private var displayData: [User] = [] {
-        didSet {
-            // Tự động check empty state và reload mỗi khi data thay đổi
-            self.emptyState.isHidden = !displayData.isEmpty
-            self.tableView.reloadData()
-        }
-    }
+    private var displayData: [User] = []
     
     private let emptyState = UILabel.customLabel(text: "No member was found.", font: .systemFont(ofSize: 16), textColor: .secondaryLabel)
     
@@ -43,6 +40,9 @@ class FriendsOrMembersListViewController: FadeBaseViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        resetOldData()
+        
         setupUI()
         setupBindings()
         setupTableView()
@@ -58,7 +58,7 @@ class FriendsOrMembersListViewController: FadeBaseViewController {
     }
     
     override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
+        super.viewDidDisappear(animated)
         setupNavBar()
     }
     
@@ -98,23 +98,38 @@ class FriendsOrMembersListViewController: FadeBaseViewController {
         let menuBtn = DropdownButton()
         
         // 2. Gán items
-        menuBtn.items = [
-            DropdownItem(title: "Add Task", icon: "plus", type: .normal) { [weak self] in
+        var dropDownItems: [DropdownItem] = []
+        guard let type = self.listType else { return }
+        switch type {
+        case .allUsers, .friends, .tripMemberForAnotherLooking:
+            break
+        case .tripMembers:
+            dropDownItems.append(DropdownItem(title: "Kick member", icon: "person.fill.badge.minus", type: .destructive) { [weak self] in
                 guard let self = self else { return }
-                
-            },
-            DropdownItem(title: "Delete Task", icon: "trash", type: .destructive) { [weak self] in
+                self.currentMode = .kick
+            })
+        case .pendingRequest:
+            dropDownItems.append(DropdownItem(title: "Accept Requests", icon: "person.fill.checkmark", type: .clear) { [weak self] in
                 guard let self = self else { return }
-                
-            }
-        ]
-        
+                self.currentMode = .acept
+            })
+            dropDownItems.append(DropdownItem(title: "Deny Requests", icon: "person.fill.xmark", type: .destructive) { [weak self] in
+                guard let self = self else { return }
+                self.currentMode = .deny
+            })
+        }
+        dropDownItems.append(DropdownItem(title: "Cancel action", icon: "xmark", type: .destructive) { [weak self] in
+            guard let self = self else { return }
+            self.currentMode = .normal
+        })
+        menuBtn.items = dropDownItems
         let leftItem = UIBarButtonItem(customView: backBtn)
         let rightItem = UIBarButtonItem(customView: menuBtn)
         
         self.navigationItem.leftBarButtonItem = leftItem
-        self.navigationItem.rightBarButtonItem = rightItem
-        
+        if type != .friends && type != .allUsers && type != .tripMemberForAnotherLooking {
+            self.navigationItem.rightBarButtonItem = rightItem
+        }
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = .systemBackground
@@ -160,25 +175,45 @@ class FriendsOrMembersListViewController: FadeBaseViewController {
     private func setupBindings() {
         // 1. Xác định xem màn hình này đang cần data nào
         let targetPublisher: CurrentValueSubject<[User], Never>
-        
-        if memberIds != nil {
-            // Case 1: Màn hình danh sách thành viên chuyến đi
-            targetPublisher = viewModel.profiles
-        } else if let isAll = isAllUser, isAll == true {
-            // Case 2: Màn hình tìm kiếm tất cả user
-            targetPublisher = viewModel.allUsers
-        } else {
-            // Case 3: Mặc định là danh sách bạn bè
-            targetPublisher = viewModel.friendProfiles
+        guard let type = self.listType else { return }
+        switch type {
+        case .allUsers:
+            targetPublisher = self.viewModel.allUsers
+        case .tripMembers, .tripMemberForAnotherLooking, .pendingRequest:
+            targetPublisher = self.viewModel.profiles
+        case .friends:
+            targetPublisher = self.viewModel.friendProfiles
         }
         
         // 2. Chỉ subscribe đúng 1 lần duy nhất
         targetPublisher
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.tableView.reloadData()
+            .sink { [weak self] t in
+                guard let self = self else { return }
+                self.displayData = t
+                self.emptyState.isHidden = !self.displayData.isEmpty
+                self.tableView.reloadData()
             }
             .store(in: &cancellables)
+    }
+    
+    // Hàm này giúp dọn dẹp data cũ của Singleton
+    private func resetOldData() {
+        // 1. Xóa trên UI trước
+        self.displayData = []
+        self.tableView.reloadData()
+        
+        // 2. Reset trong ViewModel (Để nó không bắn lại data cũ khi ta vừa subscribe)
+        // Lưu ý: Cậu cần đảm bảo biến subjects trong ViewModel có thể .send() được (nếu là CurrentValueSubject)
+        guard let type = self.listType else { return }
+        switch type {
+        case .allUsers:
+            viewModel.allUsers.send([])
+        case .tripMembers, .tripMemberForAnotherLooking, .pendingRequest:
+            viewModel.profiles.send([])
+        case .friends:
+            viewModel.friendProfiles.send([])
+        }
     }
 }
 
@@ -196,34 +231,56 @@ extension FriendsOrMembersListViewController: UITableViewDataSource, UITableView
         
         let user = displayData[indexPath.row]
         cell.configure(user: user)
-        
         cell.updateMode(mode: currentMode)
+        cell.selectionStyle = .none // Tắt màu xám khi click vào cell
         
-        guard let userId = user.id, let id = self.tripId, let trip = tripViewModel.trips.value.first(where: { $0.id == id }) else {
-            print("trip was not found")
-            return cell
-        }
+        // --- KHU VỰC QUAN TRỌNG ---
+        // Kiểm tra an toàn: Nếu không có UserID thì return luôn
+        guard let userId = user.id else { return cell }
+        
+        // LƯU Ý: Nếu tripDetail bị nil, ta vẫn gán closure nhưng check nil bên trong
+        // Để tránh việc nút bấm bị "chết" (không phản hồi)
         
         cell.onTapAction = { [weak self] in
             guard let self = self else { return }
-            if self.currentMode == .acept {
-                Task {
-                    do {
-                        await self.handleAceptPerson(trip: trip, userId: userId, name: user.name)
-                    }
+            
+            // 1. Tìm lại index thực tế của user này trong mảng hiện tại
+            // (Không tin tưởng indexPath cũ vì thứ tự có thể đã thay đổi)
+            guard let currentIndex = self.displayData.firstIndex(where: { $0.id == userId }) else {
+                return
+            }
+            
+            // Tạo indexPath mới chuẩn xác
+            let indexPathToRemove = IndexPath(row: currentIndex, section: 0)
+
+            // Check trip để xử lý logic API
+            guard let trip = self.tripDetail else { return }
+
+            Task {
+                // Gọi API xử lý
+                switch self.currentMode {
+                case .acept:
+                    await self.handleAceptPerson(trip: trip, userId: userId, name: user.name)
+                case .deny:
+                    await self.handleDenyPerson(trip: trip, userId: userId, name: user.name)
+                case .kick:
+                    await self.handleKickPerson(trip: trip, userId: userId, name: user.name)
+                case .normal:
+                    return
                 }
-            } else if self.currentMode == .deny {
-                Task {
-                    do {
-                        await self.handleDenyPerson(trip: trip, userId: userId, name: user.name)
-                    }
-                }
-            } else if self.currentMode == .kick {
-                Task {
-                    do {
-                        await self.handleKickPerson(trip: trip, userId: userId, name: user.name)
-                    }
-                }
+
+                // --- CẬP NHẬT UI CÓ ANIMATION ---
+                
+                // Bước 1: Xóa data trong mảng gốc trước
+                // (⚠️ Lưu ý: Nếu biến displayData của cậu có didSet { reloadData() }
+                // thì cậu phải tìm cách chặn nó lại, nếu không nó sẽ bị conflict animation)
+                self.displayData.remove(at: currentIndex)
+                
+                // Bước 2: Xóa row trên giao diện với hiệu ứng lướt qua trái/phải hoặc fade
+                self.tableView.deleteRows(at: [indexPathToRemove], with: .fade)
+                
+                // (Optional) Nếu cậu muốn reload lại cell đó thay vì xoá (ví dụ update trạng thái)
+                // self.tableView.reloadRows(at: [indexPathToRemove], with: .automatic)
             }
         }
         

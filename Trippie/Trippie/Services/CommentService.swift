@@ -93,8 +93,10 @@ class CommentService {
         
         // Chỉ update message về rỗng, giữ lại document
         try await docRef.updateData([
-            "message": "",
-            "mediaUrls": [],
+            "message": "This message was deleted.",
+            "imageUrls": [],
+            "videoUrl": "",
+            "videoThumbnail": "",
             "updatedAt": Date()
         ])
     }

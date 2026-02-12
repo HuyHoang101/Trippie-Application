@@ -11,6 +11,8 @@ import UIKit
 @MainActor
 class ImageViewModel {
     @Published var uploadedUrls: [String] = []
+    @Published var VideoThumbnail: String = ""
+    @Published var videoUrl: String = ""
     
     let loading = CurrentValueSubject<Bool, Never>(false)
     let errorMessage = PassthroughSubject<String, Never>()
@@ -44,7 +46,7 @@ class ImageViewModel {
                 }
                 
                 // Sau khi TẤT CẢ đã xong
-                self.uploadedUrls = tempUrls
+                self.uploadedUrls.append(contentsOf: tempUrls)
                 //print("DEBUG: Đã upload xong toàn bộ: \(self.uploadedUrls)")
                 
             } catch {
@@ -59,7 +61,7 @@ class ImageViewModel {
         guard !uploadedUrls.isEmpty else { return }
         
         loading.send(true)
-        let urlsToDelete = self.uploadedUrls
+        let urlsToDelete = self.uploadedUrls + [self.videoUrl, self.VideoThumbnail]
         
         Task {
             await withTaskGroup(of: Void.self) { group in
@@ -74,6 +76,42 @@ class ImageViewModel {
                 }
             }
             self.uploadedUrls = []
+            self.loading.send(false)
+        }
+    }
+    
+    func UploadVideo(fileUrl: URL, thumbnailData: Data, folder: String = "chats") {
+        self.loading.send(true)
+        
+        Task {
+            do {
+                // Sử dụng TaskGroup để chạy song song
+                try await withThrowingTaskGroup(of: (String, String).self) { group in
+                    
+                    group.addTask {
+                        let videoPath = "\(folder)/video_\(UUID().uuidString).mp4"
+                        let url = try await self.imageService.uploadVideo(fileURL: fileUrl, path: videoPath)
+                        return ("video", url)
+                    }
+                    
+                    group.addTask {
+                        let url = try await self.uploadSingleImage(thumbnailData, folder: folder)
+                        return ("thumb", url)
+                    }
+                    
+                    // Thu thập kết quả trả về
+                    for try await (type, url) in group {
+                        if type == "video" {
+                            self.videoUrl = url
+                        } else {
+                            self.VideoThumbnail = url
+                        }
+                    }
+                }
+            } catch {
+                self.errorMessage.send("Upload video failed: \(error.localizedDescription)")
+            }
+            
             self.loading.send(false)
         }
     }

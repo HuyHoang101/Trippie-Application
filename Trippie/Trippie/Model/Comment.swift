@@ -15,7 +15,9 @@ struct Comment: Codable {
     var userAvatar: String
     var role: UserRole
     
-    var mediaUrls: [String]
+    var imageUrls: [String]
+    var videoUrl: String
+    var videoThumbnail: String
     var message: String
     
     @ServerTimestamp var createdAt: Date?

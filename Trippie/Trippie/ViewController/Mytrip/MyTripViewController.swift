@@ -266,8 +266,12 @@ class MyTripViewController: FadeBaseViewController {
             }
         }
         
+        var count = 0
+        
         if myTrips.count == 0 {
             viewAllButton2.isHidden = true
+            label2.isHidden = true
+            hstack2.isHidden = true
             let emptyCard = UIView()
             hstack2.addArrangedSubview(emptyCard)
             emptyCard.layer.cornerRadius = 12
@@ -276,7 +280,7 @@ class MyTripViewController: FadeBaseViewController {
             emptyCard.widthAnchor.constraint(equalTo: view.widthAnchor, constant: -25).isActive = true
             emptyCard.heightAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.48).isActive = true
             
-            let emptylabel = UILabel.customLabel(text: "You haven't completed any trip that you created before.", font: AppTheme.Font.mainMedium(size: 16), textColor: .secondaryLabel, textAligment: .center)
+            let emptylabel = UILabel.customLabel(text: "You haven't completed any trip before.", font: AppTheme.Font.mainMedium(size: 16), textColor: .secondaryLabel, textAligment: .center)
             emptyCard.addSubview(emptylabel)
             emptylabel.numberOfLines = 0
             emptylabel.centerYAnchor.constraint(equalTo: emptyCard.centerYAnchor).isActive = true
@@ -286,6 +290,9 @@ class MyTripViewController: FadeBaseViewController {
             self.view.layoutIfNeeded()
             emptyCard.addDashedBorder()
         } else {
+            count += 1
+            label2.isHidden = false
+            hstack2.isHidden = false
             viewAllButton2.isHidden = false
             let trip = myTrips.prefix(5)
             trip.forEach { t in
@@ -303,25 +310,13 @@ class MyTripViewController: FadeBaseViewController {
         }
         
         if joinTrips.count == 0 {
+            hstack3.isHidden = true
+            label3.isHidden = true
             viewAllButton3.isHidden = true
-            let emptyCard = UIView()
-            hstack3.addArrangedSubview(emptyCard)
-            emptyCard.layer.cornerRadius = 12
-            emptyCard.clipsToBounds = true
-            emptyCard.translatesAutoresizingMaskIntoConstraints = false
-            emptyCard.widthAnchor.constraint(equalTo: view.widthAnchor, constant: -25).isActive = true
-            emptyCard.heightAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.48).isActive = true
-            
-            let emptylabel = UILabel.customLabel(text: "You haven't completed any trip that you joined before.", font: AppTheme.Font.mainMedium(size: 16), textColor: .secondaryLabel, textAligment: .center)
-            emptyCard.addSubview(emptylabel)
-            emptylabel.numberOfLines = 0
-            emptylabel.centerYAnchor.constraint(equalTo: emptyCard.centerYAnchor).isActive = true
-            emptylabel.leadingAnchor.constraint(equalTo: emptyCard.leadingAnchor, constant: 40).isActive = true
-            emptylabel.trailingAnchor.constraint(equalTo: emptyCard.trailingAnchor, constant: -40).isActive = true
-            
-            self.view.layoutIfNeeded()
-            emptyCard.addDashedBorder()
         } else {
+            count += 1
+            label3.isHidden = false
+            hstack3.isHidden = false
             viewAllButton3.isHidden = false
             let trip = joinTrips.prefix(5)
             trip.forEach { t in
@@ -337,6 +332,11 @@ class MyTripViewController: FadeBaseViewController {
                 }
             }
         }
+        
+        if count == 0 {
+            hstack2.isHidden = false
+        }
+        
     }
     
     private func setupNavBar() {

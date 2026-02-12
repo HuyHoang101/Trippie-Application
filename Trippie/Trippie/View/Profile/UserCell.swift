@@ -9,23 +9,25 @@ import UIKit
 
 class UserCell: UITableViewCell {
     
-    // Identifier để register
     static let identifier = "UserCell"
     
-    //Callback action
     var onTapAction: (() -> Void)?
     
-    private let actionButton = UIButton.customButton(image: UIImage(systemName: "checkmark.circle.fill"), backgroundColor: .clear, tintColor: .systemRed)
+    // 1. Action Button: Cần width cố định để animation đẹp
+    private let actionButton: UIButton = {
+        let btn = UIButton.customButton(image: UIImage(systemName: "person.fill.checkmark"), backgroundColor: .clear, tintColor: .systemRed)
+        // Ẩn mặc định để tránh giật layout lúc đầu
+        btn.isHidden = true
+        return btn
+    }()
     
-    private let rootStackView = UIStackView.customStack(yPadding: 12, axis: .horizontal, alignment: .fill, distribution: .fill, stackSpacing: 0)
+    // Root Stack: Chứa MainView và ActionButton
+    private let rootStackView = UIStackView.customStack(yPadding: 12, axis: .horizontal, alignment: .fill, distribution: .fill, stackSpacing: 8)
     
     private let mainView = UIView()
     
-    // MARK: - UI Components
-    // 1. Dùng TrippieImageView có sẵn của cậu
     private let avatarImageView = TrippieImageView(style: .circle, isShadow: false)
     
-    // 2. Name Label (Đậm hơn chút cho nổi bật)
     private let nameLabel = UILabel.customLabel(
         text: "User Name",
         font: UIFont.systemFont(ofSize: 16, weight: .semibold),
@@ -33,7 +35,6 @@ class UserCell: UITableViewCell {
         textAligment: .left
     )
     
-    // 3. Email Label (Nhạt hơn, nhỏ hơn)
     private let emailLabel = UILabel.customLabel(
         text: "email@example.com",
         font: UIFont.systemFont(ofSize: 13, weight: .regular),
@@ -41,16 +42,14 @@ class UserCell: UITableViewCell {
         textAligment: .left
     )
     
-    // 4. VStack (UIStackView) để gom Name và Email
     private lazy var infoStackView: UIStackView = {
         let stack = UIStackView(arrangedSubviews: [nameLabel, emailLabel])
         stack.axis = .vertical
-        stack.spacing = 4 // Khoảng cách giữa tên và email
+        stack.spacing = 4
         stack.alignment = .leading
         return stack
     }()
     
-    // MARK: - Init
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setupUI()
@@ -61,13 +60,17 @@ class UserCell: UITableViewCell {
         fatalError("init(coder:) has not been implemented")
     }
     
-    // MARK: - Setup UI
     private func setupUI() {
         backgroundColor = .clear
-        selectionStyle = .none // Tắt hiệu ứng xám khi click (tuỳ chọn)
+        selectionStyle = .none
         
+        actionButton.isHidden = true
+        
+        // Setup MainView layout
         mainView.addSubview(avatarImageView)
         mainView.addSubview(infoStackView)
+        
+        // Setup Root layout
         rootStackView.addArrangedSubview(mainView)
         rootStackView.addArrangedSubview(actionButton)
         contentView.addSubview(rootStackView)
@@ -76,59 +79,73 @@ class UserCell: UITableViewCell {
         avatarImageView.clipsToBounds = true
         avatarImageView.layer.borderWidth = 0.5
         avatarImageView.layer.borderColor = UIColor.authBackground2.withAlphaComponent(0.5).cgColor
+        
+        // Tắt translate để dùng AutoLayout
         avatarImageView.translatesAutoresizingMaskIntoConstraints = false
         infoStackView.translatesAutoresizingMaskIntoConstraints = false
+        actionButton.translatesAutoresizingMaskIntoConstraints = false // Quan trọng
         
         NSLayoutConstraint.activate([
-            // Avatar: Nằm bên trái, giữa chiều dọc, size 50x50
+            // 1. Root Stack: Pin chặt vào contentView
+            rootStackView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            rootStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            rootStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16), // Padding trái
+            rootStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16), // Padding phải
+            
+            // 2. Avatar: Pin Top/Bottom vào mainView để xác định chiều cao cho mainView -> SỬA LỖI LAYOUT BỊ BAY
             avatarImageView.leadingAnchor.constraint(equalTo: mainView.leadingAnchor),
             avatarImageView.centerYAnchor.constraint(equalTo: mainView.centerYAnchor),
             avatarImageView.widthAnchor.constraint(equalToConstant: 50),
             avatarImageView.heightAnchor.constraint(equalToConstant: 50),
+            
+            // Quan trọng: Neo Top/Bottom của Avatar vào MainView (có padding) để MainView có height thực tế
+            avatarImageView.topAnchor.constraint(greaterThanOrEqualTo: mainView.topAnchor),
+            avatarImageView.bottomAnchor.constraint(lessThanOrEqualTo: mainView.bottomAnchor),
 
-            // StackView: Nằm bên phải Avatar, cách 12pt
+            // 3. Info Stack
             infoStackView.leadingAnchor.constraint(equalTo: avatarImageView.trailingAnchor, constant: 12),
-            infoStackView.trailingAnchor.constraint(equalTo: mainView.trailingAnchor, constant: -16),
+            infoStackView.trailingAnchor.constraint(equalTo: mainView.trailingAnchor, constant: -4),
             infoStackView.centerYAnchor.constraint(equalTo: avatarImageView.centerYAnchor),
             
-            rootStackView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            rootStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            rootStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            rootStackView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            
+            // 4. Action Button: Phải có Width cố định -> SỬA LỖI NÚT TRƯỢT NGANG
+            actionButton.widthAnchor.constraint(equalToConstant: 44)
         ])
         
+        // Constraint height priority để mainView ôm nội dung
+        let heightConstraint = mainView.heightAnchor.constraint(greaterThanOrEqualToConstant: 75)
+        heightConstraint.priority = .defaultHigh
+        heightConstraint.isActive = true
     }
     
     func updateMode(mode: ActionAceptPersonJoinTrip) {
+        // Animation block giống hệt TaskCell
         UIView.animate(withDuration: 0.3) {
             switch mode {
             case .acept:
-                self.actionButton.isHidden = false
                 self.actionButton.configuration?.image = UIImage(systemName: "person.fill.checkmark")
-                self.actionButton.configuration?.baseBackgroundColor = .clear
                 self.actionButton.configuration?.baseForegroundColor = .systemGreen
+                self.actionButton.isHidden = false
             case .deny:
-                self.actionButton.isHidden = false
                 self.actionButton.configuration?.image = UIImage(systemName: "person.fill.xmark")
-                self.actionButton.configuration?.baseBackgroundColor = .clear
                 self.actionButton.configuration?.baseForegroundColor = .systemRed
-            case .kick:
                 self.actionButton.isHidden = false
+            case .kick:
                 self.actionButton.configuration?.image = UIImage(systemName: "rectangle.portrait.and.arrow.right")
-                self.actionButton.configuration?.baseBackgroundColor = .clear
                 self.actionButton.configuration?.baseForegroundColor = .systemRed
+                self.actionButton.isHidden = false
             case .normal:
                 self.actionButton.isHidden = true
             }
+            // QUAN TRỌNG: Ép layout chạy ngay lập tức để mượt
+            self.contentView.layoutIfNeeded()
         }
     }
     
-    // MARK: - Data Binding
     func configure(user: User) {
         nameLabel.text = user.name
         emailLabel.text = user.email
         avatarImageView.setImage(url: user.avatarUrl, placeholderSystemName: "person.fill", pixel: 350)
+        self.layoutIfNeeded()
     }
     
     @objc private func didTapActionBtn() {

@@ -122,4 +122,5 @@ enum UserListType {
     case tripMembers    // Thành viên trong chuyến đi
     case friends        // Bạn bè
     case pendingRequest
+    case tripMemberForAnotherLooking
 }

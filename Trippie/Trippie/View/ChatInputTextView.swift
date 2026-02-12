@@ -14,6 +14,8 @@ protocol ChatInputDelegate: AnyObject {
 
 class ChatInputTextView: UITextView {
     
+    let isTypingPublisher = PassthroughSubject<Bool, Never>()
+    
     // MARK: - PROPERTIES
     weak var heightConstraint: NSLayoutConstraint?
     weak var chatDelegate: ChatInputDelegate?
@@ -60,12 +62,34 @@ class ChatInputTextView: UITextView {
     // MARK: - BINDING (Thay thế NotificationCenter)
     private func setupBinding() {
         
-        // 1. Lắng nghe text thay đổi (UITextView.textDidChangeNotification)
-        // Dùng Combine Publisher của NotificationCenter nhưng viết gọn theo kiểu reactive
-        NotificationCenter.default.publisher(for: UITextView.textDidChangeNotification, object: self)
-            .compactMap { $0.object as? UITextView } // Đảm bảo đúng là view này
+        // Luồng lắng nghe Text Change CÓ SẴN của cậu
+        let textChangeStream = NotificationCenter.default
+            .publisher(for: UITextView.textDidChangeNotification, object: self)
+            .compactMap { $0.object as? UITextView }
+            .share() // (Quan trọng) Chia sẻ luồng này để dùng cho nhiều mục đích
+        
+        // MỤC ĐÍCH 1: Xử lý chiều cao (Code cũ của cậu)
+        textChangeStream
             .sink { [weak self] _ in
                 self?.handleTextChange()
+            }
+            .store(in: &cancellables)
+            
+        // MỤC ĐÍCH 2: Xử lý trạng thái "Đang gõ" (CODE MỚI THÊM)
+        textChangeStream
+            .map { _ in true } // Cứ có chữ thay đổi là -> true
+            .removeDuplicates()
+            .sink { [weak self] isTyping in
+                self?.isTypingPublisher.send(isTyping) // Bắn tin hiệu ra ngoài: "Ê nó đang gõ nè"
+            }
+            .store(in: &cancellables)
+            
+        // MỤC ĐÍCH 3: Xử lý trạng thái "Ngừng gõ" (Debounce)
+        textChangeStream
+            .debounce(for: .seconds(1.5), scheduler: RunLoop.main) // Đợi 1.5s không gõ gì nữa
+            .map { _ in false } // -> false
+            .sink { [weak self] isTyping in
+                self?.isTypingPublisher.send(isTyping) // Bắn tín hiệu ra ngoài: "Nó nghỉ gõ rồi"
             }
             .store(in: &cancellables)
         

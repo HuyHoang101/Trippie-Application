@@ -11,6 +11,8 @@ import Combine
 @MainActor
 class CommentViewModel {
     
+    static let shared = CommentViewModel()
+    
     // MARK: - OUTPUT (Bindings)
     // source-of-truth for TableView/CollectionView
     let comments = CurrentValueSubject<[Comment], Never>([])
@@ -74,9 +76,9 @@ class CommentViewModel {
     }
     
     // 3. GỬI TIN NHẮN
-    func sendComment(message: String, user: User, mediaUrls: [String] = []) {
-        guard let tripId = currentTripId, !message.isEmpty || !mediaUrls.isEmpty else { return }
-        
+    func sendComment(message: String = "", imgUrls: [String] = [], videoUrl: String = "", thumbnailUrl: String = "") {
+        guard let tripId = currentTripId, !message.isEmpty || !imgUrls.isEmpty || !videoUrl.isEmpty else { return }
+        guard let user = UserViewModel.shared.myProfile.value else { return }
         // Tạo model Comment
         let newComment = Comment(
             id: nil, // Firebase tự sinh
@@ -84,7 +86,9 @@ class CommentViewModel {
             userName: user.name,
             userAvatar: user.avatarUrl, // Giả sử model User có field này
             role: .member, // Hoặc check logic owner
-            mediaUrls: mediaUrls,
+            imageUrls: imgUrls,
+            videoUrl: videoUrl,
+            videoThumbnail: thumbnailUrl,
             message: message,
             createdAt: nil, // Server timestamp
             updatedAt: nil
