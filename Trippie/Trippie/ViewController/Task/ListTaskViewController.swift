@@ -191,7 +191,9 @@ class ListTaskViewController: FadeBaseViewController {
     
     //MARK: - SETUP ACTION
     private func setupAction() {
-        
+        let tap = UITapGestureRecognizer(target: self, action: #selector(didTapView))
+        ruleContainer.addGestureRecognizer(tap)
+        ruleContainer.isUserInteractionEnabled = true
     }
     
     @objc private func handleBack() {
@@ -204,6 +206,14 @@ class ListTaskViewController: FadeBaseViewController {
         creatTaskVC.userRole = tripWithStatus?.participation?.role
         creatTaskVC.viewModel = taskViewModel
         self.navigationController?.pushViewController(creatTaskVC, animated: true)
+    }
+    
+    @objc private func didTapView() {
+        let vc = GroupMessageViewController()
+        guard let trip = self.tripWithStatus?.trip else { return }
+        vc.tripId = trip.id
+        vc.navigationTitle = "\(trip.location), \(trip.country)"
+        self.navigationController?.pushViewController(vc, animated: true)
     }
     
     private func handleEditAction(task: TaskOfTrip) {

@@ -14,11 +14,12 @@ class GroupMessageViewController: FadeBaseViewController {
     var navigationTitle: String?
     var tripId: String?
     
-    private let commentViewModel = CommentViewModel.shared
+    private let commentViewModel = CommentViewModel()
     private let imageViewModel = ImageViewModel()
     private var cancellable = Set<AnyCancellable>()
     
     private let tableView = UITableView()
+    private let refreshControl = UIRefreshControl()
     private let replyLabel = RepplyComponentView()
     private let beginLabel = UILabel.customLabel(text: "Say hello and start chating with you friends.", font: .systemFont(ofSize: 14), textColor: .systemGray3, textAligment: .center)
     
@@ -28,6 +29,9 @@ class GroupMessageViewController: FadeBaseViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        setupUI()
+        setupAction()
+        binding()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -37,9 +41,13 @@ class GroupMessageViewController: FadeBaseViewController {
     
     
     private func setupUI() {
+        commentViewModel.joinChatRoom(tripId: tripId ?? "")
         tableView.delegate = self
         tableView.dataSource = self
         replyLabel.imageViewModel = self.imageViewModel
+        refreshControl.addTarget(self, action: #selector(yourTopFunction), for: .valueChanged)
+        tableView.refreshControl = refreshControl
+        scrollToBottom()
         
         view.addSubview(tableView)
         view.addSubview(replyLabel)
@@ -56,7 +64,8 @@ class GroupMessageViewController: FadeBaseViewController {
             
             replyLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             replyLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            replyLabel.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            replyLabel.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+            
             
             beginLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             beginLabel.bottomAnchor.constraint(equalTo: replyLabel.topAnchor, constant: -40),
@@ -122,10 +131,10 @@ class GroupMessageViewController: FadeBaseViewController {
                         
                         let separator = Comment(
                             id: UUID().uuidString, // ID phải unique để không lỗi List
-                            userId: "",           // Rỗng theo ý cậu
+                            userId: "",
                             userName: "",
                             userAvatar: "",
-                            role: .member,        // ⚠️ Lưu ý: Chọn 1 case mặc định của Enum
+                            role: .member,
                             imageUrls: [],
                             videoUrl: "",
                             videoThumbnail: "",
@@ -150,15 +159,15 @@ class GroupMessageViewController: FadeBaseViewController {
     private func setupAction() {
         replyLabel.onTapAttackImage = {[weak self] in
             guard let self = self else {return}
-            
+            self.didTapChooseImage()
         }
         replyLabel.onTapAttackVideo = {[weak self] in
             guard let self = self else {return}
-            
+            self.didTapChooseVideo()
         }
         replyLabel.onTapAttackTakePhoto = {[weak self] in
             guard let self = self else {return}
-            
+            didTapChooseTakePhoto()
         }
         replyLabel.onTapReviewImage = {[weak self] in
             guard let self = self else {return}
@@ -166,11 +175,48 @@ class GroupMessageViewController: FadeBaseViewController {
         }
         replyLabel.onTapReviewVideo = {[weak self] in
             guard let self = self else {return}
-            
+            didTapReviewVideo()
         }
         replyLabel.onSend = {[weak self] in
             guard let self = self else {return}
             self.didTapSend()
+        }
+    }
+    
+    @objc func yourTopFunction() {
+        commentViewModel.loadHistory()
+        // Giả lập delay 2 giây rồi tắt loading
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            self.refreshControl.endRefreshing()
+        }
+    }
+
+    // --- LOGIC QUAN TRỌNG Ở ĐÂY (Requirement 2) ---
+    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        
+        // Tính toán vị trí tối đa có thể cuộn xuống
+        let height = scrollView.frame.size.height
+        let contentYoffset = scrollView.contentOffset.y
+        let distanceFromBottom = scrollView.contentSize.height - contentYoffset
+        
+        // Nếu nội dung ngắn hơn màn hình, không cần chặn
+        if scrollView.contentSize.height < height { return }
+
+        // Logic chặn vuốt đệm (bounce) ở đáy:
+        // Khi khoảng cách từ đáy nhỏ hơn chiều cao view (tức là đã lố qua content)
+        if distanceFromBottom < height {
+            // Khóa cứng vị trí lại tại điểm cuối cùng
+            scrollView.contentOffset.y = scrollView.contentSize.height - height
+        }
+    }
+    
+    func scrollToBottom() {
+        DispatchQueue.main.async { // Đảm bảo chạy trên main thread sau khi UI update
+            let numberOfRows = self.tableView.numberOfRows(inSection: 0) // Giả sử chỉ có 1 section
+            if numberOfRows > 0 {
+                let indexPath = IndexPath(row: numberOfRows - 1, section: 0)
+                self.tableView.scrollToRow(at: indexPath, at: .bottom, animated: false)
+            }
         }
     }
     
@@ -274,7 +320,7 @@ extension GroupMessageViewController: UITableViewDataSource, UITableViewDelegate
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        let selectedTrip = displayData[indexPath.row]
+        let _ = displayData[indexPath.row]
         
     }
     

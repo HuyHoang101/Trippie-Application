@@ -11,7 +11,6 @@ import Combine
 @MainActor
 class CommentViewModel {
     
-    static let shared = CommentViewModel()
     
     // MARK: - OUTPUT (Bindings)
     // source-of-truth for TableView/CollectionView

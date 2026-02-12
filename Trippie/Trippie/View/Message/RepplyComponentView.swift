@@ -18,10 +18,14 @@ class RepplyComponentView: UIView {
     var onTapReviewImage: (() -> Void)?
     var onTapReviewVideo: (() -> Void)?
     var onTapCancel: (() -> Void)?
-    var imageViewModel: ImageViewModel!
+    var imageViewModel: ImageViewModel! {
+        didSet {
+            binding()
+            renderVideoImage()
+        }
+    }
     var chat: String = ""
     
-    private let messageViewModel = CommentViewModel.shared
     private var cancellable = Set<AnyCancellable>()
     
     private let images = ImageAttachmentView()
@@ -35,11 +39,12 @@ class RepplyComponentView: UIView {
     private let cancelBtn = UIButton.customButton(image: UIImage(systemName: "xmark"), backgroundColor: .clear, tintColor: .systemGray)
     private var startChating: Bool = false
     
+    private let rootStack = UIStackView.customStack(axis: .vertical, alignment: .leading, distribution: .fill, stackSpacing: 4)
+    
     //MARK: - INIT
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupUI()
-        binding()
         action()
     }
     
@@ -49,9 +54,10 @@ class RepplyComponentView: UIView {
     
     private func setupUI() {
         let mainstack = UIStackView.customStack(xPadding: 8, yPadding: 12, axis: .horizontal, alignment: .bottom, distribution: .fill)
-        addSubview(images)
-        addSubview(video)
-        addSubview(mainstack)
+        addSubview(rootStack)
+        rootStack.addArrangedSubview(images)
+        rootStack.addArrangedSubview(video)
+        rootStack.addArrangedSubview(mainstack)
         addSubview(cancelBtn)
         mainstack.addArrangedSubview(appendBtn)
         mainstack.addArrangedSubview(attackmentTakePhoto)
@@ -64,31 +70,38 @@ class RepplyComponentView: UIView {
         video.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            mainstack.bottomAnchor.constraint(equalTo: bottomAnchor),
-            mainstack.leadingAnchor.constraint(equalTo: leadingAnchor),
-            mainstack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            mainstack.topAnchor.constraint(equalTo: images.bottomAnchor, constant: 4),
-            
-            images.topAnchor.constraint(equalTo: video.bottomAnchor),
-            images.leadingAnchor.constraint(equalTo: video.leadingAnchor),
-            
-            video.topAnchor.constraint(equalTo: topAnchor),
-            video.leadingAnchor.constraint(equalTo: leadingAnchor),
+            rootStack.bottomAnchor.constraint(equalTo: bottomAnchor),
+            rootStack.leadingAnchor.constraint(equalTo: leadingAnchor),
+            rootStack.trailingAnchor.constraint(equalTo: trailingAnchor),
+            rootStack.topAnchor.constraint(equalTo: topAnchor),
             
             cancelBtn.topAnchor.constraint(equalTo: topAnchor, constant: 8),
             cancelBtn.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             
+            video.heightAnchor.constraint(equalTo: video.widthAnchor, multiplier: 3/4),
         ])
-        if let container = self.superview {
-            video.widthAnchor.constraint(lessThanOrEqualTo: container.widthAnchor, multiplier: 0.6).isActive = true
-            video.heightAnchor.constraint(equalTo: video.widthAnchor, multiplier: 3/4).isActive = true
-        }
-}
+        
+        video.isHidden = true
+        images.isHidden = true
+        cancelBtn.isHidden = true
+    }
     
     private func renderVideoImage() {
         let imgs = imageViewModel.uploadedUrls
         let thumnail = imageViewModel.VideoThumbnail
         let videoUrl = imageViewModel.videoUrl
+        
+        // Reset state
+        images.isHidden = true
+        video.isHidden = true
+        cancelBtn.isHidden = true
+        
+        // Enable buttons back
+        attackmentTakePhoto.isEnabled = true
+        attackmentVideoBtn.isEnabled = true
+        attackmentImageBtn.isEnabled = true
+        chatBox.isEditable = true
+        
         if !imgs.isEmpty {
             images.isHidden = false
             images.configure(urls: imgs)
@@ -105,14 +118,13 @@ class RepplyComponentView: UIView {
             chatBox.placeholder = "Send a message..."
             chatBox.isEditable = false
             cancelBtn.isHidden = false
-        } else {
-            images.isHidden = true
-            video.isHidden = true
-            attackmentTakePhoto.isEnabled = true
-            attackmentVideoBtn.isEnabled = true
-            attackmentImageBtn.isEnabled = true
-            chatBox.isEditable = true
-            cancelBtn.isHidden = true
+        }
+        if let container = self.superview {
+            video.widthAnchor.constraint(lessThanOrEqualTo: container.widthAnchor, multiplier: 0.6).isActive = true
+        }
+        
+        UIView.animate(withDuration: 0.3) {
+            self.layoutIfNeeded()
         }
     }
     
