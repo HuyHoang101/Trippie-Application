@@ -18,6 +18,7 @@ class MessageBubbleView: UIView {
     private let nameLabel = UILabel.customLabel(text: "", font: .systemFont(ofSize: 10), textColor: .secondaryLabel)
     private let avatar = TrippieImageView(style: .circle, isShadow: false, borderColor: .authBackground2.withAlphaComponent(0.4))
     private let mainStack = UIStackView.customStack(axis: .vertical, alignment: .fill, distribution: .fill, stackSpacing: 4)
+    private let subStackForMessage = UIStackView.customStack(axis: .vertical, alignment: .leading, distribution: .fill)
     
     private let images = ImageAttachmentView()
     private let video = VideoAttachmentView()
@@ -28,6 +29,7 @@ class MessageBubbleView: UIView {
         super.init(frame: frame)
         setupBubble()
         setupUI()
+        setupActions()
     }
     
     required init?(coder: NSCoder) {
@@ -36,8 +38,8 @@ class MessageBubbleView: UIView {
     
     //MARK: - SETUP BUBBLE
     private func setupBubble() {
-        chatBubble.topInset = 10
-        chatBubble.bottomInset = 10
+        chatBubble.topInset = 5
+        chatBubble.bottomInset = 5
         chatBubble.leftInset = 10
         chatBubble.rightInset = 10
         chatBubble.isCircle = false
@@ -45,6 +47,7 @@ class MessageBubbleView: UIView {
         chatBubble.translatesAutoresizingMaskIntoConstraints = false
         chatBubble.clipsToBounds = true
         chatBubble.numberOfLines = 0
+        chatBubble.setContentCompressionResistancePriority(.required, for: .vertical)
     }
     
     private func setupUI() {
@@ -54,25 +57,23 @@ class MessageBubbleView: UIView {
         mainStack.addArrangedSubview(nameLabel)
         mainStack.addArrangedSubview(images)
         mainStack.addArrangedSubview(video)
-        mainStack.addArrangedSubview(chatBubble)
+        mainStack.addArrangedSubview(subStackForMessage)
+        subStackForMessage.addArrangedSubview(chatBubble)
         
         avatar.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            avatar.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12),
+            avatar.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
             avatar.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
             
             avatar.widthAnchor.constraint(equalToConstant: 46),
             avatar.heightAnchor.constraint(equalToConstant: 46),
             
-            mainStack.topAnchor.constraint(equalTo: topAnchor, constant: 12),
-            mainStack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -12),
+            mainStack.topAnchor.constraint(equalTo: topAnchor, constant: 2),
+            mainStack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
             mainStack.leadingAnchor.constraint(equalTo: avatar.trailingAnchor, constant: 4),
-            mainStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: 12),
+            mainStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
         ])
-        if let container = self.superview {
-            mainStack.widthAnchor.constraint(lessThanOrEqualTo: container.widthAnchor, multiplier: 0.75).isActive = true
-        }
     }
     
     func configure(comment: Comment, isHideAvatar: Bool, isHideName: Bool) {
@@ -86,14 +87,18 @@ class MessageBubbleView: UIView {
             chatBubble.textColor = .white
             avatar.isHidden = true
             nameLabel.textAlignment = .right
+            isEmoji(comment.message.isPureEmoji)
+            subStackForMessage.alignment = .trailing
         } else {
             chatBubble.backgroundColor = .systemGray6
             chatBubble.textColor = .label
             avatar.isHidden = false
             nameLabel.textAlignment = .left
+            isEmoji(comment.message.isPureEmoji)
+            subStackForMessage.alignment = .leading
         }
         nameLabel.text = comment.userName
-        chatBubble.textAlignment = .justified
+        chatBubble.textAlignment = .left
         chatBubble.text = comment.message
         avatar.setImage(url: comment.userAvatar, placeholderSystemName: "person.fill", pixel: 350)
         
@@ -120,6 +125,23 @@ class MessageBubbleView: UIView {
             nameLabel.isHidden = true
         } else {
             nameLabel.isHidden = false
+        }
+    }
+    
+    private func isEmoji(_ isemo: Bool) {
+        if isemo {
+            chatBubble.topInset = 0
+            chatBubble.bottomInset = 0
+            chatBubble.leftInset = 0
+            chatBubble.rightInset = 0
+            chatBubble.font = .systemFont(ofSize: 26)
+            chatBubble.backgroundColor = .clear
+        } else {
+            chatBubble.font = .systemFont(ofSize: 13)
+            chatBubble.topInset = 10
+            chatBubble.bottomInset = 10
+            chatBubble.leftInset = 10
+            chatBubble.rightInset = 10
         }
     }
     
@@ -151,7 +173,7 @@ class ImageAttachmentView: UIView {
     private let img1 = TrippieImageView(style: .rounded(radius: 0, corners: nil), isShadow: false)
     private let img2 = TrippieImageView(style: .rounded(radius: 0, corners: nil), isShadow: false)
         
-    private let countLabel = UILabel.boxStyle(text: "+0", font: .systemFont(ofSize: 20), background: .black.withAlphaComponent(0.4), textColor: .white)
+    private let countLabel = UILabel.boxStyle(text: "+0", font: .systemFont(ofSize: 14), background: .black.withAlphaComponent(0.15), textColor: .white)
     
     override init(frame: CGRect) {
             super.init(frame: frame)
@@ -162,6 +184,7 @@ class ImageAttachmentView: UIView {
     
     private func setup() {
         addSubview(stackView)
+        countLabel.layer.borderColor = UIColor.clear.cgColor
         stackView.addArrangedSubview(img1)
         stackView.addArrangedSubview(img2)
         stackView.addArrangedSubview(countLabel)
@@ -223,7 +246,7 @@ class ImageAttachmentView: UIView {
             img2.setImage(url: urls[1], pixel: 300)
             
             countLabel.isHidden = false
-            countLabel.text = "  +\(count - 2)"
+            countLabel.text = "+\(count - 2) "
         }
     }
 }

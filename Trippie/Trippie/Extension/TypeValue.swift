@@ -55,3 +55,40 @@ extension PHPickerResult {
         }
     }
 }
+
+
+extension String {
+    // Kiểm tra xem chuỗi có chứa ít nhất 1 emoji không
+    var containsEmoji: Bool {
+        return unicodeScalars.contains { $0.isEmoji }
+    }
+
+    // KIỂM TRA CHÍNH: Chuỗi CHỈ chứa emoji, không chứa chữ hay số
+    var isPureEmoji: Bool {
+        guard !isEmpty else { return false }
+        return unicodeScalars.allSatisfy { $0.isEmoji || $0.isEmojiModifier }
+    }
+}
+
+extension UnicodeScalar {
+    // Kiểm tra scalar có thuộc dải mã của Emoji không
+    var isEmoji: Bool {
+        switch value {
+        case 0x1F600...0x1F64F, // Emoticons
+             0x1F300...0x1F5FF, // Misc Symbols and Pictographs
+             0x1F680...0x1F6FF, // Transport and Map
+             0x1F1E6...0x1F1FF, // Regional Flags
+             0x2600...0x26FF,   // Misc Symbols
+             0x2700...0x27BF,   // Dingbats
+             0xFE00...0xFE0F,   // Variation Selectors
+             0x1F900...0x1F9FF: // Supplemental Symbols and Pictographs
+            return true
+        default:
+            return false
+        }
+    }
+
+    var isEmojiModifier: Bool {
+        return value >= 0x1F3FB && value <= 0x1F3FF // Màu da...
+    }
+}

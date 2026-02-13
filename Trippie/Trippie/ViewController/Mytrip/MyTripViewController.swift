@@ -79,6 +79,11 @@ class MyTripViewController: FadeBaseViewController {
             
         view.addSubview(mainscroll)
         mainscroll.addSubview(maincontent)
+        mainscroll.delegate = self
+        mainscroll.alwaysBounceVertical = true
+            
+        // Đảm bảo tính năng bounce đang bật
+        mainscroll.bounces = true
         
         let container = UIView()
         container.addSubview(label)
@@ -437,5 +442,24 @@ class MyTripViewController: FadeBaseViewController {
                 self?.render()
             }
             .store(in: &cancellable)
+    }
+}
+
+extension MyTripViewController: UIScrollViewDelegate {
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        // Kiểm tra nếu là mainScroll và người dùng kéo xuống một khoảng (ví dụ -100)
+        let offset = scrollView.contentOffset.y
+        if offset < -100 {
+            handleRefreshData()
+        }
+    }
+    
+    private func handleRefreshData() {
+
+        self.viewModel.fetchMyTrips()
+
+        // Gợi ý: cảm giác "haptic" khi kéo đủ lực
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
     }
 }

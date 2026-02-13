@@ -9,6 +9,8 @@ import UIKit
 
 class FeedCard: UIView {
     
+    var cardDidTap: (() -> Void)?
+    
     private let titleLabel = UILabel.customLabel(text: "", font: UIFont.systemFont(ofSize: 14, weight: .semibold), textColor: .black)
     private let countryLabel = UILabel.customLabel(text: "", font: UIFont.systemFont(ofSize: 12, weight: .medium), textColor: .systemGray3)
     private let dayIndex = UILabel.customLabel(text: "", font: UIFont.systemFont(ofSize: 12, weight: .semibold), textColor: UIColor(named: "AuthBackground1") ?? UIColor.purple, textAligment: .right)
@@ -29,6 +31,7 @@ class FeedCard: UIView {
         super.init(frame: .zero)
         
         setupUI()
+        setupTapAction()
         configure(with: trip)
     }
     
@@ -77,5 +80,14 @@ class FeedCard: UIView {
         countryLabel.text = trip.country
         dayIndex.text = "\(trip.dayIndex) days"
         image.setImage(url: trip.coverImage.first)
+    }
+    private func setupTapAction() {
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+        self.addGestureRecognizer(tap)
+        self.isUserInteractionEnabled = true
+    }
+    
+    @objc private func handleTap() {
+        cardDidTap?() // Khi chạm vào thì gọi closure
     }
 }

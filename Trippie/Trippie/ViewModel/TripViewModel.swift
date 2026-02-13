@@ -16,6 +16,8 @@ class TripViewModel {
     @Published var tripForFilter = [Trip]()
     
     // MARK: - OUTPUT (Bindings)
+    let singleTrip = CurrentValueSubject<Trip?, Never>(nil)
+    let singleMyTrip = CurrentValueSubject<TripWithStatus?, Never>(nil)
     let trips = CurrentValueSubject<[Trip], Never>([])
     let randomTrips = CurrentValueSubject<[Trip], Never>([])
     let myTrips = CurrentValueSubject<[TripWithStatus], Never>([])
@@ -39,6 +41,32 @@ class TripViewModel {
     // MARK: - Init
     init() {
         pipe()
+    }
+    
+    // MARK: - SINGLE TRIP
+    func fetchTripById(tripId: String) {
+        Task {
+            do {
+                let result = try await tripService.getTripById(tripId: tripId)
+                singleTrip.send(result)
+                self.loading.send(false)
+            } catch {
+                self.errorMessage.send(error.localizedDescription)
+            }
+        }
+    }
+    
+    // MARK: - SINGLE MY TRIP
+    func fetchMyTripById(tripId: String) {
+        Task {
+            do {
+                let result = try await tripService.getMyTripById(tripId: tripId)
+                singleMyTrip.send(result)
+                self.loading.send(false)
+            } catch {
+                self.errorMessage.send(error.localizedDescription)
+            }
+        }
     }
     
     // MARK: - 1. FETCH FEED (Đã thêm Delay tối thiểu 0.3s)
@@ -106,7 +134,9 @@ class TripViewModel {
                 } else {
                     // --- CASE: CREATE ---
                     let result = try await tripService.createTrip(trip: trip)
-                   
+                    var currentTrips = self.myTrips.value
+                    currentTrips.insert(result, at: 0)
+                    self.myTrips.send(currentTrips)
                     self.updateLocalLists(updatedTrip: result.trip)
                     self.successMessage.send("Create Trip Successfully!")
                 }
@@ -164,6 +194,9 @@ class TripViewModel {
         if let index = currentFeedTrips.firstIndex(where: { $0.id == updatedTrip.id }) {
             currentFeedTrips[index] = updatedTrip
             trips.send(currentFeedTrips)
+        } else {
+            currentFeedTrips.insert(updatedTrip, at: 0)
+            trips.send(currentFeedTrips)
         }
         
         didTapChange.send(updatedTrip.id!)
@@ -172,9 +205,10 @@ class TripViewModel {
     // MARK: - 5. MEMBER MANAGEMENT ACTIONS
     func acceptJoinRequest(userId: String, trip: Trip) {
         self.loading.send(true)
+        guard let id = trip.id else { return }
         Task {
             do {
-                let updatedTrip = try await tripService.acceptJoinTrip(userId: userId, trip: trip)
+                let updatedTrip = try await tripService.acceptJoinTrip(userId: userId, tripId: id)
                 self.updateLocalLists(updatedTrip: updatedTrip)
                 self.successMessage.send("Accept member successfully!")
                 self.loading.send(false)
@@ -186,10 +220,11 @@ class TripViewModel {
     }
     
     func denyJoinRequest(userId: String, trip: Trip) {
+        guard let id = trip.id else { return }
         self.loading.send(true)
         Task {
             do {
-                let updatedTrip = try await tripService.denyJoinTrip(userId: userId, trip: trip)
+                let updatedTrip = try await tripService.denyJoinTrip(userId: userId, tripId: id)
                 self.updateLocalLists(updatedTrip: updatedTrip)
                 self.successMessage.send("Deny member successfully!")
                 self.loading.send(false)
@@ -201,10 +236,11 @@ class TripViewModel {
     }
     
     func kickMember(userId: String, trip: Trip) {
+        guard let id = trip.id else { return }
         self.loading.send(true)
         Task {
             do {
-                let updatedTrip = try await tripService.kickMemberInTrip(userId: userId, trip: trip)
+                let updatedTrip = try await tripService.kickMemberInTrip(userId: userId, tripId: id)
                 self.updateLocalLists(updatedTrip: updatedTrip)
                 self.successMessage.send("Kick member successfully!")
                 self.loading.send(false)
@@ -246,10 +282,10 @@ class TripViewModel {
     // MARK: - LEAVE TRIP
     func leaveTrip(trip: Trip) {
         self.loading.send(true)
-       
+        guard let id = trip.id else { return }
         Task {
             do {
-                let updatedTrip = try await tripService.leaveTrip(input: trip)
+                let updatedTrip = try await tripService.leaveTrip(tripId: id)
               
                 var currentMyTrips = myTrips.value
                 currentMyTrips.removeAll(where: {$0.trip.id == updatedTrip.id})
@@ -294,10 +330,10 @@ class TripViewModel {
     //MARK: - JOIN TRIP
     func joinTrip(trip: Trip) {
         self.loading.send(true)
-        
+        guard let id = trip.id else { return }
         Task {
             do {
-                let updatedTrip = try await tripService.joinTrip(trip: trip)
+                let updatedTrip = try await tripService.joinTrip(tripId: id)
                 
                 self.updateLocalLists(updatedTrip: updatedTrip)
                 self.successMessage.send("Send join request successfully!")

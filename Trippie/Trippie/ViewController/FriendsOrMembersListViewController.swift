@@ -145,30 +145,36 @@ class FriendsOrMembersListViewController: FadeBaseViewController {
     }
     
     @MainActor
-    private func handleKickPerson(trip: Trip, userId: String, name: String) async {
+    private func handleKickPerson(trip: Trip, userId: String, name: String) async -> Bool {
         let confirm = await confirmAlert(type: .kick, title: "\(name)?")
         
         if confirm {
             self.tripViewModel.kickMember(userId: userId, trip: trip)
+            return true
         }
+        return false
     }
     
     @MainActor
-    private func handleAceptPerson(trip: Trip, userId: String, name: String) async {
+    private func handleAceptPerson(trip: Trip, userId: String, name: String) async -> Bool {
         let confirm = await confirmAlert(type: .add, title: "\(name)?")
         
         if confirm {
             self.tripViewModel.acceptJoinRequest(userId: userId, trip: trip)
+            return true
         }
+        return false
     }
     
     @MainActor
-    private func handleDenyPerson(trip: Trip, userId: String, name: String) async {
+    private func handleDenyPerson(trip: Trip, userId: String, name: String) async -> Bool {
         let confirm = await confirmAlert(type: .deny, title: "\(name)?")
         
         if confirm {
             self.tripViewModel.denyJoinRequest(userId: userId, trip: trip)
+            return true
         }
+        return false
     }
     
     // MARK: - BINDING
@@ -193,6 +199,16 @@ class FriendsOrMembersListViewController: FadeBaseViewController {
                 self.displayData = t
                 self.emptyState.isHidden = !self.displayData.isEmpty
                 self.tableView.reloadData()
+            }
+            .store(in: &cancellables)
+        
+        tripViewModel.didTapChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] t in
+                guard let self = self else { return }
+                self.tripDetail = tripViewModel.trips.value.first(where: {$0.id == t})
+                print(tripDetail?.members ?? "")
+                print(tripDetail?.pendingRequests ?? "")
             }
             .store(in: &cancellables)
     }
@@ -225,62 +241,55 @@ extension FriendsOrMembersListViewController: UITableViewDataSource, UITableView
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        guard indexPath.row < displayData.count else {
+            return UITableViewCell()
+        }
+        
         guard let cell = tableView.dequeueReusableCell(withIdentifier: UserCell.identifier, for: indexPath) as? UserCell else {
             return UITableViewCell()
         }
         
+        // Configure giao diện ban đầu
         let user = displayData[indexPath.row]
         cell.configure(user: user)
         cell.updateMode(mode: currentMode)
-        cell.selectionStyle = .none // Tắt màu xám khi click vào cell
+        cell.selectionStyle = .none
         
-        // --- KHU VỰC QUAN TRỌNG ---
-        // Kiểm tra an toàn: Nếu không có UserID thì return luôn
-        guard let userId = user.id else { return cell }
-        
-        // LƯU Ý: Nếu tripDetail bị nil, ta vẫn gán closure nhưng check nil bên trong
-        // Để tránh việc nút bấm bị "chết" (không phản hồi)
-        
-        cell.onTapAction = { [weak self] in
-            guard let self = self else { return }
+        // --- GÁN CLOSURE ACTION ---
+        cell.onTapAction = { [weak self, weak cell] in
+            guard let self = self, let currentCell = cell else { return }
             
-            // 1. Tìm lại index thực tế của user này trong mảng hiện tại
-            // (Không tin tưởng indexPath cũ vì thứ tự có thể đã thay đổi)
-            guard let currentIndex = self.displayData.firstIndex(where: { $0.id == userId }) else {
-                return
-            }
+            // 1. Lấy indexPath hiện tại CHÍNH XÁC từ tableView để tránh lỗi cell reuse
+            guard let currentIndexPath = self.tableView.indexPath(for: currentCell) else { return }
             
-            // Tạo indexPath mới chuẩn xác
-            let indexPathToRemove = IndexPath(row: currentIndex, section: 0)
-
-            // Check trip để xử lý logic API
+            // 2. Lấy ĐÚNG user tại thời điểm bấm chứ không dùng biến user cũ ở trên
+            let currentUser = self.displayData[currentIndexPath.row]
+            
             guard let trip = self.tripDetail else { return }
+            guard let userId = currentUser.id else { return }
+            
+            print("Đang xử lý đúng user: \(currentUser.name) - ID: \(userId)")
 
             Task {
-                // Gọi API xử lý
+                var isConfirmed = false
+                
+                // 3. Gọi API xử lý và đợi kết quả Confirm
                 switch self.currentMode {
                 case .acept:
-                    await self.handleAceptPerson(trip: trip, userId: userId, name: user.name)
+                    isConfirmed = await self.handleAceptPerson(trip: trip, userId: userId, name: currentUser.name)
                 case .deny:
-                    await self.handleDenyPerson(trip: trip, userId: userId, name: user.name)
+                    isConfirmed = await self.handleDenyPerson(trip: trip, userId: userId, name: currentUser.name)
                 case .kick:
-                    await self.handleKickPerson(trip: trip, userId: userId, name: user.name)
+                    isConfirmed = await self.handleKickPerson(trip: trip, userId: userId, name: currentUser.name)
                 case .normal:
                     return
                 }
-
-                // --- CẬP NHẬT UI CÓ ANIMATION ---
                 
-                // Bước 1: Xóa data trong mảng gốc trước
-                // (⚠️ Lưu ý: Nếu biến displayData của cậu có didSet { reloadData() }
-                // thì cậu phải tìm cách chặn nó lại, nếu không nó sẽ bị conflict animation)
-                self.displayData.remove(at: currentIndex)
-                
-                // Bước 2: Xóa row trên giao diện với hiệu ứng lướt qua trái/phải hoặc fade
-                self.tableView.deleteRows(at: [indexPathToRemove], with: .fade)
-                
-                // (Optional) Nếu cậu muốn reload lại cell đó thay vì xoá (ví dụ update trạng thái)
-                // self.tableView.reloadRows(at: [indexPathToRemove], with: .automatic)
+                // 4. CHỈ XOÁ UI KHI ĐÃ CONFIRM (isConfirmed == true)
+                if isConfirmed {
+                    self.displayData.remove(at: currentIndexPath.row)
+                    self.tableView.deleteRows(at: [currentIndexPath], with: .fade)
+                }
             }
         }
         

@@ -24,22 +24,27 @@ class RepplyComponentView: UIView {
             renderVideoImage()
         }
     }
-    var chat: String = ""
+    var chat: String {
+        return chatBox.text
+    }
     
     private var cancellable = Set<AnyCancellable>()
     
     private let images = ImageAttachmentView()
     private let video = VideoAttachmentView()
-    private let chatBox = ChatInputTextView()
+    private let chatBox = ChatInputView()
     private let sendBtn = UIButton.customButton(image: UIImage(systemName: "paperplane.fill"), backgroundColor: .authBackground2, tintColor: .white, isCircle: true)
-    private let attackmentImageBtn = UIButton.customButton(image: UIImage(systemName: "photo"), backgroundColor: .clear, tintColor: .systemGray3)
-    private let attackmentVideoBtn = UIButton.customButton(image: UIImage(systemName: "video.fill"), backgroundColor: .clear, tintColor: .systemGray3)
-    private let attackmentTakePhoto = UIButton.customButton(image: UIImage(systemName: "camera.fill"), backgroundColor: .clear, tintColor: .systemGray3)
-    private let appendBtn = UIButton.customButton(image: UIImage(systemName: "chevron.right"), backgroundColor: .clear, tintColor: .authBackground2)
-    private let cancelBtn = UIButton.customButton(image: UIImage(systemName: "xmark"), backgroundColor: .clear, tintColor: .systemGray)
+    private let attackmentImageBtn = UIButton.customButton(image: UIImage(systemName: "photo"), backgroundColor: .clear, tintColor: .systemGray3, padding: 3)
+    private let attackmentVideoBtn = UIButton.customButton(image: UIImage(systemName: "video.fill"), backgroundColor: .clear, tintColor: .systemGray3, padding: 3)
+    private let attackmentTakePhoto = UIButton.customButton(image: UIImage(systemName: "camera.fill"), backgroundColor: .clear, tintColor: .systemGray3, padding: 3)
+    private let appendBtn = UIButton.customButton(image: UIImage(systemName: "chevron.right"), backgroundColor: .clear, tintColor: .authBackground2, padding: 3)
+    private let cancelBtn = UIButton.customButton(image: UIImage(systemName: "xmark"), backgroundColor: .clear, tintColor: .systemGray, padding: 3)
     private var startChating: Bool = false
     
-    private let rootStack = UIStackView.customStack(axis: .vertical, alignment: .leading, distribution: .fill, stackSpacing: 4)
+    private let rootStack = UIStackView.customStack(axis: .vertical, alignment: .fill, distribution: .fill, stackSpacing: 4)
+    
+    private let vstack1 = UIStackView.customStack(axis: .vertical, alignment: .leading, distribution: .fill)
+    private let vstack2 = UIStackView.customStack(axis: .vertical, alignment: .leading, distribution: .fill)
     
     //MARK: - INIT
     override init(frame: CGRect) {
@@ -55,10 +60,15 @@ class RepplyComponentView: UIView {
     private func setupUI() {
         let mainstack = UIStackView.customStack(xPadding: 8, yPadding: 12, axis: .horizontal, alignment: .bottom, distribution: .fill)
         addSubview(rootStack)
-        rootStack.addArrangedSubview(images)
-        rootStack.addArrangedSubview(video)
-        rootStack.addArrangedSubview(mainstack)
         addSubview(cancelBtn)
+        
+        rootStack.addArrangedSubview(vstack1)
+        rootStack.addArrangedSubview(vstack2)
+        rootStack.addArrangedSubview(mainstack)
+        
+        vstack1.addArrangedSubview(video)
+        vstack2.addArrangedSubview(images)
+        
         mainstack.addArrangedSubview(appendBtn)
         mainstack.addArrangedSubview(attackmentTakePhoto)
         mainstack.addArrangedSubview(attackmentImageBtn)
@@ -79,11 +89,27 @@ class RepplyComponentView: UIView {
             cancelBtn.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
             
             video.heightAnchor.constraint(equalTo: video.widthAnchor, multiplier: 3/4),
+            
+            appendBtn.widthAnchor.constraint(equalToConstant: 36),
+            appendBtn.heightAnchor.constraint(equalToConstant: 36),
+            
+            attackmentImageBtn.widthAnchor.constraint(equalToConstant: 36),
+            attackmentImageBtn.heightAnchor.constraint(equalToConstant: 36),
+            
+            attackmentVideoBtn.widthAnchor.constraint(equalToConstant: 36),
+            attackmentVideoBtn.heightAnchor.constraint(equalToConstant: 36),
+            
+            attackmentTakePhoto.widthAnchor.constraint(equalToConstant: 36),
+            attackmentTakePhoto.heightAnchor.constraint(equalToConstant: 36),
+            
+            sendBtn.widthAnchor.constraint(equalToConstant: 40),
+            sendBtn.heightAnchor.constraint(equalToConstant: 40),
         ])
         
-        video.isHidden = true
-        images.isHidden = true
+        vstack1.isHidden = true
+        vstack2.isHidden = true
         cancelBtn.isHidden = true
+        appendBtn.isHidden = true
     }
     
     private func renderVideoImage() {
@@ -103,24 +129,29 @@ class RepplyComponentView: UIView {
         chatBox.isEditable = true
         
         if !imgs.isEmpty {
-            images.isHidden = false
+            vstack2.isHidden = false
             images.configure(urls: imgs)
             attackmentTakePhoto.isEnabled = false
             attackmentVideoBtn.isEnabled = false
             cancelBtn.isHidden = false
         } else if !thumnail.isEmpty || !videoUrl.isEmpty {
-            video.isHidden = false
+            vstack1.isHidden = false
             video.configure(videoThumbnail: thumnail)
             attackmentTakePhoto.isEnabled = false
             attackmentVideoBtn.isEnabled = false
             attackmentImageBtn.isEnabled = false
             chatBox.text = ""
-            chatBox.placeholder = "Send a message..."
             chatBox.isEditable = false
             cancelBtn.isHidden = false
         }
         if let container = self.superview {
             video.widthAnchor.constraint(lessThanOrEqualTo: container.widthAnchor, multiplier: 0.6).isActive = true
+        }
+        
+        if chatBox.text == "" {
+            attackmentVideoBtn.isEnabled = true
+        } else {
+            attackmentVideoBtn.isEnabled = false
         }
         
         UIView.animate(withDuration: 0.3) {
@@ -172,6 +203,7 @@ class RepplyComponentView: UIView {
     
     @objc private func didTapSendMessage() {
         onSend?()
+        self.chatBox.text = ""
     }
     
     @objc private func didTapCancel() {
@@ -213,7 +245,6 @@ class RepplyComponentView: UIView {
                     self.attackmentImageBtn.isHidden = true
                     self.attackmentVideoBtn.isHidden = true
                     self.attackmentTakePhoto.isHidden = true
-                    self.chat = self.chatBox.text
                 }
             }
             .store(in: &cancellable)

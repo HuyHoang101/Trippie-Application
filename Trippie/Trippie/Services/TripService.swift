@@ -204,115 +204,127 @@ class TripService {
     // MARK: - 4. JOIN TRIP (ACCEPT MEMBER)
     // Input: UserId người xin vào, Trip hiện tại
     // Output: Trip mới đã cập nhật danh sách member
-    func acceptJoinTrip(userId: String, trip: Trip) async throws -> Trip {
-        guard let tripId = trip.id else {
-            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Trip ID not found"])
+        func acceptJoinTrip(userId: String, tripId: String) async throws -> Trip {
+            // 1. Lấy Trip mới nhất về trước khi thao tác
+            var updatedTrip = try await getTripById(tripId: tripId)
+            
+            // 2. Logic thêm member
+            if !updatedTrip.members.contains(userId) {
+                updatedTrip.members.append(userId)
+                updatedTrip.currentMember += 1
+            }
+            
+            // 3. Logic check Full
+            if updatedTrip.currentMember >= updatedTrip.maxMember && updatedTrip.status != .completed {
+                updatedTrip.status = .full
+            }
+            
+            // 4. Xoá khỏi danh sách chờ
+            updatedTrip.pendingRequests.removeAll(where: { $0 == userId })
+            
+            // 5. Lưu Trip
+            try db.collection("trips").document(tripId).setData(from: updatedTrip, merge: true)
+            
+            // 6. Tạo Participation
+            let joinPart = Participation(
+                id: nil,
+                userId: userId,
+                tripId: tripId,
+                personalStatus: .upcoming,
+                role: .member
+            )
+            try db.collection("participations").addDocument(from: joinPart)
+            
+            return updatedTrip
         }
         
-        var updatedTrip = trip
-        
-        // 1. Logic thêm member
-        if !updatedTrip.members.contains(userId) {
-            updatedTrip.members.append(userId)
-            updatedTrip.currentMember += 1
+        // MARK: - 5. DENY JOIN TRIP
+        func denyJoinTrip(userId: String, tripId: String) async throws -> Trip {
+            // 1. Lấy Trip mới nhất về
+            var updatedTrip = try await getTripById(tripId: tripId)
+            
+            // 2. Xoá khỏi pending list
+            updatedTrip.pendingRequests.removeAll(where: { $0 == userId })
+            
+            // 3. Lưu lại
+            try db.collection("trips").document(tripId).setData(from: updatedTrip, merge: true)
+            
+            return updatedTrip
         }
         
-        // 2. Logic check Full
-        // Nếu số lượng hiện tại >= max -> Đổi trạng thái thành Full (nếu chưa hoàn thành)
-        if updatedTrip.currentMember >= updatedTrip.maxMember && updatedTrip.status != .completed {
-            updatedTrip.status = .full
+        // MARK: - 6. KICK MEMBER
+        func kickMemberInTrip(userId: String, tripId: String) async throws -> Trip {
+            // 1. Lấy Trip mới nhất về
+            var updatedTrip = try await getTripById(tripId: tripId)
+            
+            // 2. Xoá member và giảm count
+            if updatedTrip.members.contains(userId) {
+                updatedTrip.members.removeAll(where: { $0 == userId })
+                updatedTrip.currentMember -= 1
+            }
+            
+            // 3. Logic check trạng thái
+            if updatedTrip.status == .full && updatedTrip.status != .completed {
+                updatedTrip.status = .recruiting
+            }
+            
+            // 4. Update Trip
+            try db.collection("trips").document(tripId).setData(from: updatedTrip, merge: true)
+            
+            // 5. Xoá Participation của người bị kick
+            let partSnapshot = try await db.collection("participations")
+                .whereField("tripId", isEqualTo: tripId)
+                .whereField("userId", isEqualTo: userId)
+                .getDocuments()
+            
+            for doc in partSnapshot.documents {
+                try await doc.reference.delete()
+            }
+            
+            return updatedTrip
         }
-        
-        // 3. Xoá khỏi danh sách chờ
-        updatedTrip.pendingRequests.removeAll(where: { $0 == userId })
-        
-        // 4. Lưu Trip
-        try db.collection("trips").document(tripId).setData(from: updatedTrip, merge: true)
-        
-        // 5. Tạo Participation cho người vừa được duyệt
-        let joinPart = Participation(
-            id: nil,
-            userId: userId,
-            tripId: tripId,
-            personalStatus: .upcoming,
-            role: .member
-        )
-        // Fire & Forget (hoặc await nếu muốn chắc chắn 100%)
-        try db.collection("participations").addDocument(from: joinPart)
-        
-        return updatedTrip
+    
+    // MARK: - GET TRIP BY ID
+    func getTripById(tripId: String) async throws -> Trip {
+        let snapshot = try await db.collection("trips").document(tripId).getDocument()
+        guard let trip = try? snapshot.data(as: Trip.self) else {
+            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Trip not found"])
+        }
+        return trip
     }
     
     
-    // MARK: - 5. DENY JOIN TRIP
-    func denyJoinTrip(userId: String, trip: Trip) async throws -> Trip {
-        guard let tripId = trip.id else {
-            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Trip ID not found"])
+    // MARK: - GET TRIP WITH STATUS
+    func getMyTripById(tripId: String) async throws -> TripWithStatus {
+        guard let id = AuthService.shared.currentUserId else {
+            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "ID not found"])
         }
-        
-        var updatedTrip = trip
-        // Chỉ cần xoá khỏi pending list
-        updatedTrip.pendingRequests.removeAll(where: { $0 == userId })
-        
-        try db.collection("trips").document(tripId).setData(from: updatedTrip, merge: true)
-        
-        return updatedTrip
-    }
-    
-    
-    // MARK: - 6. KICK MEMBER
-    func kickMemberInTrip(userId: String, trip: Trip) async throws -> Trip {
-        guard let tripId = trip.id else {
-            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Trip ID not found"])
-        }
-        
-        var updatedTrip = trip
-        
-        // 1. Xoá member và giảm count
-        if updatedTrip.members.contains(userId) {
-            updatedTrip.members.removeAll(where: { $0 == userId })
-            updatedTrip.currentMember -= 1
-        }
-        
-        // 2. Logic check trạng thái:
-        // Đang FULL mà kick bớt người -> Trở về RECRUITING (để tuyển người khác)
-        if updatedTrip.status == .full && updatedTrip.status != .completed {
-            updatedTrip.status = .recruiting
-        }
-        
-        // 3. Update Trip
-        try db.collection("trips").document(tripId).setData(from: updatedTrip, merge: true)
-        
-        // 4. Xoá Participation của người bị kick
-        // Query tìm document participation của user đó trong trip này
+        let trip = try await getTripById(tripId: tripId)
         let partSnapshot = try await db.collection("participations")
             .whereField("tripId", isEqualTo: tripId)
-            .whereField("userId", isEqualTo: userId)
+            .whereField("userId", isEqualTo: id)
             .getDocuments()
         
-        for doc in partSnapshot.documents {
-            try await doc.reference.delete()
+        guard let document = partSnapshot.documents.first,
+              let participation = try? document.data(as: Participation.self) else {
+            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Participation not found"])
         }
-        
-        return updatedTrip
+        return TripWithStatus(trip: trip, participation: participation)
     }
-    
-    
-    // MARK: - 7. JOIN TRIP (SEND REQUEST)
-    func joinTrip(trip: Trip) async throws -> Trip {
-        guard let tripId = trip.id else {
-            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Trip ID not found"])
-        }
+
+    // MARK: - 7. JOIN TRIP (SEND REQUEST) - Siêu an toàn
+    func joinTrip(tripId: String) async throws -> Trip {
         guard let userId = AuthService.shared.currentUserId else {
-            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Authorized failed, please login again!"])
+            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "ID not found"])
         }
         
-        var updatedTrip = trip
-        updatedTrip.pendingRequests.append(userId)
+        let tripRef = db.collection("trips").document(tripId)
+
+        try await tripRef.updateData([
+            "pendingRequests": FieldValue.arrayUnion([userId])
+        ])
         
-        try db.collection("trips").document(tripId).setData(from: updatedTrip, merge: true)
-        
-        return updatedTrip
+        return try await getTripById(tripId: tripId)
     }
     
     //MARK: - 8. UPDATE TRIP PERSONAL STATUS
@@ -334,81 +346,82 @@ class TripService {
         return participation
     }
     
-    // MARK: - 9. LEAVE TRIP (Rời khỏi chuyến đi)
-    // Input: TripWithStatus (chứa thông tin user và trip hiện tại)
-    // Output: Trip (đã cập nhật số lượng thành viên)
-    func leaveTrip(input: Trip) async throws -> Trip {
-        var updatedTrip = input
+    // MARK: - 9. LEAVE TRIP (Rời khỏi chuyến đi) - An toàn tuyệt đối bằng Transaction
+    func leaveTrip(tripId: String) async throws -> Trip {
         guard let userId = AuthService.shared.currentUserId else {
-            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Authorized failed, please login again!"])
+            throw NSError(domain: "TripService", code: 401, userInfo: [NSLocalizedDescriptionKey: "Authorized failed, please login again!"])
         }
         
-        guard let tripId = updatedTrip.id else {
-            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "ID not found"])
-        }
+        let tripRef = db.collection("trips").document(tripId)
         
-        
-        // 1. Xoá khỏi Members (Nếu đã là thành viên)
-        if updatedTrip.members.contains(userId) {
-            updatedTrip.members.removeAll { $0 == userId }
-            updatedTrip.currentMember -= 1
+        // 1. Chạy Transaction trên Server để Update Trip
+        let _ = try await db.runTransaction({ (transaction, errorPointer) -> Any? in
             
-            // Logic: Nếu đang FULL mà có người rời đi -> Quay về trạng thái tuyển thành viên
-            if updatedTrip.status == .full {
-                updatedTrip.status = .recruiting
+            // Đọc dữ liệu Trip trong luồng khoá
+            let tripDocument: DocumentSnapshot
+            do {
+                tripDocument = try transaction.getDocument(tripRef)
+            } catch let fetchError as NSError {
+                errorPointer?.pointee = fetchError
+                return nil
             }
-        }
+            
+            guard var trip = try? tripDocument.data(as: Trip.self) else { return nil }
+            
+            // Thực hiện logic nếu user thực sự đang là thành viên
+            if trip.members.contains(userId) {
+                trip.members.removeAll { $0 == userId }
+                trip.currentMember -= 1
+                
+                // Logic: Đang FULL mà có người rời đi -> Về lại RECRUITING
+                if trip.status == .full && trip.status != .completed {
+                    trip.status = .recruiting
+                }
+                
+                // Ghi đè lại dữ liệu an toàn
+                do {
+                    try transaction.setData(from: trip, forDocument: tripRef, merge: true)
+                } catch let writeError as NSError {
+                    errorPointer?.pointee = writeError
+                    return nil
+                }
+            }
+            
+            return nil
+        })
         
-        // 2. Update Trip lên Server
-        try db.collection("trips").document(tripId).setData(from: updatedTrip, merge: true)
-        
-        // 3. Xoá Participation tương ứng
-        // Tìm document trong collection "participations" thoả mãn cả 2 điều kiện
+        // 2. Xoá Participation tương ứng bằng Batch (Nhanh và an toàn)
         let participationQuery = db.collection("participations")
             .whereField("userId", isEqualTo: userId)
             .whereField("tripId", isEqualTo: tripId)
         
         let snapshot = try await participationQuery.getDocuments()
         
-        // Dùng WriteBatch để xoá (tối ưu hơn nếu lỡ có nhiều bản ghi trùng)
         let batch = db.batch()
         for document in snapshot.documents {
             batch.deleteDocument(document.reference)
         }
         try await batch.commit()
         
-        return updatedTrip
+        // 3. Kéo Trip mới nhất về để trả ra cho UI cập nhật
+        let finalTrip = try await getTripById(tripId: tripId)
+        return finalTrip
     }
     
-    // MARK: - 10. CANCEL JOIN REQUEST (Huỷ xin - khi đang Pending)
-    // Input: TripId và UserId
-    // Output: Trip (đã xoá tên khỏi pending)
+    // MARK: - 10. CANCEL JOIN REQUEST - Siêu an toàn
     func cancelJoinRequest(tripId: String) async throws -> Trip {
-        
-        // 1. Lấy dữ liệu Trip mới nhất về để đảm bảo tính toàn vẹn
-        let docRef = db.collection("trips").document(tripId)
-        let snapshot = try await docRef.getDocument()
-        
-        guard var trip = try? snapshot.data(as: Trip.self) else {
-            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Trip not found"])
-        }
         guard let userId = AuthService.shared.currentUserId else {
-            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Authorized failed, please login again!"])
+            throw NSError(domain: "TripService", code: 404, userInfo: [NSLocalizedDescriptionKey: "ID not found"])
         }
         
-        // 2. Xoá user khỏi danh sách Pending
-        if trip.pendingRequests.contains(userId) {
-            trip.pendingRequests.removeAll { $0 == userId }
-        } else {
-            // Nếu server không có tên mình trong pending (có thể đã bị từ chối hoặc được duyệt rồi)
-            // Thì cứ trả về trip hiện tại, không lỗi
-            return trip
-        }
+        let tripRef = db.collection("trips").document(tripId)
         
-        // 3. Lưu lại
-        try docRef.setData(from: trip, merge: true)
+        // Ra lệnh Server tự tìm và xoá ID này
+        try await tripRef.updateData([
+            "pendingRequests": FieldValue.arrayRemove([userId])
+        ])
         
-        return trip
+        return try await getTripById(tripId: tripId)
     }
     
     // MARK: - SEED DATA GENERATOR

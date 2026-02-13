@@ -24,6 +24,16 @@ class PaddingLabel: UILabel {
                       height: size.height + topInset + bottomInset)
     }
     
+    override var bounds: CGRect {
+        didSet {
+            // Ép Label phải trừ đi padding trái/phải khi tính toán số dòng
+            let preferredWidth = bounds.width - (leftInset + rightInset)
+            if preferredMaxLayoutWidth != preferredWidth {
+                preferredMaxLayoutWidth = preferredWidth
+            }
+        }
+    }
+
     // Tự động bo tròn khi layout thay đổi
     override func layoutSubviews() {
         super.layoutSubviews()

@@ -41,9 +41,14 @@ class GroupMessageViewController: FadeBaseViewController {
     
     
     private func setupUI() {
+        UserViewModel.shared.fetchMyProfile()
         commentViewModel.joinChatRoom(tripId: tripId ?? "")
         tableView.delegate = self
         tableView.dataSource = self
+        tableView.register(MessageTableViewCell.self, forCellReuseIdentifier: MessageTableViewCell.identifier)
+        tableView.separatorStyle = .none
+        tableView.showsVerticalScrollIndicator = false
+        
         replyLabel.imageViewModel = self.imageViewModel
         refreshControl.addTarget(self, action: #selector(yourTopFunction), for: .valueChanged)
         tableView.refreshControl = refreshControl
@@ -57,7 +62,7 @@ class GroupMessageViewController: FadeBaseViewController {
         tableView.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: view.topAnchor),
+            tableView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: replyLabel.topAnchor),
@@ -106,6 +111,23 @@ class GroupMessageViewController: FadeBaseViewController {
         navigationController?.navigationBar.scrollEdgeAppearance = appearance
     }
     
+    func adjustContentInsetToBottom() {
+        // Đảm bảo layout đã tính toán xong
+        self.view.layoutIfNeeded()
+        
+        let tableViewHeight = tableView.bounds.height
+        let contentHeight = tableView.contentSize.height
+        
+        // Nếu nội dung ngắn hơn chiều cao bảng -> Đẩy xuống
+        if contentHeight < tableViewHeight {
+            let topInset = tableViewHeight - contentHeight
+            tableView.contentInset.top = topInset
+        } else {
+            // Nếu nội dung dài rồi thì thôi, reset về 0
+            tableView.contentInset.top = 0
+        }
+    }
+    
     private func resetOldData() {
         self.displayData = []
         self.tableView.reloadData()
@@ -150,8 +172,36 @@ class GroupMessageViewController: FadeBaseViewController {
             
             newData.append(currentMsg)
         }
-
-        self.displayData = newData
+        var newData2: [Comment] = []
+        
+        for (index, currentMsg) in newData.enumerated() {
+            if index > 0 {
+                let previousId = newData[index - 1].userId
+                let currentUserId = newData[index].userId
+                if previousId != currentUserId {
+                    
+                    let separator = Comment(
+                        id: UUID().uuidString, // ID phải unique để không lỗi List
+                        userId: "",
+                        userName: "",
+                        userAvatar: "",
+                        role: .member,
+                        imageUrls: [],
+                        videoUrl: "",
+                        videoThumbnail: "",
+                        message: "",          // Message rỗng
+                        createdAt: nil, // Lấy ngày của tin nhắn sau để hiển thị
+                        updatedAt: nil
+                    )
+                    
+                    newData2.append(separator)
+                }
+            }
+            
+            newData2.append(currentMsg)
+        }
+        
+        self.displayData = newData2
     }
     
     
@@ -277,6 +327,13 @@ class GroupMessageViewController: FadeBaseViewController {
                 self.addDateForMessage()
                 self.beginLabel.isHidden = !self.displayData.isEmpty
                 self.tableView.reloadData()
+                
+                DispatchQueue.main.async {
+                    self.adjustContentInsetToBottom()
+                    if !self.displayData.isEmpty {
+                         self.scrollToBottom() // Vẫn scroll xuống cuối cho chắc
+                    }
+                }
             }
             .store(in: &cancellable)
     }
@@ -291,7 +348,11 @@ extension GroupMessageViewController: UITableViewDataSource, UITableViewDelegate
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        guard let cell = tableView.dequeueReusableCell(withIdentifier: "MessageTableViewCell", for: indexPath) as? MessageTableViewCell else {
+        // Kiểm tra index an toàn
+        guard indexPath.row < displayData.count else {
+            return UITableViewCell()
+        }
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: MessageTableViewCell.identifier, for: indexPath) as? MessageTableViewCell else {
             return UITableViewCell()
         }
         

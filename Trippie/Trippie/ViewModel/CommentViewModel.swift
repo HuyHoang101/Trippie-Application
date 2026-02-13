@@ -78,6 +78,7 @@ class CommentViewModel {
     func sendComment(message: String = "", imgUrls: [String] = [], videoUrl: String = "", thumbnailUrl: String = "") {
         guard let tripId = currentTripId, !message.isEmpty || !imgUrls.isEmpty || !videoUrl.isEmpty else { return }
         guard let user = UserViewModel.shared.myProfile.value else { return }
+        
         // Tạo model Comment
         let newComment = Comment(
             id: nil, // Firebase tự sinh

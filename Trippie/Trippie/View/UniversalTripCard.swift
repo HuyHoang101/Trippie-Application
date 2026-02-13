@@ -9,6 +9,8 @@ import UIKit
 
 class UniversalTripCard: UIView {
     
+    var cardDidTap: (() -> Void)?
+    
     // MARK: - UI COMPONENTS
     private let imgView = TrippieImageView(style: .rounded(radius: 8, corners: nil))
     
@@ -35,6 +37,7 @@ class UniversalTripCard: UIView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupLayout()
+        setupTapAction()
     }
     
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -177,5 +180,15 @@ class UniversalTripCard: UIView {
     
     func prepareForReuse() {
         self.imgView.setImage(url: "")
+    }
+    
+    private func setupTapAction() {
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+        self.addGestureRecognizer(tap)
+        self.isUserInteractionEnabled = true
+    }
+    
+    @objc private func handleTap() {
+        cardDidTap?() // Khi chạm vào thì gọi closure
     }
 }

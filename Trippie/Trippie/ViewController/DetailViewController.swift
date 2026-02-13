@@ -48,6 +48,8 @@ class DetailViewController: FadeBaseViewController {
     private let backBtn = UIButton.customButton(image: UIImage(systemName: "arrow.left"), backgroundColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.5) ?? .systemGray.withAlphaComponent(0.5))
     private let questionBtn = UIButton.customButton(image: UIImage(systemName: "questionmark"), backgroundColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.5) ?? .systemGray.withAlphaComponent(0.5))
     private let menuBtn = DropdownButton()
+    private var tripResult: Trip?
+    private var participation: Participation?
     
         //MARK: - LIFE CYCLE
     override func viewDidLoad() {
@@ -75,6 +77,11 @@ class DetailViewController: FadeBaseViewController {
         
         view.addSubview(mainScroll)
         mainScroll.addSubview(mainContent)
+        mainScroll.delegate = self
+        mainScroll.alwaysBounceVertical = true
+            
+        // Đảm bảo tính năng bounce đang bật
+        mainScroll.bounces = true
         
         mainContent.addArrangedSubview(coverImage)
         mainContent.addArrangedSubview(titleLabel)
@@ -122,24 +129,19 @@ class DetailViewController: FadeBaseViewController {
             personalStatus.topAnchor.constraint(equalTo: coverImage.topAnchor, constant: 20),
             personalStatus.trailingAnchor.constraint(equalTo: coverImage.trailingAnchor, constant: -20)
         ])
+        guard let id = self.id else { return }
         
+        if isFeedBoard == true {
+            viewModel.fetchTripById(tripId: id)
+            self.participation = nil
+        } else {
+            viewModel.fetchMyTripById(tripId: id)
+        }
         renderDetail()
         setupNavBar()
     }
     
     private func renderDetail() {
-        let tripResult: Trip?
-        let participation: Participation?
-        
-        if isFeedBoard == true {
-            tripResult = viewModel.trips.value.first(where: { $0.id == self.id })
-            participation = nil
-        } else {
-            let joined = viewModel.myTrips.value.first(where: { $0.trip.id == self.id })
-            tripResult = joined?.trip
-            participation = joined?.participation
-        }
-        
         guard let trip = tripResult else {
             print("DEBUG: Trip not found with ID: \(self.id ?? "nil")")
             return
@@ -284,16 +286,18 @@ class DetailViewController: FadeBaseViewController {
         navigationController?.navigationBar.scrollEdgeAppearance = appearance
     }
     
-    @objc private func handleBack() {
-        navigationController?.popViewController(animated: true)
-    }
-    
     
     //MARK: - ACTION
     private func action() {
         questionBtn.addTarget(self, action: #selector(openExplainationSheet), for: .touchUpInside)
         planBtn.addTarget(self, action: #selector(pushToTask), for: .touchUpInside)
         applyButton.addTarget(self, action: #selector(appliedAction), for: .touchUpInside)
+    }
+    
+    @objc private func handleBack() {
+        navigationController?.popViewController(animated: true)
+        TripViewModel.shared.singleTrip.send(nil)
+        TripViewModel.shared.singleMyTrip.send(nil)
     }
     
     @objc private func appliedAction() {
@@ -353,13 +357,18 @@ class DetailViewController: FadeBaseViewController {
     @objc private func pushToMembers(isOwner: Bool) {
         let userListVC = FriendsOrMembersListViewController()
         userListVC.navigationTitle = "All Members"
+        guard let ownerId = self.tripDetailWithStatus?.trip.ownerId ,let ids = self.tripDetailWithStatus?.trip.members else { return }
         if isOwner {
             userListVC.listType = .tripMembers
+            userListVC.memberIds = ids
         } else {
             userListVC.listType = .tripMemberForAnotherLooking
+            var memIds = [ownerId]
+            memIds.append(contentsOf: ids)
+            userListVC.memberIds = memIds
+            
         }
         userListVC.tripDetail = self.tripDetailWithStatus?.trip
-        userListVC.memberIds = self.tripDetailWithStatus?.trip.members
         self.navigationController?.pushViewController(userListVC, animated: true)
     }
     
@@ -407,5 +416,43 @@ class DetailViewController: FadeBaseViewController {
                 self?.renderDetail()
             }
             .store(in: &cancellable)
+        viewModel.singleTrip
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] t in
+                self?.tripResult = t
+                self?.renderDetail()
+            }
+            .store(in: &cancellable)
+        viewModel.singleMyTrip
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] tws in
+                self?.tripResult = tws?.trip
+                self?.participation = tws?.participation
+                self?.renderDetail()
+            }
+            .store(in: &cancellable)
+    }
+}
+
+
+extension DetailViewController: UIScrollViewDelegate {
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        // Kiểm tra nếu là mainScroll và người dùng kéo xuống một khoảng (ví dụ -100)
+        let offset = scrollView.contentOffset.y
+        if offset < -100 {
+            handleRefreshData()
+        }
+    }
+    
+    private func handleRefreshData() {
+        guard let id = self.id else { return }
+        if let i = isFeedBoard, i {
+            self.viewModel.fetchTripById(tripId: id)
+        } else {
+            self.viewModel.fetchMyTripById(tripId: id)
+        }
+        // Gợi ý: cảm giác "haptic" khi kéo đủ lực
+        let generator = UIImpactFeedbackGenerator(style: .medium)
+        generator.impactOccurred()
     }
 }

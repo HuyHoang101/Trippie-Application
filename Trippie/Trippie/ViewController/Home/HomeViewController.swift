@@ -214,6 +214,10 @@ class HomeViewController: FadeBaseViewController {
                     card.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.6),
                     card.heightAnchor.constraint(equalTo: card.widthAnchor, multiplier: 0.8)
                 ])
+                guard let id = t.id else { return }
+                card.cardDidTap = { [weak self] in
+                    self?.pushToDetail(id: id, navigationTitle: "Detail: \(t.location)")
+                }
             }
         }
         if forList {
@@ -247,6 +251,10 @@ class HomeViewController: FadeBaseViewController {
                     NSLayoutConstraint.activate([
                         row.widthAnchor.constraint(equalTo: vstack2.widthAnchor)
                     ])
+                    guard let id = t.id else { return }
+                    row.cardDidTap = { [weak self] in
+                        self?.pushToDetail(id: id, navigationTitle: "Detail: \(t.location)")
+                    }
                 }
             }
         }
@@ -258,6 +266,13 @@ class HomeViewController: FadeBaseViewController {
         Vietnam.addTarget(self, action: #selector(handleFilterTap), for: .touchUpInside)
         Recommend.addTarget(self, action: #selector(handleFilterTap), for: .touchUpInside)
         viewAllButton.addTarget(self, action: #selector(pushToLish), for: .touchUpInside)
+    }
+    
+    private func pushToDetail(id: String, navigationTitle: String) {
+        let vc = DetailViewController()
+        vc.id = id
+        vc.isFeedBoard = true
+        vc.navigationTitle = navigationTitle
     }
     
     @objc private func multiplechoice(_ string: String) {

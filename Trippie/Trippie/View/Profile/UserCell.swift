@@ -56,8 +56,16 @@ class UserCell: UITableViewCell {
         actionButton.addTarget(self, action: #selector(didTapActionBtn), for: .touchUpInside)
     }
     
+    
+    
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    // THÊM VÀO ĐÂY: Reset closure khi tái sử dụng cell
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        self.onTapAction = nil
     }
     
     private func setupUI() {
