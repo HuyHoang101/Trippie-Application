@@ -70,6 +70,7 @@ class DetailViewController: FadeBaseViewController {
     //MARK: - SETUP UI
     private func setupUI() {
         setupBackground()
+        containerAppliedButton.isHidden = true 
         coverImage.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.numberOfLines = 0
         descriptionLabel.numberOfLines = 0
@@ -143,7 +144,6 @@ class DetailViewController: FadeBaseViewController {
     
     private func renderDetail() {
         guard let trip = tripResult else {
-            print("DEBUG: Trip not found with ID: \(self.id ?? "nil")")
             return
         }
         self.tripDetailWithStatus = TripWithStatus(trip: trip, participation: participation)
@@ -439,7 +439,7 @@ extension DetailViewController: UIScrollViewDelegate {
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         // Kiểm tra nếu là mainScroll và người dùng kéo xuống một khoảng (ví dụ -100)
         let offset = scrollView.contentOffset.y
-        if offset < -100 {
+        if offset < -70 {
             handleRefreshData()
         }
     }

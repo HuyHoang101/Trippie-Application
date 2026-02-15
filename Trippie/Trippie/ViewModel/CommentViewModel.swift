@@ -17,6 +17,8 @@ class CommentViewModel {
     let comments = CurrentValueSubject<[Comment], Never>([])
     let loading = CurrentValueSubject<Bool, Never>(false)
     let errorMessage = PassthroughSubject<String, Never>()
+    let newMessagesCount = CurrentValueSubject<Int, Never>(0)
+    private var isFirstLoad = true
     
     // MARK: - PRIVATE PROPERTIES
     // singleton shared to manage listener
@@ -38,14 +40,33 @@ class CommentViewModel {
         commentService.listenToLatestComments(tripId: tripId) { [weak self] newComments in
             guard let self = self else { return }
             
-            // LOGIC QUAN TRỌNG:
-            // Service trả về: [Vừa xong, 1 phút trước, 2 phút trước...]
-            // UI cần: [2 phút trước, 1 phút trước, Vừa xong]
-            // -> Phải .reversed()
-            let sortedComments = newComments.reversed()
+            let incomingSorted = Array(newComments.reversed())
             
-            // Update UI
-            self.comments.send(Array(sortedComments))
+            if self.isFirstLoad {
+                // Lần đầu tiên listener chạy (tải lịch sử chat) -> Không đếm
+                self.isFirstLoad = false
+                self.comments.send(incomingSorted)
+            } else {
+                var currentList = self.comments.value
+                var newlyAddedCount = 0
+                
+                for incoming in incomingSorted {
+                    if let index = currentList.firstIndex(where: { $0.id == incoming.id }) {
+                        // Nếu tin nhắn đã tồn tại -> Cập nhật nội dung (Dành cho trường hợp Edit/Xóa)
+                        currentList[index] = incoming
+                    } else {
+                        // Nếu chưa tồn tại -> Đích thị là tin nhắn mới tinh -> Thêm vào cuối mảng
+                        currentList.append(incoming)
+                        newlyAddedCount += 1
+                    }
+                }
+                if newlyAddedCount > 0 {
+                    let currentUnread = self.newMessagesCount.value
+                    self.newMessagesCount.send(currentUnread + newlyAddedCount)
+                }
+                currentList.sort { ($0.createdAt ?? Date()) < ($1.createdAt ?? Date()) }
+                self.comments.send(currentList)
+            }
             self.loading.send(false)
         }
     }
@@ -60,10 +81,14 @@ class CommentViewModel {
                 let olderComments = try await commentService.fetchOlderComments(tripId: tripId)
                 
                 if olderComments.isEmpty { return } // Hết dữ liệu
-                
-                // Logic ghép mảng: [Cũ Rích -> Cũ Vừa] + [Hiện Tại]
-                let sortedOlder = olderComments.reversed()
                 let currentList = self.comments.value
+                                
+                // TẤM KHIÊN BẢO VỆ: Chỉ lấy những tin nhắn CŨ CHƯA TỪNG XUẤT HIỆN trên UI
+                let uniqueOlderComments = olderComments.filter { older in
+                    !currentList.contains(where: { $0.id == older.id })
+                }
+                
+                let sortedOlder = Array(uniqueOlderComments.reversed())
                 let newList = sortedOlder + currentList
                 
                 self.comments.send(newList)

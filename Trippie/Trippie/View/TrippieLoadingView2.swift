@@ -9,6 +9,16 @@ import UIKit
 class TrippieLoadingView2: UIView {
     private let progressLayer = CAShapeLayer()
     
+    override var isHidden: Bool {
+        didSet {
+            if isHidden {
+                stopAnimation()
+            } else {
+                startAnimation()
+            }
+        }
+    }
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         setupLayer()
@@ -16,16 +26,21 @@ class TrippieLoadingView2: UIView {
     
     required init?(coder: NSCoder) { fatalError() }
     
-    private func setupLayer() {
+    override func layoutSubviews() {
+        super.layoutSubviews()
         let center = CGPoint(x: bounds.midX, y: bounds.midY)
-        let circularPath = UIBezierPath(arcCenter: .zero, radius: 20, startAngle: 0, endAngle: CGFloat.pi * 1.5, clockwise: true)
+        // Bán kính tự động theo chiều rộng của view
+        let circularPath = UIBezierPath(arcCenter: .zero, radius: (bounds.width / 2) - 4, startAngle: 0, endAngle: CGFloat.pi * 1.5, clockwise: true)
         
         progressLayer.path = circularPath.cgPath
-        progressLayer.strokeColor = UIColor.systemBlue.cgColor // Màu giống ảnh của cậu
+        progressLayer.position = center
+    }
+    
+    private func setupLayer() {
+        progressLayer.strokeColor = UIColor.authBackground2.cgColor
         progressLayer.fillColor = UIColor.clear.cgColor
         progressLayer.lineWidth = 4
         progressLayer.lineCap = .round
-        progressLayer.position = center
         
         layer.addSublayer(progressLayer)
         startAnimation()
@@ -38,5 +53,10 @@ class TrippieLoadingView2: UIView {
         rotation.duration = 1
         rotation.repeatCount = .infinity
         progressLayer.add(rotation, forKey: "spin")
+    }
+    
+    // ✅ 3. Thêm hàm Stop để xóa animation khi ẩn (tiết kiệm CPU)
+    private func stopAnimation() {
+        progressLayer.removeAllAnimations()
     }
 }

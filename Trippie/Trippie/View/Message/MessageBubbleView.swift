@@ -13,16 +13,34 @@ class MessageBubbleView: UIView {
     var onVideoTapped: (() -> Void)?
     var onImageTapped: (() -> Void)?
     
+    private let chatLabel = UILabel()
+    private let bubbleWrapper = UIView()
     
-    private let chatBubble = PaddingLabel()
-    private let nameLabel = UILabel.customLabel(text: "", font: .systemFont(ofSize: 10), textColor: .secondaryLabel)
+    private let nameLabel = UILabel.customLabel(text: "", font: .systemFont(ofSize: 11), textColor: .secondaryLabel)
     private let avatar = TrippieImageView(style: .circle, isShadow: false, borderColor: .authBackground2.withAlphaComponent(0.4))
+    
+    // Stack này bây giờ CHỈ dùng để chứa Tên, Hình và Video
     private let mainStack = UIStackView.customStack(axis: .vertical, alignment: .fill, distribution: .fill, stackSpacing: 4)
-    private let subStackForMessage = UIStackView.customStack(axis: .vertical, alignment: .leading, distribution: .fill)
     
     private let images = ImageAttachmentView()
     private let video = VideoAttachmentView()
     
+    // Các dây kéo Trái/Phải cho cụm Hình + Tên
+    private var mainStackLeading: NSLayoutConstraint!
+    private var mainStackTrailing: NSLayoutConstraint!
+    
+    // Các dây kéo Trái/Phải độc lập cho Bong Bóng
+    private var bubbleLeading: NSLayoutConstraint!
+    private var bubbleTrailing: NSLayoutConstraint!
+    
+    // Dây ép chiều cao bong bóng về 0 khi gửi ảnh/video
+    private var bubbleHeightZero: NSLayoutConstraint!
+    
+    // Padding cho chữ
+    private var bubbleTopConstraint: NSLayoutConstraint!
+    private var bubbleBottomConstraint: NSLayoutConstraint!
+    private var bubbleLeadingConstraint: NSLayoutConstraint!
+    private var bubbleTrailingConstraint: NSLayoutConstraint!
     
     //MARK: - INIT
     override init(frame: CGRect) {
@@ -32,153 +50,201 @@ class MessageBubbleView: UIView {
         setupActions()
     }
     
-    required init?(coder: NSCoder) {
-        fatalError()
-    }
+    required init?(coder: NSCoder) { fatalError() }
     
     //MARK: - SETUP BUBBLE
     private func setupBubble() {
-        chatBubble.topInset = 5
-        chatBubble.bottomInset = 5
-        chatBubble.leftInset = 10
-        chatBubble.rightInset = 10
-        chatBubble.isCircle = false
-        chatBubble.font = .systemFont(ofSize: 13)
-        chatBubble.translatesAutoresizingMaskIntoConstraints = false
-        chatBubble.clipsToBounds = true
-        chatBubble.numberOfLines = 0
-        chatBubble.setContentCompressionResistancePriority(.required, for: .vertical)
+        chatLabel.font = .systemFont(ofSize: 15)
+        chatLabel.numberOfLines = 0
+        chatLabel.lineBreakMode = .byWordWrapping
+        chatLabel.translatesAutoresizingMaskIntoConstraints = false
+        
+        bubbleWrapper.layer.cornerRadius = 16
+        bubbleWrapper.clipsToBounds = true
+        bubbleWrapper.translatesAutoresizingMaskIntoConstraints = false
+        
+        bubbleWrapper.addSubview(chatLabel)
+        
+        bubbleTopConstraint = chatLabel.topAnchor.constraint(equalTo: bubbleWrapper.topAnchor, constant: 8)
+        bubbleLeadingConstraint = chatLabel.leadingAnchor.constraint(equalTo: bubbleWrapper.leadingAnchor, constant: 12)
+        
+        bubbleBottomConstraint = chatLabel.bottomAnchor.constraint(equalTo: bubbleWrapper.bottomAnchor, constant: -8)
+        bubbleBottomConstraint.priority = .init(999)
+        
+        bubbleTrailingConstraint = chatLabel.trailingAnchor.constraint(equalTo: bubbleWrapper.trailingAnchor, constant: -12)
+        bubbleTrailingConstraint.priority = .init(999)
+        
+        NSLayoutConstraint.activate([
+            bubbleTopConstraint,
+            bubbleLeadingConstraint,
+            bubbleBottomConstraint,
+            bubbleTrailingConstraint
+        ])
+        
+        // Chuẩn bị dây thòng lọng ép chiều cao về 0 (Mặc định tắt)
+        bubbleHeightZero = bubbleWrapper.heightAnchor.constraint(equalToConstant: 0)
     }
     
     private func setupUI() {
-        addSubview(mainStack)
         addSubview(avatar)
+        addSubview(mainStack)
+        addSubview(bubbleWrapper) // ✅ Lôi bong bóng ra, nằm độc lập ngang hàng với Stack
         
         mainStack.addArrangedSubview(nameLabel)
         mainStack.addArrangedSubview(images)
         mainStack.addArrangedSubview(video)
-        mainStack.addArrangedSubview(subStackForMessage)
-        subStackForMessage.addArrangedSubview(chatBubble)
         
         avatar.translatesAutoresizingMaskIntoConstraints = false
+        mainStack.translatesAutoresizingMaskIntoConstraints = false
         
+        // --- 1. GẮN CỐ ĐỊNH TRỤC DỌC ---
         NSLayoutConstraint.activate([
             avatar.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
             avatar.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 12),
+            avatar.widthAnchor.constraint(equalToConstant: 40),
+            avatar.heightAnchor.constraint(equalToConstant: 40),
             
-            avatar.widthAnchor.constraint(equalToConstant: 46),
-            avatar.heightAnchor.constraint(equalToConstant: 46),
+            // Stack nằm trên
+            mainStack.topAnchor.constraint(equalTo: topAnchor, constant: 1),
             
-            mainStack.topAnchor.constraint(equalTo: topAnchor, constant: 2),
-            mainStack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
-            mainStack.leadingAnchor.constraint(equalTo: avatar.trailingAnchor, constant: 4),
-            mainStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12),
+            // Bong bóng nằm dưới Stack, đẩy xuống đáy Cell
+            bubbleWrapper.topAnchor.constraint(equalTo: mainStack.bottomAnchor, constant: 2),
+            bubbleWrapper.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -1)
+        ])
+        
+        // --- 2. CHUẨN BỊ DÂY KÉO TRỤC NGANG ĐỘC LẬP ---
+        mainStackLeading = mainStack.leadingAnchor.constraint(equalTo: avatar.trailingAnchor, constant: 6)
+        mainStackTrailing = mainStack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12)
+        
+        bubbleLeading = bubbleWrapper.leadingAnchor.constraint(equalTo: avatar.trailingAnchor, constant: 6)
+        bubbleTrailing = bubbleWrapper.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -12)
+        
+        // Giới hạn an toàn chống tràn viền (Cái này tự động khoá bong bóng không cho dãn qua màn hình)
+        NSLayoutConstraint.activate([
+            mainStack.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 12),
+            mainStack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -12),
+            
+            bubbleWrapper.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 12),
+            bubbleWrapper.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -12)
         ])
     }
     
     func configure(comment: Comment, isHideAvatar: Bool, isHideName: Bool) {
-        guard let id = AuthService.shared.currentUserId else {
-            return
-        }
+        guard let id = AuthService.shared.currentUserId else { return }
         
         let isOwner = id == comment.userId
+        let cleanText = comment.message.trimmingCharacters(in: .whitespacesAndNewlines)
+        
         if isOwner {
-            chatBubble.backgroundColor = .authBackground2
-            chatBubble.textColor = .white
+            bubbleWrapper.backgroundColor = .authBackground2
+            chatLabel.textColor = .white
             avatar.isHidden = true
             nameLabel.textAlignment = .right
-            isEmoji(comment.message.isPureEmoji)
-            subStackForMessage.alignment = .trailing
+            
+            // Cả Stack và Bong Bóng đều dính sát lề PHẢI
+            mainStackLeading.isActive = false
+            mainStackTrailing.isActive = true
+            
+            bubbleLeading.isActive = false
+            bubbleTrailing.isActive = true
         } else {
-            chatBubble.backgroundColor = .systemGray6
-            chatBubble.textColor = .label
+            bubbleWrapper.backgroundColor = .systemGray6
+            chatLabel.textColor = .label
             avatar.isHidden = false
             nameLabel.textAlignment = .left
-            isEmoji(comment.message.isPureEmoji)
-            subStackForMessage.alignment = .leading
+            
+            // Cả Stack và Bong Bóng đều dính sát lề TRÁI (sau avatar)
+            mainStackTrailing.isActive = false
+            mainStackLeading.isActive = true
+            
+            bubbleTrailing.isActive = false
+            bubbleLeading.isActive = true
         }
+        
         nameLabel.text = comment.userName
-        chatBubble.textAlignment = .left
-        chatBubble.text = comment.message
+        chatLabel.text = cleanText
         avatar.setImage(url: comment.userAvatar, placeholderSystemName: "person.fill", pixel: 350)
         
         let isVideo = !comment.videoUrl.isEmpty
+        let hasNoText = cleanText.isEmpty
+        
         if isVideo {
-            chatBubble.isHidden = true
             images.isHidden = true
             video.isHidden = false
             video.configure(videoThumbnail: comment.videoThumbnail)
+            
+            // Ẩn bong bóng và bóp chết chiều cao của nó
+            bubbleWrapper.isHidden = true
+            bubbleHeightZero.isActive = true
         } else {
-            chatBubble.isHidden = false
             images.isHidden = false
             video.isHidden = true
             images.configure(urls: comment.imageUrls)
+            
+            if hasNoText {
+                // Nếu gửi ảnh không kèm chữ -> Ẩn bong bóng và bóp chiều cao
+                bubbleWrapper.isHidden = true
+                bubbleHeightZero.isActive = true
+            } else {
+                // Có chữ -> Hiện bong bóng, nhả dây ép chiều cao ra
+                bubbleWrapper.isHidden = false
+                bubbleHeightZero.isActive = false
+            }
         }
         
-        if isHideAvatar {
-            avatar.layer.opacity = 0
-        } else {
-            avatar.layer.opacity = 1
-        }
+        avatar.layer.opacity = isHideAvatar ? 0 : 1
+        nameLabel.isHidden = isHideName
         
-        if isHideName {
-            nameLabel.isHidden = true
-        } else {
-            nameLabel.isHidden = false
-        }
+        setupEmoji(comment.message.isPureEmoji, isOwner: isOwner)
     }
     
-    private func isEmoji(_ isemo: Bool) {
+    private func setupEmoji(_ isemo: Bool, isOwner: Bool) {
         if isemo {
-            chatBubble.topInset = 0
-            chatBubble.bottomInset = 0
-            chatBubble.leftInset = 0
-            chatBubble.rightInset = 0
-            chatBubble.font = .systemFont(ofSize: 26)
-            chatBubble.backgroundColor = .clear
+            chatLabel.font = .systemFont(ofSize: 40)
+            bubbleWrapper.backgroundColor = .clear
+            
+            bubbleTopConstraint.constant = -5.2
+            bubbleBottomConstraint.constant = 5.2
+            bubbleLeadingConstraint.constant = 0
+            bubbleTrailingConstraint.constant = 0
         } else {
-            chatBubble.font = .systemFont(ofSize: 13)
-            chatBubble.topInset = 10
-            chatBubble.bottomInset = 10
-            chatBubble.leftInset = 10
-            chatBubble.rightInset = 10
+            chatLabel.font = .systemFont(ofSize: 15)
+            bubbleWrapper.backgroundColor = isOwner ? .authBackground2 : .systemGray6
+            
+            bubbleTopConstraint.constant = 8
+            bubbleBottomConstraint.constant = -8
+            bubbleLeadingConstraint.constant = 12
+            bubbleTrailingConstraint.constant = -12
         }
     }
     
     private func setupActions() {
-        // 1. Nối dây từ Video View -> Callback của Bubble
-        video.onTap = { [weak self] in
-            guard let self = self else { return }
-            // Kiểm tra xem có link video không rồi bắn ra ngoài
-            self.onVideoTapped?()
-        }
-        
-        // 2. Nối dây từ Image View -> Callback của Bubble
-        images.onTapImage = { [weak self] in
-            guard let self = self else { return }
-            // Bắn danh sách ảnh và vị trí ảnh được chọn ra ngoài
-            self.onImageTapped?()
-        }
+        video.onTap = { [weak self] in self?.onVideoTapped?() }
+        images.onTapImage = { [weak self] in self?.onImageTapped?() }
+    }
+    
+    func resetState() {
+        chatLabel.text = nil
+        nameLabel.text = nil
+        images.isHidden = true
+        video.isHidden = true
+        bubbleWrapper.isHidden = false
+        bubbleHeightZero.isActive = false // Phải reset luôn cái dây ép chiều cao
     }
 }
 
-
 // MARK: - COMPONENT IMAGE VIEW
 class ImageAttachmentView: UIView {
-    
     var onTapImage: (() -> Void)?
-    
     private let stackView = UIStackView.customStack(axis: .horizontal, alignment: .bottom, distribution: .fill, stackSpacing: 2)
-        
     private let img1 = TrippieImageView(style: .rounded(radius: 0, corners: nil), isShadow: false)
     private let img2 = TrippieImageView(style: .rounded(radius: 0, corners: nil), isShadow: false)
-        
     private let countLabel = UILabel.boxStyle(text: "+0", font: .systemFont(ofSize: 14), background: .black.withAlphaComponent(0.15), textColor: .white)
     
     override init(frame: CGRect) {
-            super.init(frame: frame)
-            setup()
-        }
+        super.init(frame: frame)
+        setup()
+    }
         
     required init?(coder: NSCoder) { fatalError() }
     
@@ -194,16 +260,27 @@ class ImageAttachmentView: UIView {
         img1.translatesAutoresizingMaskIntoConstraints = false
         img2.translatesAutoresizingMaskIntoConstraints = false
         
+        // ✅ FIX: Hạ Priority của toàn bộ Constraint kích thước cứng xuống 999
+        let bottom = stackView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        bottom.priority = .init(999)
+        let trailing = stackView.trailingAnchor.constraint(equalTo: trailingAnchor)
+        trailing.priority = .init(999)
+        
+        let w1 = img1.widthAnchor.constraint(equalToConstant: 70)
+        w1.priority = .init(999)
+        let h1 = img1.heightAnchor.constraint(equalToConstant: 70)
+        h1.priority = .init(999)
+        
+        let w2 = img2.widthAnchor.constraint(equalToConstant: 70)
+        w2.priority = .init(999)
+        let h2 = img2.heightAnchor.constraint(equalToConstant: 70)
+        h2.priority = .init(999)
+        
         NSLayoutConstraint.activate([
             stackView.topAnchor.constraint(equalTo: topAnchor),
-            stackView.bottomAnchor.constraint(equalTo: bottomAnchor),
             stackView.leadingAnchor.constraint(equalTo: leadingAnchor),
-            stackView.trailingAnchor.constraint(equalTo: trailingAnchor),
-            
-            img1.widthAnchor.constraint(equalToConstant: 70),
-            img1.heightAnchor.constraint(equalToConstant: 70),
-            img2.widthAnchor.constraint(equalToConstant: 70),
-            img2.heightAnchor.constraint(equalToConstant: 70),
+            bottom, trailing,
+            w1, h1, w2, h2
         ])
         
         let tap = UITapGestureRecognizer(target: self, action: #selector(didTapView))
@@ -211,60 +288,47 @@ class ImageAttachmentView: UIView {
         self.isUserInteractionEnabled = true
     }
     
-    @objc private func didTapView() {
-        onTapImage?()
-    }
+    @objc private func didTapView() { onTapImage?() }
     
     func configure(urls: [String]) {
+        // ... (Giữ nguyên logic cũ của cậu ở đây)
         let count = urls.count
-        // Reset trạng thái
         self.isHidden = false
         img1.isHidden = true
         img2.isHidden = true
         countLabel.isHidden = true
         
-        // Cập nhật Constraint đễ giữ UI đẹp (Optional: cậu có thể dùng width constant)
-        
         switch count {
-        case 0:
-            self.isHidden = true
-            
+        case 0: self.isHidden = true
         case 1:
             img1.isHidden = false
             img1.setImage(url: urls[0], pixel: 300)
-            
         case 2:
             img1.isHidden = false
             img2.isHidden = false
             img1.setImage(url: urls[0], pixel: 300)
             img2.setImage(url: urls[1], pixel: 300)
-            
-        default: // > 2 ảnh
+        default:
             img1.isHidden = false
             img2.isHidden = false
             img1.setImage(url: urls[0], pixel: 300)
             img2.setImage(url: urls[1], pixel: 300)
-            
             countLabel.isHidden = false
             countLabel.text = "+\(count - 2) "
         }
     }
 }
 
-
-// MARK: - 2. CUSTOM VIEW: VIDEO BUBBLE (Hiển thị Play Button)
+// MARK: - CUSTOM VIEW: VIDEO BUBBLE
 class VideoAttachmentView: UIView {
-    
     var onTap: (() -> Void)?
-    
     private let thumbnailImageView: UIImageView = {
         let iv = UIImageView()
         iv.contentMode = .scaleAspectFill
-        iv.backgroundColor = .black // Nền đen trong lúc chờ load ảnh
+        iv.backgroundColor = .black
         iv.clipsToBounds = true
         return iv
     }()
-    
     private let containerView: UIView = {
         let v = UIView()
         v.backgroundColor = .black
@@ -272,10 +336,8 @@ class VideoAttachmentView: UIView {
         v.clipsToBounds = true
         return v
     }()
-    
     private let playIcon: UIImageView = {
         let iv = UIImageView(image: UIImage(systemName: "play.circle.fill"))
-        iv.tintColor = .white
         iv.tintColor = .white.withAlphaComponent(0.9)
         iv.contentMode = .scaleAspectFit
         return iv
@@ -320,11 +382,13 @@ class VideoAttachmentView: UIView {
     }
     
     func configure(videoThumbnail: String) {
+        thumbnailImageView.backgroundColor = .black
+        
         guard let url = URL(string: videoThumbnail) else {
             thumbnailImageView.image = nil
             return
         }
-        // Dùng thư viện SDWebImage của cậu để load và cache ảnh
+        
         thumbnailImageView.sd_setImage(with: url, placeholderImage: nil)
     }
     

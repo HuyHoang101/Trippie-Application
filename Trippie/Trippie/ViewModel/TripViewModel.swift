@@ -45,6 +45,7 @@ class TripViewModel {
     
     // MARK: - SINGLE TRIP
     func fetchTripById(tripId: String) {
+        loading.send(true)
         Task {
             do {
                 let result = try await tripService.getTripById(tripId: tripId)
@@ -52,12 +53,14 @@ class TripViewModel {
                 self.loading.send(false)
             } catch {
                 self.errorMessage.send(error.localizedDescription)
+                self.loading.send(false)
             }
         }
     }
     
     // MARK: - SINGLE MY TRIP
     func fetchMyTripById(tripId: String) {
+        loading.send(true)
         Task {
             do {
                 let result = try await tripService.getMyTripById(tripId: tripId)
@@ -65,6 +68,7 @@ class TripViewModel {
                 self.loading.send(false)
             } catch {
                 self.errorMessage.send(error.localizedDescription)
+                self.loading.send(false)
             }
         }
     }

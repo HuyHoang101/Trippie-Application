@@ -51,6 +51,10 @@ class ListTaskViewController: FadeBaseViewController {
     private let backBtn = UIButton.customButton(image: UIImage(systemName: "arrow.left"), backgroundColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.5) ?? .systemGray.withAlphaComponent(0.5))
     private let multipleChoice = UIButton.customButton(image: UIImage(systemName: "ellipsis"), backgroundColor: (UIColor.authBackground2.withAlphaComponent(0.5)))
     
+    private let countLabel = UILabel.customLabel(text: "0", font: .systemFont(ofSize: 13), textColor: .white)
+    private let containerUI = UIView()
+    private let commentViewModel = CommentViewModel()
+    
     //MARK: - LIFE CYCLE
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -68,6 +72,7 @@ class ListTaskViewController: FadeBaseViewController {
     
     //MARK: - SETUP UI
     private func setupUI() {
+        containerUI.addSubview(countLabel)
         taskViewModel.fetchTask(tripId: id ?? "")
         setupBackground()
         
@@ -92,12 +97,22 @@ class ListTaskViewController: FadeBaseViewController {
         view.addSubview(tableView)
         ruleContainer.addSubview(ruleLabel)
         ruleContainer.addSubview(ruleAuthor)
+        ruleContainer.addSubview(containerUI)
+        containerUI.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
             ruleContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
             ruleContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
             ruleContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
             ruleContainer.bottomAnchor.constraint(equalTo: tableView.topAnchor, constant: -10),
+            
+            containerUI.centerXAnchor.constraint(equalTo: ruleContainer.trailingAnchor),
+            containerUI.centerYAnchor.constraint(equalTo: ruleContainer.topAnchor),
+            containerUI.widthAnchor.constraint(equalToConstant: 32),
+            containerUI.heightAnchor.constraint(equalToConstant: 32),
+            
+            countLabel.centerXAnchor.constraint(equalTo: containerUI.centerXAnchor),
+            countLabel.centerYAnchor.constraint(equalTo: containerUI.centerYAnchor),
             
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -165,7 +180,10 @@ class ListTaskViewController: FadeBaseViewController {
     private func renderRule() {
         guard let id = self.id else { return }
         guard let trip = tripViewModel.myTrips.value.first(where: { $0.trip.id == id }) else  { return }
-        
+        self.commentViewModel.joinChatRoom(tripId: id)
+        containerUI.isHidden = true
+        containerUI.backgroundColor = .systemRed
+        containerUI.layer.cornerRadius = 16
         self.tripWithStatus = trip
         
         ruleAuthor.text = "By \(trip.trip.ownerName)"
@@ -187,6 +205,19 @@ class ListTaskViewController: FadeBaseViewController {
         ruleLabel.attributedText = attributedText
     }
     
+    private func setupCountLabel() {
+        let count = commentViewModel.newMessagesCount.value
+        if count > 0 {
+            containerUI.isHidden = false
+            if count < 100 {
+                countLabel.text = "\(count)"
+            } else {
+                countLabel.text = "99+"
+            }
+        } else {
+            containerUI.isHidden = true
+        }
+    }
     
     
     //MARK: - SETUP ACTION
@@ -198,6 +229,8 @@ class ListTaskViewController: FadeBaseViewController {
     
     @objc private func handleBack() {
         self.navigationController?.popViewController(animated: true)
+        self.commentViewModel.newMessagesCount.send(0)
+        self.commentViewModel.leaveChatRoom()
     }
     
     @objc private func handlepushToCreateTask() {
@@ -213,7 +246,9 @@ class ListTaskViewController: FadeBaseViewController {
         guard let trip = self.tripWithStatus?.trip else { return }
         vc.tripId = trip.id
         vc.navigationTitle = "\(trip.location), \(trip.country)"
+        vc.commentViewModel = self.commentViewModel
         self.navigationController?.pushViewController(vc, animated: true)
+        self.commentViewModel.newMessagesCount.send(0)
     }
     
     private func handleEditAction(task: TaskOfTrip) {
@@ -248,9 +283,18 @@ class ListTaskViewController: FadeBaseViewController {
         taskViewModel.tasks
             .dropFirst()
             .removeDuplicates()
-            .receive(on: RunLoop.main)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] t in
                 self?.displayData = t
+            }
+            .store(in: &cancellabel)
+        
+        commentViewModel.newMessagesCount
+            .dropFirst()
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.setupCountLabel()
             }
             .store(in: &cancellabel)
     }

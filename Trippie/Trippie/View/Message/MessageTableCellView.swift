@@ -63,11 +63,10 @@ class MessageTableViewCell: UITableViewCell {
         bubbleTopConstraint = bubbleView.topAnchor.constraint(equalTo: contentView.topAnchor)
         bubbleBottomConstraint = bubbleView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor)
                 
-        dateTopConstraint = dateStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4)
-        dateBottomConstraint = dateStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4)
+        dateTopConstraint = dateStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 6)
+        dateBottomConstraint = dateStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -6)
         NSLayoutConstraint.activate([
-            // Neo bubbleView vào ContentView của Cell
-            // Chừa padding trên dưới để các tin nhắn không dính sát nhau
+            
             bubbleView.widthAnchor.constraint(lessThanOrEqualTo: contentView.widthAnchor, multiplier: 0.75),
             
             dateStack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
@@ -98,7 +97,13 @@ class MessageTableViewCell: UITableViewCell {
         let isOwner = id == comment.userId
         let hideName = isOwner ? true : isHideName
         bubbleView.configure(comment: comment, isHideAvatar: isHideAvatar, isHideName: hideName)
-        // 2. LOGIC BẬT/TẮT CHUẨN XÁC ĐỂ KHÔNG BỊ CELL REUSE BUG
+        
+        NSLayoutConstraint.deactivate([
+            bubbleLeadingConstraint, bubbleTrailingConstraint,
+            bubbleTopConstraint, bubbleBottomConstraint,
+            dateTopConstraint, dateBottomConstraint
+        ])
+        
         if isOwner {
             bubbleLeadingConstraint.isActive = false
             bubbleTrailingConstraint.isActive = true
@@ -156,5 +161,9 @@ class MessageTableViewCell: UITableViewCell {
         super.prepareForReuse()
         onPlayVideoCallback = nil
         onPreviewImagesCallback = nil
+        bubbleView.isHidden = false
+        dateStack.isHidden = true
+        
+        bubbleView.resetState()
     }
 }

@@ -14,7 +14,7 @@ class TripService {
     
     
     // MARK: - FETCH TRIPS FEEDING BOARD
-    func fetchTripForFeedingList(tripType: TripType? = nil, country: String? = nil, searchText: String? = nil) async throws -> [Trip] {
+    func fetchTripForFeedingList(tripType: TripType? = nil, country: String? = nil, searchText: String? = nil, isRandome: Bool = false) async throws -> [Trip] {
         let now = Date()
         
         // 1. Get trip in future
@@ -552,5 +552,76 @@ class TripService {
         }
         
         print("🎉 HOÀN TẤT! Đã seed xong dữ liệu.")
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    //MARK: - NEW FUNC WITH PAGINATION
+    func fetchTripsNormal(
+        lastDocument: DocumentSnapshot? = nil,
+        tripType: TripType? = nil,
+        country: String? = nil
+    ) async throws -> (trips: [Trip], lastDoc: DocumentSnapshot?, totalCount: Int) {
+        
+        var query: Query = db.collection("trips")
+        
+        if let type = tripType { query = query.whereField("tripType", isEqualTo: type.rawValue) }
+        if let c = country, !c.isEmpty { query = query.whereField("country", isEqualTo: c) }
+        
+        // --- 1. ĐẾM TỔNG SỐ RESULT TRÊN SERVER ---
+        // (Lưu ý: Con số này bao gồm cả những chuyến đi đã completed vì ta chưa lọc được status trên DB)
+        let countQuery = query.count
+        let countSnapshot = try await countQuery.getAggregation(source: .server)
+        let totalCount = Int(truncating: countSnapshot.count)
+        
+        // --- 2. PAGINATION THẬT (5 object) ---
+        query = query.order(by: "startTime", descending: false).limit(to: 5)
+        if let lastDoc = lastDocument { query = query.start(afterDocument: lastDoc) }
+        
+        let snapshot = try await query.getDocuments()
+        
+        let trips = snapshot.documents.compactMap { doc -> Trip? in
+            guard let trip = try? doc.data(as: Trip.self) else { return nil }
+            return trip.status != .completed ? trip : nil // Lọc nốt status ở client
+        }
+        
+        return (trips, snapshot.documents.last, totalCount)
+    }
+    
+    func fetchAllForSearch(
+        searchText: String,
+        tripType: TripType? = nil,
+        country: String? = nil
+    ) async throws -> (allTrips: [Trip], totalCount: Int) {
+        
+        var query: Query = db.collection("trips")
+        
+        if let type = tripType { query = query.whereField("tripType", isEqualTo: type.rawValue) }
+        if let c = country, !c.isEmpty { query = query.whereField("country", isEqualTo: c) }
+        query = query.order(by: "startTime", descending: false)
+        
+        // Kéo toàn bộ data thỏa mãn filter cơ bản
+        let snapshot = try await query.getDocuments()
+        let queryText = searchText.lowercased()
+        
+        // Lọc triệt để (Status + Text) ở client
+        let filteredTrips = snapshot.documents.compactMap { doc -> Trip? in
+            guard let trip = try? doc.data(as: Trip.self), trip.status != .completed else { return nil }
+            
+            let matchesSearch = trip.title.lowercased().contains(queryText) ||
+                                trip.location.lowercased().contains(queryText) ||
+                                trip.country.lowercased().contains(queryText)
+            return matchesSearch ? trip : nil
+        }
+        
+        // Trả về full mảng và số lượng chính xác 100%
+        return (filteredTrips, filteredTrips.count)
     }
 }

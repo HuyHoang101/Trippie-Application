@@ -134,10 +134,21 @@ class MyTripViewController: FadeBaseViewController {
         subscroll3.translatesAutoresizingMaskIntoConstraints = false
         
         mainscroll.showsVerticalScrollIndicator = false
-        subscroll.showsHorizontalScrollIndicator = false
-        subscroll1.showsHorizontalScrollIndicator = false
-        subscroll2.showsHorizontalScrollIndicator = false
-        subscroll3.showsHorizontalScrollIndicator = false
+                
+        // Dùng vòng lặp gộp chung cấu hình cho cả 4 subscroll cực kỳ gọn gàng
+        [subscroll, subscroll1, subscroll2, subscroll3].forEach { scroll in
+            scroll.showsHorizontalScrollIndicator = false
+            scroll.showsVerticalScrollIndicator = false
+            
+            // 1. Tắt bỏ "khoảng đệm tàng hình" mặc định của Apple
+            scroll.contentInsetAdjustmentBehavior = .never
+            
+            // 2. Chặn đứng tính năng nảy lên xuống
+            scroll.alwaysBounceVertical = false
+            
+            // 3. KHÓA HƯỚNG VUỐT: Đã vuốt ngang thì cấm tuyệt đối nhúc nhích dọc
+            scroll.isDirectionalLockEnabled = true
+        }
         
         NSLayoutConstraint.activate([
             mainscroll.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
@@ -156,25 +167,29 @@ class MyTripViewController: FadeBaseViewController {
             hstack.leadingAnchor.constraint(equalTo: subscroll.contentLayoutGuide.leadingAnchor),
             hstack.trailingAnchor.constraint(equalTo: subscroll.contentLayoutGuide.trailingAnchor),
             hstack.bottomAnchor.constraint(equalTo: subscroll.contentLayoutGuide.bottomAnchor),
-            hstack.heightAnchor.constraint(equalTo: subscroll.heightAnchor),
+            subscroll.heightAnchor.constraint(equalTo: hstack.heightAnchor), // Đảo ngược: Ép ScrollView cao bằng nội dung
+            subscroll.contentLayoutGuide.heightAnchor.constraint(equalTo: subscroll.frameLayoutGuide.heightAnchor), // Khóa chết trục dọc không cho vuốt
             
             hstack1.topAnchor.constraint(equalTo: subscroll1.contentLayoutGuide.topAnchor),
             hstack1.leadingAnchor.constraint(equalTo: subscroll1.contentLayoutGuide.leadingAnchor),
             hstack1.trailingAnchor.constraint(equalTo: subscroll1.contentLayoutGuide.trailingAnchor),
             hstack1.bottomAnchor.constraint(equalTo: subscroll1.contentLayoutGuide.bottomAnchor),
-            hstack1.heightAnchor.constraint(equalTo: subscroll1.heightAnchor),
+            subscroll1.heightAnchor.constraint(equalTo: hstack1.heightAnchor), // Đảo ngược: Ép ScrollView cao bằng nội dung
+            subscroll1.contentLayoutGuide.heightAnchor.constraint(equalTo: subscroll1.frameLayoutGuide.heightAnchor), // Khóa chết trục dọc không cho vuốt
             
             hstack2.topAnchor.constraint(equalTo: subscroll2.contentLayoutGuide.topAnchor),
             hstack2.leadingAnchor.constraint(equalTo: subscroll2.contentLayoutGuide.leadingAnchor),
             hstack2.trailingAnchor.constraint(equalTo: subscroll2.contentLayoutGuide.trailingAnchor),
             hstack2.bottomAnchor.constraint(equalTo: subscroll2.contentLayoutGuide.bottomAnchor),
-            hstack2.heightAnchor.constraint(equalTo: subscroll2.heightAnchor),
+            subscroll2.heightAnchor.constraint(equalTo: hstack2.heightAnchor), // Đảo ngược: Ép ScrollView cao bằng nội dung
+            subscroll2.contentLayoutGuide.heightAnchor.constraint(equalTo: subscroll2.frameLayoutGuide.heightAnchor), // Khóa chết trục dọc không cho vuốt
             
             hstack3.topAnchor.constraint(equalTo: subscroll3.contentLayoutGuide.topAnchor),
             hstack3.leadingAnchor.constraint(equalTo: subscroll3.contentLayoutGuide.leadingAnchor),
             hstack3.trailingAnchor.constraint(equalTo: subscroll3.contentLayoutGuide.trailingAnchor),
             hstack3.bottomAnchor.constraint(equalTo: subscroll3.contentLayoutGuide.bottomAnchor),
-            hstack3.heightAnchor.constraint(equalTo: subscroll3.heightAnchor),
+            subscroll3.heightAnchor.constraint(equalTo: hstack3.heightAnchor), // Đảo ngược: Ép ScrollView cao bằng nội dung
+            subscroll3.contentLayoutGuide.heightAnchor.constraint(equalTo: subscroll3.frameLayoutGuide.heightAnchor), // Khóa chết trục dọc không cho vuốt
             
             searchBar.heightAnchor.constraint(equalToConstant: 50),
             filterButton.widthAnchor.constraint(equalTo: filterButton.heightAnchor)
@@ -449,7 +464,7 @@ extension MyTripViewController: UIScrollViewDelegate {
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         // Kiểm tra nếu là mainScroll và người dùng kéo xuống một khoảng (ví dụ -100)
         let offset = scrollView.contentOffset.y
-        if offset < -100 {
+        if offset < -70 {
             handleRefreshData()
         }
     }

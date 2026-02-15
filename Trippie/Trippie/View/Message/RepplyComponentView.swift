@@ -44,7 +44,6 @@ class RepplyComponentView: UIView {
     private let rootStack = UIStackView.customStack(axis: .vertical, alignment: .fill, distribution: .fill, stackSpacing: 4)
     
     private let vstack1 = UIStackView.customStack(axis: .vertical, alignment: .leading, distribution: .fill)
-    private let vstack2 = UIStackView.customStack(axis: .vertical, alignment: .leading, distribution: .fill)
     
     //MARK: - INIT
     override init(frame: CGRect) {
@@ -63,11 +62,10 @@ class RepplyComponentView: UIView {
         addSubview(cancelBtn)
         
         rootStack.addArrangedSubview(vstack1)
-        rootStack.addArrangedSubview(vstack2)
         rootStack.addArrangedSubview(mainstack)
         
         vstack1.addArrangedSubview(video)
-        vstack2.addArrangedSubview(images)
+        vstack1.addArrangedSubview(images)
         
         mainstack.addArrangedSubview(appendBtn)
         mainstack.addArrangedSubview(attackmentTakePhoto)
@@ -83,12 +81,10 @@ class RepplyComponentView: UIView {
             rootStack.bottomAnchor.constraint(equalTo: bottomAnchor),
             rootStack.leadingAnchor.constraint(equalTo: leadingAnchor),
             rootStack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            rootStack.topAnchor.constraint(equalTo: topAnchor),
+            rootStack.topAnchor.constraint(equalTo: topAnchor, constant: 12),
             
             cancelBtn.topAnchor.constraint(equalTo: topAnchor, constant: 8),
             cancelBtn.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            
-            video.heightAnchor.constraint(equalTo: video.widthAnchor, multiplier: 3/4),
             
             appendBtn.widthAnchor.constraint(equalToConstant: 36),
             appendBtn.heightAnchor.constraint(equalToConstant: 36),
@@ -106,8 +102,8 @@ class RepplyComponentView: UIView {
             sendBtn.heightAnchor.constraint(equalToConstant: 40),
         ])
         
-        vstack1.isHidden = true
-        vstack2.isHidden = true
+        images.isHidden = true
+        video.isHidden = true
         cancelBtn.isHidden = true
         appendBtn.isHidden = true
     }
@@ -128,14 +124,25 @@ class RepplyComponentView: UIView {
         attackmentImageBtn.isEnabled = true
         chatBox.isEditable = true
         
+        if chatBox.text == "" {
+            attackmentVideoBtn.isEnabled = true
+            attackmentTakePhoto.isEnabled = true
+        } else {
+            attackmentVideoBtn.isEnabled = false
+            attackmentTakePhoto.isEnabled = false
+        }
+        
         if !imgs.isEmpty {
-            vstack2.isHidden = false
+            images.isHidden = false
+            video.isHidden = true
             images.configure(urls: imgs)
             attackmentTakePhoto.isEnabled = false
             attackmentVideoBtn.isEnabled = false
+            
             cancelBtn.isHidden = false
         } else if !thumnail.isEmpty || !videoUrl.isEmpty {
-            vstack1.isHidden = false
+            images.isHidden = true
+            video.isHidden = false
             video.configure(videoThumbnail: thumnail)
             attackmentTakePhoto.isEnabled = false
             attackmentVideoBtn.isEnabled = false
@@ -146,12 +153,7 @@ class RepplyComponentView: UIView {
         }
         if let container = self.superview {
             video.widthAnchor.constraint(lessThanOrEqualTo: container.widthAnchor, multiplier: 0.6).isActive = true
-        }
-        
-        if chatBox.text == "" {
-            attackmentVideoBtn.isEnabled = true
-        } else {
-            attackmentVideoBtn.isEnabled = false
+            video.heightAnchor.constraint(equalTo: video.widthAnchor, multiplier: 3/4).isActive = true
         }
         
         UIView.animate(withDuration: 0.3) {

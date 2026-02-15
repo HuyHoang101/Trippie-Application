@@ -216,6 +216,7 @@ class HomeViewController: FadeBaseViewController {
                 ])
                 guard let id = t.id else { return }
                 card.cardDidTap = { [weak self] in
+                    print("is Tap")
                     self?.pushToDetail(id: id, navigationTitle: "Detail: \(t.location)")
                 }
             }
@@ -253,6 +254,7 @@ class HomeViewController: FadeBaseViewController {
                     ])
                     guard let id = t.id else { return }
                     row.cardDidTap = { [weak self] in
+                        print("is Tap")
                         self?.pushToDetail(id: id, navigationTitle: "Detail: \(t.location)")
                     }
                 }
@@ -273,6 +275,7 @@ class HomeViewController: FadeBaseViewController {
         vc.id = id
         vc.isFeedBoard = true
         vc.navigationTitle = navigationTitle
+        self.navigationController?.pushViewController(vc, animated: true)
     }
     
     @objc private func multiplechoice(_ string: String) {
@@ -384,7 +387,7 @@ extension HomeViewController: UIScrollViewDelegate {
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         // Kiểm tra nếu là mainScroll và người dùng kéo xuống một khoảng (ví dụ -100)
         let offset = scrollView.contentOffset.y
-        if offset < -100 {
+        if offset < -70 {
             handleRefreshData()
         }
     }

@@ -23,7 +23,7 @@ class CommentService {
         // Query: Lấy 20 tin MỚI NHẤT (DESC)
         let query = db.collection("trips").document(tripId).collection("comments")
             .order(by: "createdAt", descending: true)
-            .limit(to: 20)
+            .limit(to: 30)
         
         listenerRegistration = query.addSnapshotListener { [weak self] snapshot, error in
             guard let self = self else { return }
@@ -55,7 +55,7 @@ class CommentService {
         let query = db.collection("trips").document(tripId).collection("comments")
             .order(by: "createdAt", descending: true)
             .start(afterDocument: lastDoc)
-            .limit(to: 20)
+            .limit(to: 30)
         
         let snapshot = try await query.getDocuments()
         
