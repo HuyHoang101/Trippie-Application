@@ -96,6 +96,7 @@ class MessageBubbleView: UIView {
         
         avatar.translatesAutoresizingMaskIntoConstraints = false
         mainStack.translatesAutoresizingMaskIntoConstraints = false
+        video.translatesAutoresizingMaskIntoConstraints = false
         
         // --- 1. GẮN CỐ ĐỊNH TRỤC DỌC ---
         NSLayoutConstraint.activate([
@@ -106,10 +107,11 @@ class MessageBubbleView: UIView {
             
             // Stack nằm trên
             mainStack.topAnchor.constraint(equalTo: topAnchor, constant: 1),
+            mainStack.bottomAnchor.constraint(equalTo: bubbleWrapper.topAnchor, constant: -1),
+            bubbleWrapper.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -1),
             
-            // Bong bóng nằm dưới Stack, đẩy xuống đáy Cell
-            bubbleWrapper.topAnchor.constraint(equalTo: mainStack.bottomAnchor, constant: 2),
-            bubbleWrapper.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -1)
+            video.widthAnchor.constraint(equalToConstant: 250),
+            video.heightAnchor.constraint(equalTo: video.widthAnchor, multiplier: 3/4)
         ])
         
         // --- 2. CHUẨN BỊ DÂY KÉO TRỤC NGANG ĐỘC LẬP ---
@@ -127,6 +129,9 @@ class MessageBubbleView: UIView {
             bubbleWrapper.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 12),
             bubbleWrapper.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -12)
         ])
+        
+        nameLabel.setContentCompressionResistancePriority(.required, for: .vertical)
+        nameLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 14).isActive = true
     }
     
     func configure(comment: Comment, isHideAvatar: Bool, isHideName: Bool) {
@@ -134,12 +139,13 @@ class MessageBubbleView: UIView {
         
         let isOwner = id == comment.userId
         let cleanText = comment.message.trimmingCharacters(in: .whitespacesAndNewlines)
+        images.isHidden = true
+        video.isHidden = true
         
         if isOwner {
             bubbleWrapper.backgroundColor = .authBackground2
             chatLabel.textColor = .white
             avatar.isHidden = true
-            nameLabel.textAlignment = .right
             
             // Cả Stack và Bong Bóng đều dính sát lề PHẢI
             mainStackLeading.isActive = false
@@ -147,6 +153,7 @@ class MessageBubbleView: UIView {
             
             bubbleLeading.isActive = false
             bubbleTrailing.isActive = true
+            mainStack.alignment = .trailing
         } else {
             bubbleWrapper.backgroundColor = .systemGray6
             chatLabel.textColor = .label
@@ -154,42 +161,44 @@ class MessageBubbleView: UIView {
             nameLabel.textAlignment = .left
             
             // Cả Stack và Bong Bóng đều dính sát lề TRÁI (sau avatar)
-            mainStackTrailing.isActive = false
             mainStackLeading.isActive = true
+            mainStackTrailing.isActive = false
             
             bubbleTrailing.isActive = false
             bubbleLeading.isActive = true
+            mainStack.alignment = .leading
         }
         
-        nameLabel.text = comment.userName
+        nameLabel.text = comment.userName.isEmpty ? "UnKnown User" : comment.userName
         chatLabel.text = cleanText
         avatar.setImage(url: comment.userAvatar, placeholderSystemName: "person.fill", pixel: 350)
         
         let isVideo = !comment.videoUrl.isEmpty
+        let isImage = !(comment.imageUrls.count == 0)
         let hasNoText = cleanText.isEmpty
         
         if isVideo {
-            images.isHidden = true
             video.isHidden = false
             video.configure(videoThumbnail: comment.videoThumbnail)
             
             // Ẩn bong bóng và bóp chết chiều cao của nó
             bubbleWrapper.isHidden = true
             bubbleHeightZero.isActive = true
-        } else {
-            images.isHidden = false
-            video.isHidden = true
-            images.configure(urls: comment.imageUrls)
             
-            if hasNoText {
-                // Nếu gửi ảnh không kèm chữ -> Ẩn bong bóng và bóp chiều cao
-                bubbleWrapper.isHidden = true
-                bubbleHeightZero.isActive = true
-            } else {
-                // Có chữ -> Hiện bong bóng, nhả dây ép chiều cao ra
-                bubbleWrapper.isHidden = false
-                bubbleHeightZero.isActive = false
-            }
+        }
+        
+        if isImage {
+            images.isHidden = false
+            images.configure(urls: comment.imageUrls)
+        }
+        
+        if hasNoText {
+            bubbleWrapper.isHidden = true
+            bubbleHeightZero.isActive = true
+        } else {
+            // Có chữ -> Hiện bong bóng, nhả dây ép chiều cao ra
+            bubbleWrapper.isHidden = false
+            bubbleHeightZero.isActive = false
         }
         
         avatar.layer.opacity = isHideAvatar ? 0 : 1
@@ -250,12 +259,11 @@ class ImageAttachmentView: UIView {
     
     private func setup() {
         addSubview(stackView)
+        stackView.translatesAutoresizingMaskIntoConstraints = false
         countLabel.layer.borderColor = UIColor.clear.cgColor
         stackView.addArrangedSubview(img1)
         stackView.addArrangedSubview(img2)
         stackView.addArrangedSubview(countLabel)
-        let spacer = UIView()
-        stackView.addArrangedSubview(spacer)
         
         img1.translatesAutoresizingMaskIntoConstraints = false
         img2.translatesAutoresizingMaskIntoConstraints = false
@@ -267,14 +275,14 @@ class ImageAttachmentView: UIView {
         trailing.priority = .init(999)
         
         let w1 = img1.widthAnchor.constraint(equalToConstant: 70)
-        w1.priority = .init(999)
+        w1.priority = .init(1000)
         let h1 = img1.heightAnchor.constraint(equalToConstant: 70)
-        h1.priority = .init(999)
+        h1.priority = .init(1000)
         
         let w2 = img2.widthAnchor.constraint(equalToConstant: 70)
-        w2.priority = .init(999)
+        w2.priority = .init(1000)
         let h2 = img2.heightAnchor.constraint(equalToConstant: 70)
-        h2.priority = .init(999)
+        h2.priority = .init(1000)
         
         NSLayoutConstraint.activate([
             stackView.topAnchor.constraint(equalTo: topAnchor),
@@ -343,6 +351,8 @@ class VideoAttachmentView: UIView {
         return iv
     }()
     
+    private let loading = TrippieLoadingView2()
+    
     override init(frame: CGRect) {
         super.init(frame: frame)
         setup()
@@ -354,10 +364,12 @@ class VideoAttachmentView: UIView {
         addSubview(containerView)
         containerView.addSubview(thumbnailImageView)
         containerView.addSubview(playIcon)
+        containerView.addSubview(loading)
         
         containerView.translatesAutoresizingMaskIntoConstraints = false
         thumbnailImageView.translatesAutoresizingMaskIntoConstraints = false
         playIcon.translatesAutoresizingMaskIntoConstraints = false
+        loading.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
             containerView.topAnchor.constraint(equalTo: topAnchor),
@@ -373,16 +385,30 @@ class VideoAttachmentView: UIView {
             playIcon.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
             playIcon.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
             playIcon.widthAnchor.constraint(equalToConstant: 50),
-            playIcon.heightAnchor.constraint(equalToConstant: 50)
+            playIcon.heightAnchor.constraint(equalToConstant: 50),
+            
+            loading.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+            loading.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
+            loading.widthAnchor.constraint(equalToConstant: 50),
+            loading.heightAnchor.constraint(equalToConstant: 50)
         ])
+        
+        loading.isHidden = true
         
         let tap = UITapGestureRecognizer(target: self, action: #selector(didTap))
         addGestureRecognizer(tap)
         isUserInteractionEnabled = true
     }
     
-    func configure(videoThumbnail: String) {
+    func configure(videoThumbnail: String, isLoading: Bool = false) {
         thumbnailImageView.backgroundColor = .black
+        if isLoading {
+            loading.isHidden = false
+            playIcon.isHidden = true
+        } else {
+            loading.isHidden = true
+            playIcon.isHidden = false
+        }
         
         guard let url = URL(string: videoThumbnail) else {
             thumbnailImageView.image = nil

@@ -405,6 +405,7 @@ class DetailViewController: FadeBaseViewController {
         vc.imageUrls = (self.tripDetailWithStatus?.trip.coverImage)!
         vc.isOwnerOpen = isOwner
         vc.trip = self.tripDetailWithStatus
+        vc.isFromMessage = false
         self.navigationController?.pushViewController(vc, animated: true)
     }
     

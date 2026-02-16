@@ -21,7 +21,7 @@ class RepplyComponentView: UIView {
     var imageViewModel: ImageViewModel! {
         didSet {
             binding()
-            renderVideoImage()
+            renderVideoImage(videoLoading: false)
         }
     }
     var chat: String {
@@ -41,9 +41,9 @@ class RepplyComponentView: UIView {
     private let cancelBtn = UIButton.customButton(image: UIImage(systemName: "xmark"), backgroundColor: .clear, tintColor: .systemGray, padding: 3)
     private var startChating: Bool = false
     
-    private let rootStack = UIStackView.customStack(axis: .vertical, alignment: .fill, distribution: .fill, stackSpacing: 4)
+    private let rootStack = UIStackView.customStack(yPadding: 12, axis: .vertical, alignment: .fill, distribution: .fill, stackSpacing: 4)
     
-    private let vstack1 = UIStackView.customStack(axis: .vertical, alignment: .leading, distribution: .fill)
+    private let vstack1 = UIStackView.customStack(xPadding: 8, axis: .vertical, alignment: .leading, distribution: .fill)
     
     //MARK: - INIT
     override init(frame: CGRect) {
@@ -57,7 +57,7 @@ class RepplyComponentView: UIView {
     }
     
     private func setupUI() {
-        let mainstack = UIStackView.customStack(xPadding: 8, yPadding: 12, axis: .horizontal, alignment: .bottom, distribution: .fill)
+        let mainstack = UIStackView.customStack(xPadding: 8, axis: .horizontal, alignment: .bottom, distribution: .fill)
         addSubview(rootStack)
         addSubview(cancelBtn)
         
@@ -81,7 +81,7 @@ class RepplyComponentView: UIView {
             rootStack.bottomAnchor.constraint(equalTo: bottomAnchor),
             rootStack.leadingAnchor.constraint(equalTo: leadingAnchor),
             rootStack.trailingAnchor.constraint(equalTo: trailingAnchor),
-            rootStack.topAnchor.constraint(equalTo: topAnchor, constant: 12),
+            rootStack.topAnchor.constraint(equalTo: topAnchor),
             
             cancelBtn.topAnchor.constraint(equalTo: topAnchor, constant: 8),
             cancelBtn.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
@@ -108,12 +108,13 @@ class RepplyComponentView: UIView {
         appendBtn.isHidden = true
     }
     
-    private func renderVideoImage() {
+    private func renderVideoImage(videoLoading: Bool) {
         let imgs = imageViewModel.uploadedUrls
         let thumnail = imageViewModel.VideoThumbnail
         let videoUrl = imageViewModel.videoUrl
         
         // Reset state
+        vstack1.isHidden = false
         images.isHidden = true
         video.isHidden = true
         cancelBtn.isHidden = true
@@ -124,39 +125,50 @@ class RepplyComponentView: UIView {
         attackmentImageBtn.isEnabled = true
         chatBox.isEditable = true
         
-        if chatBox.text == "" {
-            attackmentVideoBtn.isEnabled = true
-            attackmentTakePhoto.isEnabled = true
-        } else {
-            attackmentVideoBtn.isEnabled = false
-            attackmentTakePhoto.isEnabled = false
-        }
-        
+
         if !imgs.isEmpty {
             images.isHidden = false
-            video.isHidden = true
             images.configure(urls: imgs)
             attackmentTakePhoto.isEnabled = false
             attackmentVideoBtn.isEnabled = false
-            
-            cancelBtn.isHidden = false
-        } else if !thumnail.isEmpty || !videoUrl.isEmpty {
+            attackmentImageBtn.isEnabled = false
+        } else {
             images.isHidden = true
+        }
+        
+        
+        if !thumnail.isEmpty || !videoUrl.isEmpty {
             video.isHidden = false
-            video.configure(videoThumbnail: thumnail)
+            video.configure(videoThumbnail: thumnail, isLoading: videoLoading)
             attackmentTakePhoto.isEnabled = false
             attackmentVideoBtn.isEnabled = false
             attackmentImageBtn.isEnabled = false
-            chatBox.text = ""
-            chatBox.isEditable = false
-            cancelBtn.isHidden = false
-        }
-        if let container = self.superview {
-            video.widthAnchor.constraint(lessThanOrEqualTo: container.widthAnchor, multiplier: 0.6).isActive = true
-            video.heightAnchor.constraint(equalTo: video.widthAnchor, multiplier: 3/4).isActive = true
+        } else {
+            video.isHidden = true
         }
         
+        
+        if !imgs.isEmpty && imgs[0] != "placeholder_bending" {
+            cancelBtn.isHidden = false
+        } else {
+            cancelBtn.isHidden = true
+            
+            if (!thumnail.isEmpty || !videoUrl.isEmpty) && thumnail != "Thumbnail_loading" {
+                cancelBtn.isHidden = false
+            } else {
+                cancelBtn.isHidden = true
+            }
+        }
+        
+        video.widthAnchor.constraint(equalToConstant: 150).isActive = true
+        video.heightAnchor.constraint(equalTo: video.widthAnchor, multiplier: 3/4).isActive = true
+        
         UIView.animate(withDuration: 0.3) {
+            // Ép thằng View cha (GroupMessageViewController.view) update lại layout
+            // Để nó đẩy cái khung chat lên trần thay vì bành xuống dưới
+            self.superview?.layoutIfNeeded()
+            
+            // Cập nhật các element bên trong chính nó
             self.layoutIfNeeded()
         }
     }
@@ -214,19 +226,28 @@ class RepplyComponentView: UIView {
     
     //MARK: - BINDING
     private func binding() {
-        imageViewModel.$videoUrl
+        imageViewModel.$VideoThumbnail
             .dropFirst()
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                self?.renderVideoImage()
+            .sink { [weak self] l in
+                let link = l == "Thumbnail_loading"
+                self?.renderVideoImage(videoLoading: link)
             }
             .store(in: &cancellable)
+        
         
         imageViewModel.loading
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] loading in
                 self?.sendBtn.isEnabled = !loading
+                self?.cancelBtn.isEnabled = !loading
+                if loading {
+                    self?.attackmentImageBtn.isEnabled = !loading
+                    self?.attackmentVideoBtn.isEnabled = !loading
+                    self?.attackmentTakePhoto.isEnabled = !loading
+                }
+                
             }
             .store(in: &cancellable)
         
@@ -234,7 +255,7 @@ class RepplyComponentView: UIView {
             .dropFirst()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                self?.renderVideoImage()
+                self?.renderVideoImage(videoLoading: false)
             }
             .store(in: &cancellable)
         

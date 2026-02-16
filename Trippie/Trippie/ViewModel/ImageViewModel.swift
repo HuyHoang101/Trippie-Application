@@ -46,7 +46,7 @@ class ImageViewModel {
                 }
                 
                 // Sau khi TẤT CẢ đã xong
-                self.uploadedUrls.append(contentsOf: tempUrls)
+                self.uploadedUrls = tempUrls
                 //print("DEBUG: Đã upload xong toàn bộ: \(self.uploadedUrls)")
                 
             } catch {
@@ -58,7 +58,6 @@ class ImageViewModel {
     }
     
     func deleteAllImages() {
-        guard !uploadedUrls.isEmpty else { return }
         
         loading.send(true)
         let urlsToDelete = self.uploadedUrls + [self.videoUrl, self.VideoThumbnail]
@@ -69,6 +68,7 @@ class ImageViewModel {
                     group.addTask {
                         do {
                             try await self.imageService.deleteMedia(url: url)
+                            //print("Delete file success \(url)")
                         } catch {
                             //print("Delete file failed \(url): \(error)")
                         }
@@ -76,6 +76,8 @@ class ImageViewModel {
                 }
             }
             self.uploadedUrls = []
+            self.videoUrl = ""
+            self.VideoThumbnail = ""
             self.loading.send(false)
         }
     }
@@ -101,10 +103,10 @@ class ImageViewModel {
                     
                     // Thu thập kết quả trả về
                     for try await (type, url) in group {
-                        if type == "video" {
-                            self.videoUrl = url
-                        } else {
+                        if type != "video" {
                             self.VideoThumbnail = url
+                        } else {
+                            self.videoUrl = url
                         }
                     }
                 }

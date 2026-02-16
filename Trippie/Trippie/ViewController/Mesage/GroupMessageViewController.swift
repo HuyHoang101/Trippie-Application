@@ -66,6 +66,7 @@ class GroupMessageViewController: FadeBaseViewController {
         tableView.showsVerticalScrollIndicator = false
         
         replyLabel.imageViewModel = self.imageViewModel
+        beginLabel.numberOfLines = 0
         
         view.addSubview(tableView)
         view.addSubview(replyLabel)
@@ -212,6 +213,10 @@ class GroupMessageViewController: FadeBaseViewController {
             guard let self = self else {return}
             self.didTapSend()
         }
+        replyLabel.onTapCancel = {[weak self] in
+            guard let self = self else {return}
+            self.didTapCancel()
+        }
     }
     
     // --- LOGIC CHẠM TRẦN TỰ LOAD HISTORY ---
@@ -313,7 +318,10 @@ class GroupMessageViewController: FadeBaseViewController {
     
     private func didTapSend() {
         isUserInteracting = false
-        commentViewModel.sendComment(message: replyLabel.chat, imgUrls: imageViewModel.uploadedUrls, videoUrl: imageViewModel.videoUrl, thumbnailUrl: imageViewModel.VideoThumbnail)
+        let message = replyLabel.chat
+        let imageUrls = imageViewModel.uploadedUrls
+        let videoUrl = imageViewModel.videoUrl
+        commentViewModel.sendComment(message: message, imgUrls: imageUrls, videoUrl: videoUrl, thumbnailUrl: imageViewModel.VideoThumbnail)
         imageViewModel.uploadedUrls = []
         imageViewModel.videoUrl = ""
         imageViewModel.VideoThumbnail = ""
@@ -455,11 +463,25 @@ class GroupMessageViewController: FadeBaseViewController {
         else if newDataCount > oldDataCount {
             let indexPaths = (oldDataCount..<newDataCount).map { IndexPath(row: $0, section: 0) }
             
-            // 1. TÌM MỎ NEO: Giữ chặt tin nhắn đang xem
-            
-            
+            // 1. Cập nhật data gốc trước tiên
             self.displayData = newData
             
+            // ✅ 2. FIX AVATAR / TÊN (CHỌC THẲNG VÀO CELL CHỐNG CRASH)
+            // Thay vì bắt TableView reload (dễ văng app), ta tóm cổ cái Cell cũ trên màn hình và gọi lại hàm configure!
+            if oldDataCount > 0 {
+                let lastOldIndex = oldDataCount - 1
+                let lastOldPath = IndexPath(row: lastOldIndex, section: 0)
+                
+                // Nếu tin nhắn cũ vẫn đang nằm trên màn hình -> Update lại UI cho nó
+                if let cell = self.tableView.cellForRow(at: lastOldPath) as? MessageTableViewCell {
+                    let item = self.displayData[lastOldIndex]
+                    let (hideName, hideAvatar) = self.isHideNameandHideAvatarAction(index: lastOldIndex)
+                    // Gọi lại hàm configure để nó tự ẩn/hiện Avatar và Tên
+                    cell.configure(comment: item, isHideAvatar: hideAvatar, isHideName: hideName)
+                }
+            }
+            
+            // 3. NHÉT DATA MỚI IM RU
             if self.isUserInteracting {
                 UIView.performWithoutAnimation {
                     self.tableView.insertRows(at: indexPaths, with: .none)
@@ -469,7 +491,6 @@ class GroupMessageViewController: FadeBaseViewController {
                 UIView.performWithoutAnimation {
                     self.tableView.insertRows(at: indexPaths, with: .none)
                 }
-                // Chỉ tính lại Inset khi người dùng KHÔNG chạm tay vào màn hình
                 self.adjustContentInsetToBottom()
                 let bottomIndexPath = IndexPath(row: newDataCount - 1, section: 0)
                 self.tableView.scrollToRow(at: bottomIndexPath, at: .bottom, animated: true)
@@ -633,6 +654,7 @@ extension GroupMessageViewController: PHPickerViewControllerDelegate {
                     
                     // Switch về Main Thread gọi ViewModel
                     DispatchQueue.main.async {
+                        self.imageViewModel.VideoThumbnail = "Thumbnail_loading"
                         self.imageViewModel.UploadVideo(fileUrl: localUrl, thumbnailData: thumbnailData, folder: "chats")
                     }
                 } catch {
@@ -662,7 +684,13 @@ extension GroupMessageViewController: PHPickerViewControllerDelegate {
                     }
                     return dataList
                 }
-                
+                var arr = ["placeholder_bending"]
+                if optimizedDataArray.count > 1 {
+                    for _ in 1...(optimizedDataArray.count - 1) {
+                        arr.append("...")
+                    }
+                }
+                self.imageViewModel.uploadedUrls = arr
                 // 2. Upload
                 self.imageViewModel.uploadImages(optimizedDataArray, folder: "chats")
             }
@@ -702,6 +730,7 @@ extension GroupMessageViewController: UIImagePickerControllerDelegate, UINavigat
         // ----------------------------------------
         if mediaType == UTType.image.identifier {
             if let originalImage = info[.originalImage] as? UIImage {
+                self.imageViewModel.uploadedUrls = ["placeholder_bending"]
                 if let imageData = originalImage.jpegData(compressionQuality: 1.0) {
                     self.imageViewModel.uploadImages([imageData], folder: "chats")
                 }
@@ -717,6 +746,7 @@ extension GroupMessageViewController: UIImagePickerControllerDelegate, UINavigat
                 if let thumbnailData = self.generateThumbnail(for: videoUrl) {
                     // Chuyển về Main Thread an toàn rồi Upload
                     DispatchQueue.main.async {
+                        self.imageViewModel.VideoThumbnail = "Thumbnail_loading"
                         self.imageViewModel.UploadVideo(fileUrl: videoUrl, thumbnailData: thumbnailData, folder: "chats")
                     }
                 }

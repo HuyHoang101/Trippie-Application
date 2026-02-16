@@ -25,6 +25,9 @@ class AllPhotosViewController: FadeBaseViewController {
     var imageUrls: [String] = []
     var isOwnerOpen: Bool!
     var trip: TripWithStatus!
+    var videoUrls: [String] = []
+    var thumbnailUrls: [String] = []
+    var isFromMessage: Bool!
     
     private var isAdding = false
     private var deleteUrls: [String] = []
@@ -260,6 +263,13 @@ class PhotoGridCell: UICollectionViewCell {
         iv.contentMode = .scaleAspectFit
         return iv
     }()
+    private let playIcon: UIImageView = {
+        let i = UIImageView()
+        i.image = UIImage(systemName: "play.fill")
+        i.tintColor = .white.withAlphaComponent(0.9)
+        i.translatesAutoresizingMaskIntoConstraints = false
+        return i
+    }()
     private let imageView = TrippieImageView(style: .rounded(radius: 0, corners: []), isShadow: false, borderColor: .authBackground2.withAlphaComponent(0.3))
     
     override init(frame: CGRect) {
@@ -267,6 +277,7 @@ class PhotoGridCell: UICollectionViewCell {
         contentView.addSubview(bgContainer)
         bgContainer.addSubview(imageView)
         bgContainer.addSubview(checkmarkIcon)
+        bgContainer.addSubview(playIcon)
         
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFill
@@ -286,13 +297,20 @@ class PhotoGridCell: UICollectionViewCell {
             checkmarkIcon.topAnchor.constraint(equalTo: bgContainer.topAnchor, constant: 12),
             checkmarkIcon.trailingAnchor.constraint(equalTo: bgContainer.trailingAnchor, constant: -12),
             checkmarkIcon.widthAnchor.constraint(equalToConstant: 24),
-            checkmarkIcon.heightAnchor.constraint(equalToConstant: 24)
+            checkmarkIcon.heightAnchor.constraint(equalToConstant: 24),
+            
+            playIcon.centerYAnchor.constraint(equalTo: bgContainer.centerYAnchor),
+            playIcon.centerXAnchor.constraint(equalTo: bgContainer.centerXAnchor),
+            playIcon.widthAnchor.constraint(equalToConstant: 26),
+            playIcon.heightAnchor.constraint(equalToConstant: 26)
         ])
+        
+        playIcon.isHidden = true
     }
     
     required init?(coder: NSCoder) { fatalError() }
     
-    func configure(url: String, isDeleteMode: Bool, isSelected: Bool) {
+    func configure(url: String, isDeleteMode: Bool, isSelected: Bool, isVideo: Bool = false) {
         imageView.setImage(url: url)
         checkmarkIcon.isHidden = !isDeleteMode
         imageView.transform = .identity
@@ -313,6 +331,8 @@ class PhotoGridCell: UICollectionViewCell {
                 checkmarkIcon.alpha = 0.15
             }
         }
+        
+        playIcon.isHidden = !isVideo
     }
 }
 
