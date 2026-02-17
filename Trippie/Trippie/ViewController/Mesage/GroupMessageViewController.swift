@@ -15,8 +15,9 @@ class GroupMessageViewController: FadeBaseViewController {
     
     var navigationTitle: String?
     var tripId: String?
-    
     var commentViewModel: CommentViewModel!
+    var tripWithStatus: TripWithStatus?
+    
     private let imageViewModel = ImageViewModel()
     private var cancellable = Set<AnyCancellable>()
     
@@ -110,13 +111,13 @@ class GroupMessageViewController: FadeBaseViewController {
         // 2. Gán items
         var dropDownItems: [DropdownItem] = []
         
-        dropDownItems.append(DropdownItem(title: "All Images", icon: "photos.fill", type: .normal) { [weak self] in
+        dropDownItems.append(DropdownItem(title: "All Images", icon: "photo.on.rectangle", type: .normal) { [weak self] in
             guard let self = self else { return }
-            
+            self.didTapAllImage(isVideo: false)
         })
-        dropDownItems.append(DropdownItem(title: "All Videos", icon: "videos.fill", type: .normal) { [weak self] in
+        dropDownItems.append(DropdownItem(title: "All Videos", icon: "video.square.fill", type: .normal) { [weak self] in
             guard let self = self else { return }
-            
+            self.didTapAllImage(isVideo: true)
         })
         menuBtn.items = dropDownItems
         let leftItem = UIBarButtonItem(customView: backBtn)
@@ -217,6 +218,20 @@ class GroupMessageViewController: FadeBaseViewController {
             guard let self = self else {return}
             self.didTapCancel()
         }
+    }
+    
+    private func didTapAllImage(isVideo: Bool) {
+        let vc = AllPhotosViewController()
+        guard let t = tripWithStatus else { return }
+        vc.trip = t
+        vc.isOwnerOpen = false
+        if isVideo {
+            vc.videoUrls = commentViewModel.allVideoUrls.value
+            vc.thumbnailUrls = commentViewModel.allThumbnailUrls.value
+        } else {
+            vc.imageUrls = commentViewModel.allImageUrls.value
+        }
+        self.navigationController?.pushViewController(vc, animated: true)
     }
     
     // --- LOGIC CHẠM TRẦN TỰ LOAD HISTORY ---

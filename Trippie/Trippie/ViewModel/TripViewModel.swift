@@ -21,6 +21,7 @@ class TripViewModel {
     let trips = CurrentValueSubject<[Trip], Never>([])
     let randomTrips = CurrentValueSubject<[Trip], Never>([])
     let myTrips = CurrentValueSubject<[TripWithStatus], Never>([])
+    let filteredMyTrips = CurrentValueSubject<[TripWithStatus], Never>([])
     let loading = CurrentValueSubject<Bool, Never>(false)
     let errorMessage = PassthroughSubject<String, Never>()
     let successMessage = PassthroughSubject<String, Never>()
@@ -28,9 +29,7 @@ class TripViewModel {
     let didTapChange = PassthroughSubject<String, Never>()
     
     // MARK: - INPUT (FILTER & SEARCH)
-    let searchText = CurrentValueSubject<String?, Never>(nil)
-    let country = CurrentValueSubject<String?, Never>(nil)
-    let tripType = CurrentValueSubject<TripType?, Never>(nil)
+    let searchTextMyTrip = CurrentValueSubject<String?, Never>(nil)
     let titleFilter = CurrentValueSubject<String?, Never>(nil)
     
     // MARK: - PRIVATE PROPERTIES
@@ -80,7 +79,7 @@ class TripViewModel {
         
         Task {
             do {
-                let result = try await tripService.fetchTripForFeedingList(tripType: tripType.value, country: country.value, searchText: searchText.value)
+                let result = try await tripService.fetchTripForFeedingList()
                 
                 
                 await waitMinTime(startTime: startTime)
@@ -350,12 +349,28 @@ class TripViewModel {
     
     //MARK: - PIPE
     private func pipe(){
-        Publishers.CombineLatest3(searchText, country, tripType)
-                .dropFirst()
-                .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
-                .removeDuplicates { $0 == $1 }
-                .sink { [weak self] (text, country, type) in
-                    self?.fetchTripForFeedTable()
+        Publishers.CombineLatest(myTrips, searchTextMyTrip)
+                .map { (trips, searchText) -> [TripWithStatus] in
+                    // Nếu không có chữ gì để search -> Trả về y nguyên mảng gốc
+                    guard let text = searchText?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+                        return trips
+                    }
+                    
+                    let query = text.lowercased()
+                    
+                    // Lọc mảng gốc và trả về mảng mới
+                    return trips.filter { item in
+                        // Chú ý: Cậu thay item.title, item.country cho đúng với Model thực tế nhé
+                        let titleMatch = item.trip.title.lowercased().contains(query)
+                        let countryMatch = item.trip.country.lowercased().contains(query)
+                        let locationMatch = item.trip.location.lowercased().contains(query)
+                        
+                        return titleMatch || countryMatch || locationMatch
+                    }
+                }
+                .sink { [weak self] result in
+                    // Đẩy data đã lọc ra cho biến mới
+                    self?.filteredMyTrips.send(result)
                 }
                 .store(in: &cancellable)
 

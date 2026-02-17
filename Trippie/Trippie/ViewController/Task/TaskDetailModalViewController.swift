@@ -161,7 +161,7 @@ class TaskDetailModalViewController: UIViewController {
         }
         // Set Status Badge
         let status = PersonalStatus(rawValue: task.status.rawValue) ?? .upcoming
-        statusBadge.configure(status: status) // Giả định TripStatusBadge có hàm setStatus
+        statusBadge.configure(status: status)
         
         // Logic hiển thị Edit By / Created At
         if let editor = task.editBy, !editor.isEmpty {
@@ -170,14 +170,10 @@ class TaskDetailModalViewController: UIViewController {
             let dateStr = df.string(from: task.updatedAt ?? Date())
             editByLabel.text = "Edited by \(editor) at \(dateStr)"
             editByLabel.isHidden = false
-            
-            // Nếu có editBy, dòng thời gian dưới tên sẽ hiện ngày tạo ban đầu
-            timeInfoLabel.text = "Posted on \(formatDate(task.createdAt))"
         } else {
             editByLabel.isHidden = true
-            timeInfoLabel.text = "Posted on \(formatDate(task.createdAt))"
         }
-        
+        timeInfoLabel.text = "Posted on \(formatDate(task.createdAt))"
         // Xử lý ảnh Cover
         if task.coverImage.isEmpty {
             coverImageView.isHidden = true

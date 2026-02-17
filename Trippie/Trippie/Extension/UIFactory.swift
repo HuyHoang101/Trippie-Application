@@ -17,7 +17,8 @@ extension UITextField {
     static func createInput(placeholder: String,
                             keyboardType: UIKeyboardType = .default,
                             accentColor: UIColor? = nil,
-                            iconName: String? = nil) -> UITextField { // Thêm iconName
+                            iconName: String? = nil,
+                            onIconTap: (() -> Void)? = nil) -> UITextField { // Thêm iconName
         
         let tf = UITextField()
         tf.placeholder = placeholder
@@ -29,22 +30,26 @@ extension UITextField {
             // Nếu có Icon: Tạo một Container để chứa Icon + Space
             let container = UIView()
             
-            let iconView = UIImageView(image: UIImage(systemName: name))
-            iconView.contentMode = .scaleAspectFit
-            // Màu icon: Nếu là Glassmorphism (có accent) thì màu trắng mờ, ngược lại dùng gray hệ thống
-            iconView.tintColor = accentColor != nil ? UIColor.white.withAlphaComponent(0.6) : .systemGray
-            iconView.translatesAutoresizingMaskIntoConstraints = false
+            let iconBtn = UIButton(type: .system)
+            iconBtn.setImage(UIImage(systemName: name), for: .normal)
+            iconBtn.contentMode = .scaleAspectFit
+            iconBtn.tintColor = accentColor != nil ? UIColor.white.withAlphaComponent(0.6) : .systemGray
+            iconBtn.translatesAutoresizingMaskIntoConstraints = false
             
-            container.addSubview(iconView)
+            if let action = onIconTap {
+                iconBtn.addAction(UIAction { _ in action() }, for: .touchUpInside)
+            }
+            
+            container.addSubview(iconBtn)
             
             // Setup Constraint cho Icon nằm thụt vào một chút (ví dụ 12pt từ lề trái)
             NSLayoutConstraint.activate([
-                iconView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
-                iconView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-                iconView.widthAnchor.constraint(equalToConstant: 20),
-                iconView.heightAnchor.constraint(equalToConstant: 20),
+                iconBtn.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 12),
+                iconBtn.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                iconBtn.widthAnchor.constraint(equalToConstant: 20),
+                iconBtn.heightAnchor.constraint(equalToConstant: 20),
                 // Quan trọng: Container phải có chiều rộng đủ cho icon + khoảng cách đến text (ví dụ thêm 8pt bên phải icon)
-                container.trailingAnchor.constraint(equalTo: iconView.trailingAnchor, constant: 8)
+                container.trailingAnchor.constraint(equalTo: iconBtn.trailingAnchor, constant: 8)
             ])
             
             tf.leftView = container

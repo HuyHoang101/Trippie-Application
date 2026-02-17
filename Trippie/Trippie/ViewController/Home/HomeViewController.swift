@@ -19,7 +19,9 @@ class HomeViewController: FadeBaseViewController {
     
     private let welcomlabel2 = UILabel.customLabel(text: "Use one of our suggestions or make a list of what a pack", font: AppTheme.Font.mainMedium(size: 14), textColor: .secondaryLabel)
     
-    private let searchBar = UITextField.createInput(placeholder: "Searching...", iconName: "magnifyingglass")
+    private lazy var searchBar = UITextField.createInput(placeholder: "Searching...", iconName: "magnifyingglass") { [weak self] in
+        self?.pushToLishWithSearching()
+    }
     
     private let filterButton = UIButton.customButton(image: UIImage(systemName: "slider.horizontal.3"), backgroundColor: UIColor(named: "AuthBackground1") ?? UIColor.purple, tintColor: .white, isCircle: false, padding: 13)
     
@@ -268,6 +270,15 @@ class HomeViewController: FadeBaseViewController {
         Vietnam.addTarget(self, action: #selector(handleFilterTap), for: .touchUpInside)
         Recommend.addTarget(self, action: #selector(handleFilterTap), for: .touchUpInside)
         viewAllButton.addTarget(self, action: #selector(pushToLish), for: .touchUpInside)
+        filterButton.addTarget(self, action: #selector(openFilter), for: .touchUpInside)
+    }
+    
+    @objc private func openFilter() {
+        let vc = FilterController()
+        vc.modalTransitionStyle = .crossDissolve
+        vc.modalPresentationStyle = .overFullScreen
+        
+        self.present(vc, animated: true)
     }
     
     private func pushToDetail(id: String, navigationTitle: String) {
@@ -326,6 +337,18 @@ class HomeViewController: FadeBaseViewController {
         default:
             break
         }
+    }
+    
+    @objc private func pushToLishWithSearching() {
+        let text = searchBar.text ?? ""
+        let vc = ListViewController()
+        vc.isFilter = true
+        vc.navigationTitle = "Search: \(text.isEmpty ? "None" : text)"
+        TripFeedViewModel.shared.country.send(nil)
+        TripFeedViewModel.shared.tripType.send(nil)
+        TripFeedViewModel.shared.searchText.send(text)
+        self.navigationController?.pushViewController(vc, animated: true)
+        searchBar.text = ""
     }
     
     @objc private func handleFilterTap(_ sender: UIButton) {

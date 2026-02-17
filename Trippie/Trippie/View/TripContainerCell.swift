@@ -8,6 +8,8 @@ import UIKit
 
 class TripContainerCell: UITableViewCell {
     
+    var cellDidTap: (() -> Void)?
+    
     // Nhúng thẻ UniversalTripCard vào
     let cardView = UniversalTripCard()
     
@@ -36,6 +38,9 @@ class TripContainerCell: UITableViewCell {
     
     func bindData(trip: TripWithStatus) {
         cardView.configure(trip: trip, isListMode: true)
+        cardView.cardDidTap = { [weak self] in
+            self?.cellDidTap?()
+        }
     }
     
     override func prepareForReuse() {

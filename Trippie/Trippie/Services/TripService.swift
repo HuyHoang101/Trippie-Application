@@ -582,7 +582,7 @@ class TripService {
         let totalCount = Int(truncating: countSnapshot.count)
         
         // --- 2. PAGINATION THẬT (5 object) ---
-        query = query.order(by: "startTime", descending: false).limit(to: 5)
+        query = query.order(by: "startTime", descending: false).limit(to: 8)
         if let lastDoc = lastDocument { query = query.start(afterDocument: lastDoc) }
         
         let snapshot = try await query.getDocuments()

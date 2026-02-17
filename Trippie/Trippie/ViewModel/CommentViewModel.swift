@@ -18,6 +18,9 @@ class CommentViewModel {
     let loading = CurrentValueSubject<Bool, Never>(false)
     let errorMessage = PassthroughSubject<String, Never>()
     let newMessagesCount = CurrentValueSubject<Int, Never>(0)
+    let allImageUrls = CurrentValueSubject<[String], Never>([])
+    let allVideoUrls = CurrentValueSubject<[String], Never>([])
+    let allThumbnailUrls = CurrentValueSubject<[String], Never>([])
     private var isFirstLoad = true
     
     // MARK: - PRIVATE PROPERTIES
@@ -148,6 +151,31 @@ class CommentViewModel {
         commentService.removeListener()
         // Reset data để lần sau vào không bị hiện tin nhắn cũ của room trước
         comments.send([])
+    }
+    
+    // 6. All Images
+    func fetchAllImage(tripId: String) {
+        Task {
+            do {
+                let results = try await commentService.fetchAllImages(tripId: tripId)
+                self.allImageUrls.send(results)
+            } catch {
+                self.errorMessage.send(error.localizedDescription)
+            }
+        }
+    }
+    
+    // 7. All Videos
+    func fetchAllVideo(tripId: String) {
+        Task {
+            do {
+                let (videos, thumbnails) = try await commentService.fetchAllVideos(tripId: tripId)
+                self.allVideoUrls.send(videos)
+                self.allThumbnailUrls.send(thumbnails)
+            } catch {
+                self.errorMessage.send(error.localizedDescription)
+            }
+        }
     }
     
 }

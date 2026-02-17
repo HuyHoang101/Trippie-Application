@@ -102,8 +102,8 @@ class ListTaskViewController: FadeBaseViewController {
         
         NSLayoutConstraint.activate([
             ruleContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
-            ruleContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 12),
-            ruleContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -12),
+            ruleContainer.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            ruleContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
             ruleContainer.bottomAnchor.constraint(equalTo: tableView.topAnchor, constant: -10),
             
             containerUI.centerXAnchor.constraint(equalTo: ruleContainer.trailingAnchor),
@@ -181,6 +181,8 @@ class ListTaskViewController: FadeBaseViewController {
         guard let id = self.id else { return }
         guard let trip = tripViewModel.myTrips.value.first(where: { $0.trip.id == id }) else  { return }
         self.commentViewModel.joinChatRoom(tripId: id)
+        self.commentViewModel.fetchAllImage(tripId: id)
+        self.commentViewModel.fetchAllVideo(tripId: id)
         containerUI.isHidden = true
         containerUI.backgroundColor = .systemRed
         containerUI.layer.cornerRadius = 16
@@ -242,11 +244,13 @@ class ListTaskViewController: FadeBaseViewController {
     }
     
     @objc private func didTapView() {
+        guard let tripWithStatus = tripViewModel.myTrips.value.first(where: { $0.trip.id == id }) else  { return }
         let vc = GroupMessageViewController()
         guard let trip = self.tripWithStatus?.trip else { return }
         vc.tripId = trip.id
         vc.navigationTitle = "\(trip.location), \(trip.country)"
         vc.commentViewModel = self.commentViewModel
+        vc.tripWithStatus = tripWithStatus
         self.navigationController?.pushViewController(vc, animated: true)
         self.commentViewModel.newMessagesCount.send(0)
     }

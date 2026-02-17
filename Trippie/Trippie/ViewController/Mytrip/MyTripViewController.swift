@@ -30,9 +30,10 @@ class MyTripViewController: FadeBaseViewController {
     
     private let maincontent = UIStackView.customStack(axis: .vertical, alignment: .fill, distribution: .fill, stackSpacing: 0)
     
-    private let searchBar = UITextField.createInput(placeholder: "Searching...", iconName: "magnifyingglass")
+    private lazy var searchBar = UITextField.createInput(placeholder: "Searching...", iconName: "magnifyingglass") { [weak self] in
+        
+    }
     
-    private let filterButton = UIButton.customButton(image: UIImage(systemName: "slider.horizontal.3"), backgroundColor: UIColor(named: "AuthBackground1") ?? UIColor.purple, tintColor: .white, isCircle: false, padding: 13)
     
     private let filterStack = UIStackView.customStack(xPadding: 12, yPadding: 20, axis: .horizontal, alignment: .center, distribution: .fill, stackSpacing: 12)
     
@@ -108,7 +109,6 @@ class MyTripViewController: FadeBaseViewController {
         maincontent.addArrangedSubview(subscroll3)
         
         filterStack.addArrangedSubview(searchBar)
-        filterStack.addArrangedSubview(filterButton)
         
         hstack4.addArrangedSubview(label1)
         hstack4.addArrangedSubview(viewAllButton1)
@@ -192,7 +192,6 @@ class MyTripViewController: FadeBaseViewController {
             subscroll3.contentLayoutGuide.heightAnchor.constraint(equalTo: subscroll3.frameLayoutGuide.heightAnchor), // Khóa chết trục dọc không cho vuốt
             
             searchBar.heightAnchor.constraint(equalToConstant: 50),
-            filterButton.widthAnchor.constraint(equalTo: filterButton.heightAnchor)
         ])
         
         render()
@@ -393,7 +392,14 @@ class MyTripViewController: FadeBaseViewController {
         viewAllButton4.addTarget(self, action: #selector(pushToLish), for: .touchUpInside)
     }
     
-    @objc func pushToLish(_ render: UIButton) {
+    @objc private func didTapSearch() {
+        let vc = ListViewController()
+        vc.navigationTitle = "Search: \(self.searchBar.text ?? "None")"
+        
+        self.navigationController?.pushViewController(vc, animated: true)
+    }
+    
+    @objc private func pushToLish(_ render: UIButton) {
         let listVC = ListViewController()
         
         switch render {
@@ -449,7 +455,7 @@ class MyTripViewController: FadeBaseViewController {
     }
     
     //MARK: - Binding
-    func binding() {
+    private func binding() {
         viewModel.myTrips
             .dropFirst()
             .receive(on: RunLoop.main)

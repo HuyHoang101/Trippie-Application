@@ -101,6 +101,53 @@ class CommentService {
         ])
     }
     
+    // MARK: - ALL IMAGE
+    func fetchAllImages(tripId: String) async throws -> [String] {
+        let db = Firestore.firestore()
+        
+        let snapshot = try await db.collection("trips")
+            .document(tripId)
+            .collection("comments")
+            .whereField("imageUrls", isNotEqualTo: [])
+            .getDocuments()
+        
+        var allImages: [String] = []
+        
+        for doc in snapshot.documents {
+            if let urls = doc.get("imageUrls") as? [String] {
+                allImages.append(contentsOf: urls)
+            }
+        }
+        
+        return allImages
+    }
+    
+    
+    //MARK: - ALL VIDEOS
+    func fetchAllVideos(tripId: String) async throws -> (videos: [String], thumbnails: [String]) {
+        let db = Firestore.firestore()
+        
+        let snapshot = try await db.collection("trips")
+            .document(tripId)
+            .collection("comments")
+            .whereField("videoUrl", isNotEqualTo: "")
+            .getDocuments()
+        
+        var videoUrls: [String] = []
+        var thumbnails: [String] = []
+        
+        for doc in snapshot.documents {
+            if let video = doc.get("videoUrl") as? String, !video.isEmpty,
+               let thumb = doc.get("videoThumbnail") as? String {
+                
+                videoUrls.append(video)
+                thumbnails.append(thumb)
+            }
+        }
+        
+        return (videoUrls, thumbnails)
+    }
+    
     // MARK: - CLEANUP
     func removeListener() {
         listenerRegistration?.remove()

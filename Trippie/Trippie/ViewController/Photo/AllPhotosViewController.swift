@@ -27,7 +27,6 @@ class AllPhotosViewController: FadeBaseViewController {
     var trip: TripWithStatus!
     var videoUrls: [String] = []
     var thumbnailUrls: [String] = []
-    var isFromMessage: Bool!
     
     private var isAdding = false
     private var deleteUrls: [String] = []
@@ -75,7 +74,7 @@ class AllPhotosViewController: FadeBaseViewController {
     }
     
     private func setupNavBar() {
-        self.title = "All images"
+        self.title = !imageUrls.isEmpty ? "All images" : "All videos"
         backBtn.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
         
         if isOwnerOpen {
@@ -208,17 +207,23 @@ class AllPhotosViewController: FadeBaseViewController {
 // MARK: - CollectionView Logic
 extension AllPhotosViewController: UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return imageUrls.count
+        let count = videoUrls.isEmpty ? imageUrls.count : videoUrls.count
+        return count
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "PhotoGridCell", for: indexPath) as! PhotoGridCell
         
-        let url = imageUrls[indexPath.item]
+        var url = ""
+        if !imageUrls.isEmpty {
+            url = imageUrls[indexPath.item]
+        } else {
+            url = thumbnailUrls[indexPath.item]
+        }
         
         let isSelected = deleteUrls.contains(url)
         
-        cell.configure(url: imageUrls[indexPath.item], isDeleteMode: startingDelete, isSelected: isSelected)
+        cell.configure(url: url, isDeleteMode: startingDelete, isSelected: isSelected, isVideo: videoUrls.count != 0)
         return cell
     }
     
@@ -239,12 +244,21 @@ extension AllPhotosViewController: UICollectionViewDataSource, UICollectionViewD
             collectionView.reloadItems(at: [indexPath])
             
         } else {
-            let fullVC = PhotoFullScreenViewController()
-            fullVC.imageUrls = self.imageUrls
-            fullVC.currentIndex = indexPath.item
-            fullVC.modalPresentationStyle = .overFullScreen
-            fullVC.modalTransitionStyle = .crossDissolve
-            present(fullVC, animated: true)
+            if imageUrls.count != 0 {
+                let fullVC = PhotoFullScreenViewController()
+                fullVC.imageUrls = self.imageUrls
+                fullVC.currentIndex = indexPath.item
+                fullVC.modalPresentationStyle = .overFullScreen
+                fullVC.modalTransitionStyle = .crossDissolve
+                present(fullVC, animated: true)
+            } else {
+                let fullVC = VideoSwipeViewController()
+                fullVC.currentIndex = indexPath.item
+                fullVC.videoUrls = self.videoUrls
+                fullVC.modalPresentationStyle = .overFullScreen
+                fullVC.modalTransitionStyle = .crossDissolve
+                present(fullVC, animated: true)
+            }
         }
     }
 }

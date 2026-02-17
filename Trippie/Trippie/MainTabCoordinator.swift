@@ -57,7 +57,7 @@ class MainTabCoordinator {
         appearance.configureWithOpaqueBackground()
         appearance.backgroundColor = .white
         
-        UITabBar.appearance().tintColor = UIColor(named: "AuthBackground1")
+        UITabBar.appearance().tintColor = .authBackground2
         UITabBar.appearance().backgroundColor = .systemGray
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance

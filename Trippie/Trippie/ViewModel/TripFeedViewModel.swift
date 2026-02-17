@@ -7,8 +7,18 @@
 
 import FirebaseFirestore
 import Combine
+import Foundation
 
 class TripFeedViewModel {
+    
+    static let shared = TripFeedViewModel()
+    
+    // MARK: - INPUT (FILTER & SEARCH)
+    let searchText = CurrentValueSubject<String?, Never>(nil)
+    let country = CurrentValueSubject<String?, Never>(nil)
+    let tripType = CurrentValueSubject<TripType?, Never>(nil)
+    
+    private var cancellables = Set<AnyCancellable>()
     
     // MARK: - STATE CỦA PAGINATION THẬT (KHÔNG SEARCH)
     var normalTrips = CurrentValueSubject<[Trip], Never>([])
@@ -24,23 +34,55 @@ class TripFeedViewModel {
     // Trạng thái chung
     var isLoading = false
     var totalResultCount = CurrentValueSubject<Int, Never>(0)
+    let errorMessage = PassthroughSubject<String, Never>()
+    
+    // MARK: - INIT & BINDING
+    private init() {
+        setupFilterBinding()
+    }
+    
+    // Tự động lắng nghe thay đổi từ các bộ lọc để gọi API
+    private func setupFilterBinding() {
+        Publishers.CombineLatest3(searchText, country, tripType)
+            .dropFirst()
+            .debounce(for: .milliseconds(500), scheduler: RunLoop.main) // Chống spam call khi gõ phím
+            .sink { [weak self] (text, country, type) in
+                self?.reloadFeed()
+            }
+            .store(in: &cancellables)
+    }
+    
+    // Hàm này dùng để reset và fetch lại từ đầu khi bộ lọc thay đổi
+    func reloadFeed() {
+        resetData()
+        let query = searchText.value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        
+        if query.isEmpty {
+            loadNextNormalPage()
+        } else {
+            initialSearch()
+        }
+    }
     
     // =======================================================
     // MARK: - 1. LOGIC CHUYỂN TRANG: PAGINATION THẬT
     // =======================================================
     
-    func loadNextNormalPage(tripType: TripType? = nil, country: String? = nil) {
+    func loadNextNormalPage() {
         // Chặn spam call nếu đang tải hoặc đã hết data
         guard !isLoading && !isNormalEndReached else { return }
         isLoading = true
         
+        let currentType = tripType.value
+        let currentCountry = country.value
+        
         Task {
             do {
-                // Gọi hàm fetchTripsNormal bạn đã viết, truyền lastDocument vào
+                // Gọi hàm fetchTripsNormal, truyền lastDocument và filter hiện tại vào
                 let result = try await TripService.shared.fetchTripsNormal(
                     lastDocument: self.lastDocument,
-                    tripType: tripType,
-                    country: country
+                    tripType: currentType,
+                    country: currentCountry
                 )
                 
                 // Cập nhật state
@@ -60,6 +102,7 @@ class TripFeedViewModel {
                 self.isLoading = false
             } catch {
                 print("Lỗi kéo data: \(error)")
+                self.errorMessage.send(error.localizedDescription)
                 self.isLoading = false
             }
         }
@@ -69,31 +112,38 @@ class TripFeedViewModel {
     // MARK: - 2. LOGIC CHUYỂN TRANG: PAGINATION GIẢ
     // =======================================================
     
-    // Hàm này gọi LẦN ĐẦU TIÊN khi user bấm search
-    func initialSearch(searchText: String, tripType: TripType? = nil, country: String? = nil) {
+    // Hàm này gọi LẦN ĐẦU TIÊN khi user có chữ trong ô search
+    private func initialSearch() {
+        guard let text = searchText.value?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return }
+        
         isLoading = true
         self.allSearchTrips = []
         self.currentSearchIndex = 0
         self.isSearchEndReached = false
         
+        let currentType = tripType.value
+        let currentCountry = country.value
+        
         Task {
             do {
                 // Gọi hàm fetchAllForSearch kéo toàn bộ data
                 let result = try await TripService.shared.fetchAllForSearch(
-                    searchText: searchText,
-                    tripType: tripType,
-                    country: country
+                    searchText: text,
+                    tripType: currentType,
+                    country: currentCountry
                 )
                 
                 self.allSearchTrips = result.allTrips
                 self.totalResultCount.send(result.totalCount)
                 
-                // Sau khi kéo xong toàn bộ, gọi hàm "cắt lát" để lấy 5 item đầu tiên
                 self.isLoading = false
+                
+                // Sau khi kéo xong toàn bộ, gọi hàm "cắt lát" để lấy item đầu tiên
                 self.loadNextSearchPage()
                 
             } catch {
                 print("Lỗi search: \(error)")
+                self.errorMessage.send(error.localizedDescription)
                 self.isLoading = false
             }
         }
@@ -104,13 +154,13 @@ class TripFeedViewModel {
         guard !isLoading && !isSearchEndReached else { return }
         isLoading = true
         
-        let pageSize = 5
+        let pageSize = 8
         let startIndex = currentSearchIndex
         let endIndex = min(startIndex + pageSize, allSearchTrips.count)
         
         // Nếu vẫn còn data để cắt
         if startIndex < endIndex {
-            // Lấy lát cắt 5 phần tử tiếp theo
+            // Lấy lát cắt phần tử tiếp theo
             let nextBatch = Array(allSearchTrips[startIndex..<endIndex])
             
             // Nối vào data hiển thị
