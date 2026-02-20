@@ -265,10 +265,28 @@ class HandsaveTask: FadeBaseViewController {
             task.userAvatar = t.userAvatar
             task.userRole = t.userRole
         }
-
-        viewModel.handSaveTask(task: task, name: ownerName)
-        imagesViewModel.uploadedUrls = []
-        self.navigationController?.popViewController(animated: true)
+        Task {
+            let (isSuccess, message) = await viewModel.handSaveTask(task: task, name: ownerName)
+            
+            if isSuccess {
+                imagesViewModel.uploadedUrls = []
+                self.navigationController?.popViewController(animated: true)
+            } else {
+                if message.contains("edited") {
+                    let alert = await confirmAlert(type: .cancelTaskEdit, title: "")
+                    if alert {
+                        viewModel.editingTask.send(nil)
+                        self.navigationController?.popViewController(animated: true)
+                    }
+                } else {
+                    let alert = await confirmAlert(type: .cancelTaskDelete, title: "")
+                    if alert {
+                        viewModel.editingTask.send(nil)
+                        self.navigationController?.popViewController(animated: true)
+                    }
+                }
+            }
+        }
     }
     
     // MARK: - Logic Helper

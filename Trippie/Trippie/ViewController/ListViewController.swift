@@ -133,9 +133,6 @@ class ListViewController: FadeBaseViewController {
                     if let index = self.displayData.firstIndex(where: { $0.trip.id == changedID }) {
                         // Cập nhật đúng 1 dòng với hiệu ứng mượt
                         self.tableView.reloadRows(at: [IndexPath(row: index, section: 0)], with: .automatic)
-                    } else {
-                        // Trường hợp bị xoá khỏi mảng thì reload lại bảng
-                        self.tableView.reloadData()
                     }
                 }
             }
@@ -160,6 +157,15 @@ class ListViewController: FadeBaseViewController {
                     if !searchText.isEmpty {
                         self?.appendFeedData(newRawTrips: newTrips)
                     }
+                }
+                .store(in: &cancellable)
+        }
+        
+        if isFilterMyTrip {
+            tripViewModel.filteredMyTrips
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] newTrips in
+                    self?.displayData = newTrips
                 }
                 .store(in: &cancellable)
         }

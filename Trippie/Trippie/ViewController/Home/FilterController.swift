@@ -13,13 +13,13 @@ class FilterController: UIViewController {
     
     private let viewModel = TripFeedViewModel.shared
     
-    private let containerView = UIStackView.customStack(xPadding: 20, yPadding: 20, background: .background, axis: .vertical, alignment: .fill, distribution: .fill, stackSpacing: 12, cornerRadius: 12, isShadow: true)
+    private let containerView = UIStackView.customStack(xPadding: 20, yPadding: 20, background: .systemBackground, axis: .vertical, alignment: .fill, distribution: .fill, stackSpacing: 12, cornerRadius: 12, isShadow: true)
     
     private let searchBtn = UIButton.customButton(text: "Search", backgroundColor: .authBackground2)
     private let closeButton = UIButton.customButton(image: UIImage(systemName: "xmark.circle.fill"), backgroundColor: .clear, tintColor: .white)
     private lazy var countryField = UIStackView.createInputGroup(
         labelName: "Country:",
-        placeholder: "Select your country",
+        placeholder: "Select the country",
         style: .country,
         inputHeight: 45,
         onCountryTap: { [weak self] in
@@ -47,7 +47,7 @@ class FilterController: UIViewController {
     
     //MARK: - SETUP UI
     private func setupUI() {
-        view.backgroundColor = .black.withAlphaComponent(0.3)
+        view.backgroundColor = .black.withAlphaComponent(0.5)
         view.addSubview(containerView)
         view.addSubview(closeButton)
         containerView.addArrangedSubview(searchBar)
@@ -60,8 +60,8 @@ class FilterController: UIViewController {
             containerView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 36),
             containerView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -36),
             
-            closeButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -36),
-            closeButton.bottomAnchor.constraint(equalTo: containerView.topAnchor, constant: 12)
+            closeButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
+            closeButton.bottomAnchor.constraint(equalTo: containerView.topAnchor, constant: -7)
         ])
     }
     
@@ -88,31 +88,26 @@ class FilterController: UIViewController {
         viewModel.searchText.send(searchBar.text ?? "")
         viewModel.country.send(countryField.inputValue ?? "")
         viewModel.tripType.send(TripType(rawValue: selectedType ?? "") ?? nil)
+        // 1. TÌM CHÍNH XÁC NAVIGATION CONTROLLER
+        var targetNav: UINavigationController?
         
-        // 1. Tóm lấy Navigation Controller của màn hình cha ở dưới
-        guard let presentingNav = self.presentingViewController as? UINavigationController
-                ?? self.presentingViewController?.navigationController else {
+        // Nếu màn hình dưới cùng là TabBar, ta chui vào tab đang chọn để lấy Nav Controller
+        if let tabBar = self.presentingViewController as? UITabBarController {
+            targetNav = tabBar.selectedViewController as? UINavigationController
+        } else {
+            // Còn không thì lấy theo kiểu bình thường
+            targetNav = self.presentingViewController as? UINavigationController ?? self.presentingViewController?.navigationController
+        }
+        
+        guard let presentingNav = targetNav else {
+            print("⚠️ Cảnh báo: Vẫn không tìm thấy Navigation Controller để Push!")
             self.dismiss(animated: true)
             return
         }
         
         // 2. Tắt màn hình Filter đi
         self.dismiss(animated: true) {
-            // 3. Closure này sẽ chạy NGAY SAU KHI màn hình Filter tụt xuống xong
-            
-            // Tạo hiệu ứng Push chậm 1 giây
-            let transition = CATransition()
-            transition.duration = 1.0 // Thời gian 1 giây cậu muốn
-            transition.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-            transition.type = .push
-            transition.subtype = .fromRight
-            
-            // Ép hiệu ứng này vào Navigation Controller
-            presentingNav.view.layer.add(transition, forKey: kCATransition)
-            
-            // QUAN TRỌNG: animated chỗ này PHẢI LÀ FALSE.
-            // Vì nếu để true, nó sẽ bị đè hiệu ứng gốc của Apple lên hiệu ứng 1s của mình.
-            presentingNav.pushViewController(lvc, animated: false)
+            presentingNav.pushViewController(lvc, animated: true)
         }
     }
     

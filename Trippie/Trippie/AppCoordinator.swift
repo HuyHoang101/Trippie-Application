@@ -58,5 +58,18 @@ class AppCoordinator {
         // Gọi MainTabCoordinator để dựng TabBar
         let mainTabCoordinator = MainTabCoordinator(window: window)
         mainTabCoordinator.start()
+        
+        // 2. Gọi hàm check Pending Notification (sẽ tự động Push nếu user bật app từ một thông báo)
+        NotificationNavigator.shared.executePendingNotificationIfNeeded()
+        
+        // 3. Yêu cầu quyền thông báo
+        let authOptions: UNAuthorizationOptions = [.alert, .badge, .sound]
+        UNUserNotificationCenter.current().requestAuthorization(options: authOptions) { granted, error in
+            if granted {
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
+        }
     }
 }

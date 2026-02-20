@@ -9,6 +9,7 @@ target 'Trippie' do
   pod 'Firebase/Auth'
   pod 'Firebase/Firestore'
   pod 'Firebase/Storage'
+  pod 'Firebase/Messaging'
   
   # UI 
   pod 'SnapKit'               # Code layout nhanh

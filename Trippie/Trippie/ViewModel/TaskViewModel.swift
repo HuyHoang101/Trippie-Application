@@ -7,169 +7,143 @@
 
 import Combine
 import Foundation
+import FirebaseFirestore
 
 @MainActor
 class TaskViewModel {
     
     // MARK: - OUTPUT (Bindings)
-    // source-of-truth for TableView/CollectionView
     let tasks = CurrentValueSubject<[TaskOfTrip], Never>([])
     let loading = CurrentValueSubject<Bool, Never>(false)
     let errorMessage = PassthroughSubject<String, Never>()
     let editingTask = CurrentValueSubject<TaskOfTrip?, Never>(nil)
     
-    
     // MARK: - PRIVATE PROPERTIES
-    // singleton shared
     private let taskService = TaskService.shared
-    private let cancellables = Set<AnyCancellable>()
-    
+    private var listener: ListenerRegistration? // Giữ chìa khoá kết nối
     
     // MARK: - INIT
+    // Không còn static shared, mỗi lần dùng là new ra một cái mới
     init() {}
     
+    // MARK: - REALTIME ACTIONS
     
-    // MARK: - ACTIONS (LOGIC)
-    
-    //1. FETCH TASK
-    func fetchTask(tripId: String) {
+    // 1. BẮT ĐẦU NGHE (Gọi khi vào màn hình)
+    func startListening(tripId: String) {
         self.loading.send(true)
-        let startTime = Date()
         
-        Task {
-            do {
-                let resultTasks = try await taskService.fetchTaskByTripId(tripId: tripId)
+        // Đảm bảo ngắt cái cũ trước khi nghe cái mới
+        stopListening()
+        
+        listener = taskService.listenToTasks(tripId: tripId) { [weak self] result in
+            guard let self = self else { return }
+            
+            // Tắt loading khi nhận data đầu tiên
+            if self.loading.value { self.loading.send(false) }
+            
+            switch result {
+            case .success(let data):
+                self.tasks.send(data)
+            case .failure(let error):
+                self.errorMessage.send(error.localizedDescription)
+            }
+        }
+    }
+    
+    // 2. NGẮT KẾT NỐI (Gọi khi back ra)
+    func stopListening() {
+        listener?.remove()
+        listener = nil
+    }
+    
+    // MARK: - CRUD ACTIONS
+    
+    // MARK: - 3. CREATE / EDIT TASK (logic check conflict)
+    // Thay đổi signature: Thêm async và kiểu trả về (Bool, String)
+    func handSaveTask(task: TaskOfTrip, name: String) async -> (Bool, String) {
+        self.loading.send(true)
+        let isEdit = !(editingTask.value == nil)
+        // --- BƯỚC 1: KIỂM TRA ĐIỀU KIỆN (VALIDATION) ---
+        if isEdit, let tripId = editingTask.value?.tripId, let taskId = task.id {
+            
+            // Lấy task realtime mới nhất từ danh sách đang nghe
+            // (tasks.value luôn được cập nhật bởi listener)
+            let currentRealtimeTask = tasks.value.first(where: { $0.id == taskId })
+            
+            // CASE 1: Task không còn tồn tại trong list (Ai đó đã xoá)
+            guard let liveTask = currentRealtimeTask else {
+                self.loading.send(false)
+                return (false, "This job no longer exists.")
+            }
+            
+            // CASE 2: Task đã bị người khác sửa nội dung
+            // So sánh 'updatedAt' của bản realtime với bản snapshot lúc mình bắt đầu sửa
+            if let snapshot = editingTask.value, liveTask.updatedAt != snapshot.updatedAt {
+                self.loading.send(false)
+                return (false, "This task has just been edited.")
+            }
+        }
+        
+        // --- BƯỚC 2: GỌI SERVER ---
+        do {
+            if let tripId = editingTask.value?.tripId {
+                // --- CASE EDIT ---
+                try await taskService.updateTask(tripId: tripId, task: task, name: name, isEdit: isEdit)
                 
-                await waitMinTime(startTime: startTime)
-                self.tasks.send(resultTasks)
-                self.loading.send(false)
-            } catch {
-                self.loading.send(false)
-                self.errorMessage.send(error.localizedDescription)
+                self.showToast(message: "Updated Task Successfully!", isSuccess: true)
+                self.editingTask.send(nil) // Reset trạng thái edit
+                
+            } else {
+                // --- CASE CREATE ---
+                try await taskService.createTask(tripId: task.tripId, task: task)
+                self.showToast(message: "Create Task Successfully!", isSuccess: true)
             }
+            
+            self.loading.send(false)
+            return (true, "Success")
+            
+        } catch {
+            self.loading.send(false)
+            self.handleError(error, context: "Save Task")
+            return (false, error.localizedDescription)
         }
     }
+
     
-    //2. CREATE/EDIT TASK
-    func handSaveTask(task: TaskOfTrip, name: String, isEdit: Bool = true) {
-        self.loading.send(true)
-        
-        Task {
-            do {
-                if let tripId = editingTask.value?.tripId {
-                    
-                    let result = try await taskService.updateTask(tripId: tripId, task: task, name: name, isEdit: isEdit)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        NotificationCenter.default.post(
-                            name: .showGlobalToast,
-                            object: nil,
-                            userInfo: [
-                                "message": "Updated Task Successfully!",
-                                "isSuccess": true
-                            ]
-                        )
-                    }
-                    var updatedTasks = tasks.value
-                    updatedTasks.removeAll(where: {$0.id == result.id})
-                    updatedTasks.append(result)
-                    
-                    let finalTasks = updatedTasks.sorted {
-                        if $0.dayIndex == $1.dayIndex {
-                            return $0.time < $1.time
-                        }
-                        return $0.dayIndex < $1.dayIndex
-                    }
-                    tasks.send(finalTasks)
-                    editingTask.send(nil)
-                    self.loading.send(false)
-                    
-                } else {
-                    
-                    let result = try await taskService.createTask(tripId: task.tripId, task: task)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        NotificationCenter.default.post(
-                            name: .showGlobalToast,
-                            object: nil,
-                            userInfo: [
-                                "message": "Create Task Successfully!",
-                                "isSuccess": true
-                            ]
-                        )
-                    }
-                    var updatedTasks = tasks.value
-                    updatedTasks.append(result)
-                    
-                    let finalTasks = updatedTasks.sorted {
-                        if $0.dayIndex == $1.dayIndex {
-                            return $0.time < $1.time
-                        }
-                        return $0.dayIndex < $1.dayIndex
-                    }
-                    tasks.send(finalTasks)
-                    self.loading.send(false)
-                    
-                }
-            } catch {
-                self.loading.send(false)
-                self.errorMessage.send(error.localizedDescription)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    NotificationCenter.default.post(
-                        name: .showGlobalToast,
-                        object: nil,
-                        userInfo: [
-                            "message": "Save Task failed: \(error.localizedDescription)",
-                            "isSuccess": false
-                        ]
-                    )
-                }
-            }
-        }
-    }
     
-    //3. DELETE TASK
-    func deleteTask(tripId:String, taskId: String) {
+    func deleteTask(tripId: String, taskId: String) {
         self.loading.send(true)
         Task {
             do {
                 try await taskService.deleteTask(tripId: tripId, taskId: taskId)
-                var updatedTask = tasks.value
-                updatedTask.removeAll(where: {$0.id == taskId})
-                tasks.send(updatedTask)
+                self.showToast(message: "Delete Task Successfully!", isSuccess: true)
                 self.loading.send(false)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    NotificationCenter.default.post(
-                        name: .showGlobalToast,
-                        object: nil,
-                        userInfo: [
-                            "message": "Delete Task Successfully!",
-                            "isSuccess": true
-                        ]
-                    )
-                }
             } catch {
                 self.loading.send(false)
-                self.errorMessage.send(error.localizedDescription)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    NotificationCenter.default.post(
-                        name: .showGlobalToast,
-                        object: nil,
-                        userInfo: [
-                            "message": "Delete Task failed: \(error.localizedDescription)",
-                            "isSuccess": false
-                        ]
-                    )
-                }
+                self.handleError(error, context: "Delete Task")
             }
         }
     }
     
-    // MARK: - PRIVATE HELPER (DELAY)
-    private func waitMinTime(startTime: Date, minDuration: Double = 1) async {
-        let elapsed = Date().timeIntervalSince(startTime)
-        if elapsed < minDuration {
-            // Nếu chạy nhanh quá (ví dụ 0.05s) -> Ngủ thêm (1.0 - 0.05 = 0.95s)
-            let leftTime = minDuration - elapsed
-            try? await Task.sleep(nanoseconds: UInt64(leftTime * 1_000_000_000))
+    // MARK: - HELPER
+    private func showToast(message: String, isSuccess: Bool) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            NotificationCenter.default.post(
+                name: .showGlobalToast,
+                object: nil,
+                userInfo: ["message": message, "isSuccess": isSuccess]
+            )
+        }
+    }
+    
+    private func handleError(_ error: Error, context: String) {
+        self.errorMessage.send(error.localizedDescription)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            NotificationCenter.default.post(
+                name: .showGlobalToast,
+                object: nil,
+                userInfo: ["message": "\(context) failed: \(error.localizedDescription)", "isSuccess": false]
+            )
         }
     }
 }

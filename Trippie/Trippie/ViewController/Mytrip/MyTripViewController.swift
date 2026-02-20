@@ -31,7 +31,7 @@ class MyTripViewController: FadeBaseViewController {
     private let maincontent = UIStackView.customStack(axis: .vertical, alignment: .fill, distribution: .fill, stackSpacing: 0)
     
     private lazy var searchBar = UITextField.createInput(placeholder: "Searching...", iconName: "magnifyingglass") { [weak self] in
-        
+        self?.didTapSearch()
     }
     
     
@@ -156,10 +156,10 @@ class MyTripViewController: FadeBaseViewController {
             mainscroll.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             mainscroll.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
             
-            maincontent.topAnchor.constraint(equalTo: mainscroll.contentLayoutGuide.topAnchor, constant: 20),
+            maincontent.topAnchor.constraint(equalTo: mainscroll.contentLayoutGuide.topAnchor),
             maincontent.leadingAnchor.constraint(equalTo: mainscroll.contentLayoutGuide.leadingAnchor),
             maincontent.trailingAnchor.constraint(equalTo: mainscroll.contentLayoutGuide.trailingAnchor),
-            maincontent.bottomAnchor.constraint(equalTo: mainscroll.contentLayoutGuide.bottomAnchor, constant: -20),
+            maincontent.bottomAnchor.constraint(equalTo: mainscroll.contentLayoutGuide.bottomAnchor, constant: -10),
             
             maincontent.widthAnchor.constraint(equalTo: mainscroll.widthAnchor),
             
@@ -395,8 +395,10 @@ class MyTripViewController: FadeBaseViewController {
     @objc private func didTapSearch() {
         let vc = ListViewController()
         vc.navigationTitle = "Search: \(self.searchBar.text ?? "None")"
-        
+        vc.isFilterMyTrip = true
+        viewModel.searchTextMyTrip.send(searchBar.text ?? "")
         self.navigationController?.pushViewController(vc, animated: true)
+        searchBar.text = ""
     }
     
     @objc private func pushToLish(_ render: UIButton) {

@@ -7,6 +7,7 @@
 
 import Foundation
 import FirebaseFirestore
+import FirebaseMessaging
 
 class UserService {
     static let shared = UserService()
@@ -206,5 +207,43 @@ class UserService {
             try? document.data(as: User.self)
         }
         return users
+    }
+    
+    
+    //MARK: - 9. TOKEN REGISERTER
+    func registerAppFCMToken() async throws {
+        // 1. Check Login
+        guard let uid = AuthService.shared.currentUserId else { return }
+        
+        // 2. Lấy FCM Token từ SDK (Hàm này lấy từ cache, rất nhanh)
+        let currentToken = try await Messaging.messaging().token()
+        
+        // --- TỐI ƯU BẰNG USER DEFAULTS ---
+        // Lấy token lần cuối cùng mình đã cập nhật lên server
+        let lastSyncedToken = UserDefaults.standard.string(forKey: "fcm_token_\(uid)")
+        
+        // So sánh: Nếu token hiện tại GIỐNG HỆT cái đã lưu -> Bỏ qua ngay lập tức
+        if currentToken == lastSyncedToken {
+            //print("✅ Token chưa thay đổi, không cần gọi Firestore.")
+            return
+        }
+        // ----------------------------------
+        
+        //print("🔄 Token đã thay đổi (hoặc lần đầu), đang cập nhật lên Server...")
+        
+        // 3. Fetch User (Chỉ chạy vào đây khi token thực sự thay đổi)
+        let userRef = db.collection("users").document(uid)
+        let snapshot = try await userRef.getDocument()
+        
+        guard var currentUser = try? snapshot.data(as: User.self) else { return }
+        
+        // 4. Update lên Firestore
+        currentUser.fcmToken = currentToken
+        _ = try await updateInfor(user: currentUser)
+        
+        // 5. QUAN TRỌNG: Lưu lại vào UserDefaults để lần sau không gọi nữa
+        UserDefaults.standard.set(currentToken, forKey: "fcm_token_\(uid)")
+        
+        //print("🚀 Đã update FCM Token mới và lưu cache thành công!")
     }
 }

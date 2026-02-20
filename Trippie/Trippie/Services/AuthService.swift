@@ -12,6 +12,7 @@ import GoogleSignIn
 import FacebookLogin
 import FirebaseCore
 internal import FBSDKLoginKit
+import FirebaseMessaging
 
 class AuthService {
     static let shared = AuthService()
@@ -63,12 +64,20 @@ class AuthService {
     }
     
     // --- 3. LOGOUT ---
-    func logout() throws {
-        try Auth.auth().signOut()
+    func logout() async throws {
         // Xoá sạch dấu vết trong cache khi logout
+        guard let userUid = AuthService.shared.currentUserId else { return }
+        let db = Firestore.firestore()
+        try await db.collection("users").document(userUid).updateData([
+            "fcmToken": ""
+        ])
+        // 2. Xoá token rác bên trong SDK Firebase để reset hoàn toàn
+        try? await Messaging.messaging().deleteToken()
+        UserDefaults.standard.removeObject(forKey: "fcm_token_\(userUid)")
         UserDefaults.standard.removeObject(forKey: userDefaultsKey)
         UserDefaults.standard.removeObject(forKey: userDefaultsName)
         UserDefaults.standard.removeObject(forKey: userDefaultsAvatar)
+        try Auth.auth().signOut()
     }
     
     // --- 4. CHECK USER (OPTIMIZED) ---

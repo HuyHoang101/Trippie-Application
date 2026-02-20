@@ -13,13 +13,7 @@ class ListTaskViewController: FadeBaseViewController {
     private var tripWithStatus: TripWithStatus?
     private let tripViewModel = TripViewModel.shared
     private let taskViewModel = TaskViewModel()
-    private var displayData: [TaskOfTrip] = [] {
-        didSet {
-            DispatchQueue.main.async { [weak self] in
-                self?.tableView.reloadData()
-            }
-        }
-    }
+    private var displayData: [TaskOfTrip] = []
     private var currentMode: ListTaskMode = .normal {
         didSet {
             tableView.reloadData() // Mỗi khi đổi mode thì reload lại bảng để hiện icon
@@ -73,7 +67,7 @@ class ListTaskViewController: FadeBaseViewController {
     //MARK: - SETUP UI
     private func setupUI() {
         containerUI.addSubview(countLabel)
-        taskViewModel.fetchTask(tripId: id ?? "")
+        taskViewModel.startListening(tripId: id ?? "")
         setupBackground()
         
         tableView.delegate = self
@@ -183,6 +177,7 @@ class ListTaskViewController: FadeBaseViewController {
         self.commentViewModel.joinChatRoom(tripId: id)
         self.commentViewModel.fetchAllImage(tripId: id)
         self.commentViewModel.fetchAllVideo(tripId: id)
+        ChatStateManager.shared.startListening(tripId: id)
         containerUI.isHidden = true
         containerUI.backgroundColor = .systemRed
         containerUI.layer.cornerRadius = 16
@@ -230,9 +225,11 @@ class ListTaskViewController: FadeBaseViewController {
     }
     
     @objc private func handleBack() {
-        self.navigationController?.popViewController(animated: true)
         self.commentViewModel.newMessagesCount.send(0)
         self.commentViewModel.leaveChatRoom()
+        guard let id = self.id else { return }
+        ChatStateManager.shared.stopListening(tripId: id)
+        self.navigationController?.popViewController(animated: true)
     }
     
     @objc private func handlepushToCreateTask() {
@@ -289,7 +286,9 @@ class ListTaskViewController: FadeBaseViewController {
             .removeDuplicates()
             .receive(on: DispatchQueue.main)
             .sink { [weak self] t in
-                self?.displayData = t
+                guard let self = self else { return }
+                                // Gọi hàm update thông minh
+                self.updateTableViewSmartly(newTasks: t)
             }
             .store(in: &cancellabel)
         
@@ -301,6 +300,65 @@ class ListTaskViewController: FadeBaseViewController {
                 self?.setupCountLabel()
             }
             .store(in: &cancellabel)
+    }
+    
+    private func updateTableViewSmartly(newTasks: [TaskOfTrip]) {
+        let oldTasks = displayData
+        
+        // 1. Lần đầu load data (Data cũ rỗng) -> Reload thường
+        if oldTasks.isEmpty {
+            self.displayData = newTasks
+            self.tableView.reloadData()
+            return
+        }
+        
+        // 2. Tính toán sự thay đổi (Insert / Delete) dựa trên ID
+        // Yêu cầu: TaskOfTrip phải có id duy nhất
+        let changes = newTasks.difference(from: oldTasks) { $0.id == $1.id }
+        
+        // 3. Thực hiện update theo lô (Batch Updates) để mượt và giữ vị trí cuộn
+        self.tableView.performBatchUpdates({
+            // Cập nhật nguồn dữ liệu MỚI
+            self.displayData = newTasks
+            
+            for change in changes {
+                switch change {
+                case .remove(let offset, _, _):
+                    // Xoá dòng cũ (Animation fade để mượt)
+                    self.tableView.deleteRows(at: [IndexPath(row: offset, section: 0)], with: .fade)
+                    
+                case .insert(let offset, _, _):
+                    // Thêm dòng mới
+                    self.tableView.insertRows(at: [IndexPath(row: offset, section: 0)], with: .fade)
+                }
+            }
+        }, completion: { _ in
+            // 4. Xử lý phần EDIT (Nội dung thay đổi nhưng ID giữ nguyên)
+            // Logic: Sau khi thêm/xoá xong, check xem có dòng nào ID giống nhau nhưng nội dung khác nhau không
+            
+            var indexPathsToReload: [IndexPath] = []
+            
+            for (index, newTask) in newTasks.enumerated() {
+                // Tìm task cũ có cùng ID (nếu tồn tại)
+                if let oldTask = oldTasks.first(where: { $0.id == newTask.id }) {
+                    
+                    // So sánh các trường quan trọng để xem có cần reload không
+                    // Ví dụ: title, time, hoặc updatedAt
+                    // Nếu TaskOfTrip của cậu đã conform Equatable thì chỉ cần: if oldTask != newTask
+                    if oldTask.updatedAt != newTask.updatedAt ||
+                       oldTask.dayIndex != newTask.dayIndex ||
+                       oldTask.time != newTask.time {
+                        
+                        indexPathsToReload.append(IndexPath(row: index, section: 0))
+                    }
+                }
+            }
+            
+            // Reload nhẹ nhàng các dòng bị sửa (với animation .none để không bị chớp)
+            if !indexPathsToReload.isEmpty {
+                self.tableView.reloadRows(at: indexPathsToReload, with: .none)
+            }
+        })
     }
 }
 

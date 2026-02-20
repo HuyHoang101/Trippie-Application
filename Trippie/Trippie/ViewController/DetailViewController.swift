@@ -59,6 +59,7 @@ class DetailViewController: FadeBaseViewController {
         action()
         binding()
         bindLoading(to: viewModel.loading)
+        fetchtrip()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -130,22 +131,22 @@ class DetailViewController: FadeBaseViewController {
             personalStatus.topAnchor.constraint(equalTo: coverImage.topAnchor, constant: 20),
             personalStatus.trailingAnchor.constraint(equalTo: coverImage.trailingAnchor, constant: -20)
         ])
+        renderDetail()
+        setupNavBar()
+    }
+    
+    private func fetchtrip() {
         guard let id = self.id else { return }
-        
         if isFeedBoard == true {
             viewModel.fetchTripById(tripId: id)
             self.participation = nil
         } else {
             viewModel.fetchMyTripById(tripId: id)
         }
-        renderDetail()
-        setupNavBar()
     }
     
     private func renderDetail() {
-        guard let trip = tripResult else {
-            return
-        }
+        guard let trip = tripResult else { return }
         self.tripDetailWithStatus = TripWithStatus(trip: trip, participation: participation)
         // 3. Hiển thị các thành phần dùng chung
         titleLabel.text = trip.title
@@ -223,7 +224,7 @@ class DetailViewController: FadeBaseViewController {
         }
         var dropDownMenus: [DropdownItem] = []
         
-        if id == trip.ownerId {
+        if id == trip.ownerId  && !(isFeedBoard ?? true){
             dropDownMenus.append(DropdownItem(title: "All images", icon: "photo.on.rectangle.angled", type: .normal) { [weak self] in
                 guard let self = self else { return }
                 self.pushToAllImage(isOwner: true)
@@ -413,7 +414,7 @@ class DetailViewController: FadeBaseViewController {
         viewModel.didTapChange
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
-                self?.renderDetail()
+                self?.fetchtrip()
             }
             .store(in: &cancellable)
         viewModel.singleTrip

@@ -45,7 +45,7 @@ class TripFeedViewModel {
     private func setupFilterBinding() {
         Publishers.CombineLatest3(searchText, country, tripType)
             .dropFirst()
-            .debounce(for: .milliseconds(500), scheduler: RunLoop.main) // Chống spam call khi gõ phím
+            .debounce(for: .milliseconds(500), scheduler: RunLoop.main)
             .sink { [weak self] (text, country, type) in
                 self?.reloadFeed()
             }
@@ -101,7 +101,7 @@ class TripFeedViewModel {
                 
                 self.isLoading = false
             } catch {
-                print("Lỗi kéo data: \(error)")
+                print("Get data failed: \(error)")
                 self.errorMessage.send(error.localizedDescription)
                 self.isLoading = false
             }

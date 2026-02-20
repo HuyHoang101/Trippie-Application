@@ -58,7 +58,6 @@ class GroupMessageViewController: FadeBaseViewController {
     
     private func setupUI() {
         UserViewModel.shared.fetchMyProfile()
-        commentViewModel.joinChatRoom(tripId: tripId ?? "")
         tableView.bounces = false
         tableView.delegate = self
         tableView.dataSource = self
