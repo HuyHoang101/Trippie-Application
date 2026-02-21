@@ -245,7 +245,7 @@ class TripService {
             
             // 2. Xoá khỏi pending list
             updatedTrip.pendingRequests.removeAll(where: { $0 == userId })
-            
+            updatedTrip.recentAction = "deny"
             // 3. Lưu lại
             try db.collection("trips").document(tripId).setData(from: updatedTrip, merge: true)
             
@@ -267,7 +267,7 @@ class TripService {
             if updatedTrip.status == .full && updatedTrip.status != .completed {
                 updatedTrip.status = .recruiting
             }
-            
+            updatedTrip.recentAction = "kick"
             // 4. Update Trip
             try db.collection("trips").document(tripId).setData(from: updatedTrip, merge: true)
             
@@ -372,6 +372,7 @@ class TripService {
             if trip.members.contains(userId) {
                 trip.members.removeAll { $0 == userId }
                 trip.currentMember -= 1
+                trip.recentAction = "leave"
                 
                 // Logic: Đang FULL mà có người rời đi -> Về lại RECRUITING
                 if trip.status == .full && trip.status != .completed {
@@ -418,7 +419,8 @@ class TripService {
         
         // Ra lệnh Server tự tìm và xoá ID này
         try await tripRef.updateData([
-            "pendingRequests": FieldValue.arrayRemove([userId])
+            "pendingRequests": FieldValue.arrayRemove([userId]),
+            "recentAction": "cancel"
         ])
         
         return try await getTripById(tripId: tripId)

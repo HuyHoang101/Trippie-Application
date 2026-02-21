@@ -34,6 +34,7 @@ struct Trip: Codable { // Thêm Codable
     @ServerTimestamp var createdAt: Date?
     @ServerTimestamp var updatedAt: Date?
     
+    var recentAction: String?
     
     var isExpired: Bool {
         return startTime < Date()

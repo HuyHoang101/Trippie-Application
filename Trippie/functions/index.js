@@ -182,6 +182,7 @@ exports.onTripUpdate = functions.firestore
         const removedMembers = getRemoved(beforeMembers, afterMembers);
         const addedPending = getAdded(beforePending, afterPending);
         const removedPending = getRemoved(beforePending, afterPending);
+        const recentAction = afterData.recentAction || "";
 
         const promises = [];
 
@@ -195,10 +196,12 @@ exports.onTripUpdate = functions.firestore
 
         // CASE 2: BỊ KICK/TỰ ĐỘNG RỜI KHỎI NHÓM (Bị xoá khỏi mảng Members)
         removedMembers.forEach(userId => {
-            promises.push(sendPush(
-                userId, "Trip Update", `You are no longer in the trip to ${tripLocation}.`, 
-                { type: "status_change", tripId: String(tripId), status: "kicked_or_left" }
-            ));
+            if (recentAction !== "leave") { 
+                promises.push(sendPush(
+                    userId, "Trip Update", `You are no longer in the trip to ${tripLocation}.`, 
+                    { type: "status_change", tripId: String(tripId), status: "kicked_or_left" }
+                ));
+            }
         });
 
         // CASE 3: NEW REQUEST (Có ID mới chui vào mảng Pending)
@@ -211,7 +214,7 @@ exports.onTripUpdate = functions.firestore
 
         // CASE 4: BỊ DENY / TỰ HUỶ REQUEST (Bị xoá khỏi Pending, và KHÔNG CÓ TRONG addedMembers)
         removedPending.forEach(userId => {
-            if (!addedMembers.includes(userId)) {
+            if (!addedMembers.includes(userId) && recentAction !== "cancel") {
                 promises.push(sendPush(
                     userId, "Request Update", `Your request to join the trip to ${tripLocation} was declined.`, 
                     { type: "status_change", tripId: String(tripId), status: "denied" }

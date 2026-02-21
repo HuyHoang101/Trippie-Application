@@ -350,6 +350,11 @@ class ProfileViewController: FadeBaseViewController {
         
     }
     
+    @objc private func pushToNotification() {
+        let vc = NotificationListViewController()
+        self.navigationController?.pushViewController(vc, animated: true)
+    }
+    
     @objc private func showRatingModal() {
         let vc = RatingModalViewController()
         vc.otherUserId = self.anotherUserProfile?.id// Truyền ID người được rate

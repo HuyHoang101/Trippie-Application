@@ -287,7 +287,7 @@ extension ListViewController: UITableViewDataSource, UITableViewDelegate {
     // --- LOGIC CHẠM ĐÁY TỰ LOAD PAGINATION ---
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             guard isFilter else { return }
-            guard displayData.count >= 5 else { return } // Tránh load khi data quá ít
+            guard displayData.count >= 8 else { return } // Tránh load khi data quá ít
             
             let offsetY = scrollView.contentOffset.y
             let contentHeight = scrollView.contentSize.height

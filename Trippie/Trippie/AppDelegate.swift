@@ -34,7 +34,30 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         
         completionHandler()
     }
-
+    
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+            
+        let userInfo = notification.request.content.userInfo
+        
+        // 1. Kiểm tra nếu đây là thông báo Chat
+        if let type = userInfo["type"] as? String, type == "chat_message",
+           let tripId = userInfo["tripId"] as? String {
+            
+            // 2. Hỏi ông quản lý xem có đang mở phòng chat này không?
+            if ChatStateManager.shared.isListening(to: tripId) {
+                print("🤫 Đang ở trong phòng chat \(tripId), chặn hiển thị thông báo rác!")
+                // Trả về mảng rỗng [] -> Tức là Bịt miệng nó luôn (Không rung, không kêu, không banner)
+                completionHandler([])
+                return
+            }
+        }
+        
+        // 3. Nếu là thông báo khác (New Request, Trip Reminder...) HOẶC đang ở màn hình Home -> Cho phép hiện bình thường
+        completionHandler([.banner, .sound, .badge])
+    }
+    
+    
+    
     // MARK: UISceneSession Lifecycle
 
     func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
