@@ -574,28 +574,38 @@ class TripService {
         
         var query: Query = db.collection("trips")
         
+        // 1. FILTER NGAY TỪ SERVER ĐỂ TRÁNH HỤT SỐ LƯỢNG
+        // Chú ý: .completed phải tương ứng với rawValue trong Enum TripStatus của cậu.
+        // Ví dụ rawValue là "completed" hoặc số. Cậu chỉnh lại chữ "completed" cho đúng nhé!
+        query = query.whereField("status", isNotEqualTo: TripStatus.completed.rawValue)
+        
         if let type = tripType { query = query.whereField("tripType", isEqualTo: type.rawValue) }
         if let c = country, !c.isEmpty { query = query.whereField("country", isEqualTo: c) }
         
-        // --- 1. ĐẾM TỔNG SỐ RESULT TRÊN SERVER ---
-        // (Lưu ý: Con số này bao gồm cả những chuyến đi đã completed vì ta chưa lọc được status trên DB)
+        // Do Firestore yêu cầu: Nếu dùng isNotEqualTo trên field "status",
+        // thì orderBy ĐẦU TIÊN bắt buộc phải là "status".
+        query = query.order(by: "status")
+        query = query.order(by: "startTime", descending: false)
+        
+        // --- ĐẾM TỔNG SỐ RESULT TRÊN SERVER ---
         let countQuery = query.count
         let countSnapshot = try await countQuery.getAggregation(source: .server)
         let totalCount = Int(truncating: countSnapshot.count)
         
-        // --- 2. PAGINATION THẬT (5 object) ---
-        query = query.order(by: "startTime", descending: false).limit(to: 8)
+        // --- 2. PAGINATION THẬT (8 object) ---
+        query = query.limit(to: 8)
         if let lastDoc = lastDocument { query = query.start(afterDocument: lastDoc) }
         
         let snapshot = try await query.getDocuments()
         
+        // Không cần lọc lại bằng status != .completed ở đây nữa, vì Server đã lọc sẵn rồi.
         let trips = snapshot.documents.compactMap { doc -> Trip? in
-            guard let trip = try? doc.data(as: Trip.self) else { return nil }
-            return trip.status != .completed ? trip : nil // Lọc nốt status ở client
+            return try? doc.data(as: Trip.self)
         }
         
         return (trips, snapshot.documents.last, totalCount)
     }
+    
     
     func fetchAllForSearch(
         searchText: String,

@@ -95,7 +95,7 @@ class TripFeedViewModel {
                 self.normalTrips.send(currentData)
                 
                 // Nếu số lượng kéo về nhỏ hơn 5 hoặc không có lastDoc -> Hết data
-                if result.trips.count < 5 || result.lastDoc == nil {
+                if result.trips.count < 8 || result.lastDoc == nil {
                     self.isNormalEndReached = true
                 }
                 

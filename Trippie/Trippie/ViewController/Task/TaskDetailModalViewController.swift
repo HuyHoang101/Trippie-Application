@@ -202,7 +202,9 @@ class TaskDetailModalViewController: UIViewController {
         var task = self.task
         task?.status = .upcoming
         self.viewModel.editingTask.send(task)
-        self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User", isEdit: false)
+        Task {
+            await self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User")
+        }
         self.task = task
         self.renderData()
     }
@@ -211,7 +213,9 @@ class TaskDetailModalViewController: UIViewController {
         var task = self.task
         task?.status = .onGoing
         self.viewModel.editingTask.send(task)
-        self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User", isEdit: false)
+        Task {
+            await self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User")
+        }
         self.task = task
         self.renderData()
     }
@@ -220,7 +224,9 @@ class TaskDetailModalViewController: UIViewController {
         var task = self.task
         task?.status = .completed
         self.viewModel.editingTask.send(task)
-        self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User", isEdit: false)
+        Task {
+            await self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User")
+        }
         self.task = task
         self.renderData()
     }
@@ -229,7 +235,9 @@ class TaskDetailModalViewController: UIViewController {
         var task = self.task
         task?.status = .cancel
         self.viewModel.editingTask.send(task)
-        self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User", isEdit: false)
+        Task {
+            await self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User")
+        }
         self.task = task
         self.renderData()
     }

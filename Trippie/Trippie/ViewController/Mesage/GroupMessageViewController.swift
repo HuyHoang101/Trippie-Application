@@ -227,8 +227,10 @@ class GroupMessageViewController: FadeBaseViewController {
         if isVideo {
             vc.videoUrls = commentViewModel.allVideoUrls.value
             vc.thumbnailUrls = commentViewModel.allThumbnailUrls.value
+            vc.navigationTitle = "All Videos"
         } else {
             vc.imageUrls = commentViewModel.allImageUrls.value
+            vc.navigationTitle = "All Images"
         }
         self.navigationController?.pushViewController(vc, animated: true)
     }

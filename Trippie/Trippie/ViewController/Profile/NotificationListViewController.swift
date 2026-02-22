@@ -29,7 +29,7 @@ class NotificationListViewController: UIViewController { // Có thể đổi th�
         
         setupTableView()
         bindViewModel()
-        
+        setupNabBar()
         // Kéo data lần đầu
         viewModel.fetchInitialNotifications()
     }
@@ -44,7 +44,7 @@ class NotificationListViewController: UIViewController { // Có thể đổi th�
         tableView.backgroundColor = .clear
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 80
-        tableView.contentInset = UIEdgeInsets(top: 10, left: 0, bottom: 20, right: 0)
+        tableView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 20, right: 0)
         
         view.addSubview(tableView)
         tableView.translatesAutoresizingMaskIntoConstraints = false

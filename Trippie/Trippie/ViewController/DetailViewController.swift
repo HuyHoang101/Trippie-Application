@@ -302,7 +302,10 @@ class DetailViewController: FadeBaseViewController {
     }
     
     @objc private func appliedAction() {
-        guard let id = self.id, let trip = viewModel.trips.value.first(where: {$0.id == id}) else { return }
+        guard let id = self.id, let trip = viewModel.trips.value.first(where: {$0.id == id}) else {
+            print("Action Failed")
+            return
+        }
         switch applyAction {
         case .join:
             viewModel.joinTrip(trip: trip)
@@ -406,6 +409,7 @@ class DetailViewController: FadeBaseViewController {
         vc.imageUrls = (self.tripDetailWithStatus?.trip.coverImage)!
         vc.isOwnerOpen = isOwner
         vc.trip = self.tripDetailWithStatus
+        vc.navigationTitle = "All Images"
         self.navigationController?.pushViewController(vc, animated: true)
     }
     

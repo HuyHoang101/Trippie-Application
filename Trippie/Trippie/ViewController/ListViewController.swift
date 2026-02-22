@@ -72,6 +72,7 @@ class ListViewController: FadeBaseViewController {
         }
         tableView.delegate = self
         tableView.dataSource = self
+        tableView.bounces = false
         
         tableView.register(TripContainerCell.self, forCellReuseIdentifier: "TripContainerCell")
         

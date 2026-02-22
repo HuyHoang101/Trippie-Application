@@ -27,6 +27,7 @@ class AllPhotosViewController: FadeBaseViewController {
     var trip: TripWithStatus!
     var videoUrls: [String] = []
     var thumbnailUrls: [String] = []
+    var navigationTitle: String?
     
     private var isAdding = false
     private var deleteUrls: [String] = []
@@ -74,7 +75,7 @@ class AllPhotosViewController: FadeBaseViewController {
     }
     
     private func setupNavBar() {
-        self.title = !imageUrls.isEmpty ? "All images" : "All videos"
+        self.title = self.navigationTitle
         backBtn.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
         
         if isOwnerOpen {

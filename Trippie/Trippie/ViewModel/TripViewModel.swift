@@ -342,6 +342,9 @@ class TripViewModel {
                 self.successMessage.send("Send join request successfully!")
               
                 self.loading.send(false)
+            } catch {
+                self.loading.send(false)
+                self.errorMessage.send(error.localizedDescription)
             }
         }
     }

@@ -51,8 +51,10 @@ async function sendPush(userIds, title, body, dataPayload) {
     // 4. THỰC THI LỆNH BẮN PUSH NOTIFICATION 
     if (tokens.length === 0) return;
     
+    let message; // Tạo biến message chung
+
     if (dataPayload.type === "chat_message") {
-        const message = {
+        message = {
             notification: { title, body },
             data: dataPayload,
             tokens: tokens,
@@ -62,17 +64,26 @@ async function sendPush(userIds, title, body, dataPayload) {
                 }} 
             }
         };
-
-        return admin.messaging().sendEachForMulticast(message);
     } else {
-        const message = {
+        message = {
             notification: { title, body },
             data: dataPayload,
             tokens: tokens,
             apns: { payload: { aps: { sound: "default" } } }
         };
+    }
 
-        return admin.messaging().sendEachForMulticast(message);
+    // 🔴 THÊM DÒNG LOG NÀY VÀO ĐỂ SOI DATA:
+    console.log("PUSH TO APPLE, DATA:", JSON.stringify(message, null, 2));
+
+    // Thực thi lệnh gửi và in ra kết quả Apple trả về (thành công hay lỗi)
+    try {
+        const response = await admin.messaging().sendEachForMulticast(message);
+        console.log("RESULT FORM APPLE RETURN:", JSON.stringify(response, null, 2));
+        return response;
+    } catch (error) {
+        console.error("PUSH ERROR:", error);
+        return null;
     }
 }
 

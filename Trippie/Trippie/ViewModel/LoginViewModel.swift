@@ -79,7 +79,7 @@ class LoginViewModel {
     func logout() {
         Task {
             do {
-                try AuthService.shared.logout()
+                try await AuthService.shared.logout()
                 await MainActor.run {
                     self.logoutSuccess.send()
                 }

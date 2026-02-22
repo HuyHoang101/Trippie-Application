@@ -345,7 +345,7 @@ class ProfileViewController: FadeBaseViewController {
             notification.addTarget(self, action: #selector(goBackAction), for: .touchUpInside)
             followLabel.addTarget(self, action: #selector(addFriendAction), for: .touchUpInside)
         } else {
-            
+            notification.addTarget(self, action: #selector(pushToNotification), for: .touchUpInside)
         }
         
     }
