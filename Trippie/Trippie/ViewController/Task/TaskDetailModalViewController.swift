@@ -11,7 +11,7 @@ import Combine
 class TaskDetailModalViewController: UIViewController {
     
     var task: TaskOfTrip?
-    
+    var participation: Participation?
     var viewModel: TaskViewModel!
     
     // MARK: - UI Components
@@ -48,6 +48,7 @@ class TaskDetailModalViewController: UIViewController {
         setupUI()
         renderData()
         setupActions()
+        self.viewModel.editingTask.send(task)
     }
     
     private func setupUI() {
@@ -123,6 +124,9 @@ class TaskDetailModalViewController: UIViewController {
             
             coverImageView.heightAnchor.constraint(equalToConstant: 200)
         ])
+        
+        guard let role = participation?.role else {return}
+        multipleChoiceBtn.isHidden = !(role == .owner)
     }
     
     private func renderData() {
@@ -134,31 +138,25 @@ class TaskDetailModalViewController: UIViewController {
         titleLabel.text = task.title
         descriptionLabel.text = task.description
         
-        if role {
-            multipleChoiceBtn.enableSelectionMode = true
-            let status = task.status
-            let index = status == .upcoming ? 0 : status == .onGoing ? 1 : status == .completed ? 2 : 3
-            multipleChoiceBtn.selectedIndex = index
-            
-            multipleChoiceBtn.items = [
-                DropdownItem(title: "Upcoming", icon: "clock", type: .normal) { [weak self] in
-                    guard let self = self else { return }
-                    self.didTapUpcoming()
-                },
-                DropdownItem(title: "On going", icon: "figure.walk", type: .normal) { [weak self] in
-                    guard let self = self else { return }
-                    self.didTapOngoing()
-                },
-                DropdownItem(title: "Completed", icon: "checkmark.seal.fill", type: .normal) { [weak self] in
-                    guard let self = self else { return }
-                    self.didTapCompleted()
-                },
-                DropdownItem(title: "Cancel", icon: "xmark.circle.fill", type: .destructive) { [weak self] in
-                    guard let self = self else { return }
-                    self.didTapCancel()
-                },
-            ]
-        }
+        multipleChoiceBtn.enableSelectionMode = true
+        let status1 = task.status
+        let index = status1 == .upcoming ? 0 : status1 == .onGoing ? 1 : status1 == .completed ? 2 : 3
+        multipleChoiceBtn.selectedIndex = index
+        
+        multipleChoiceBtn.items = [
+            DropdownItem(title: "Upcoming", icon: "clock", type: .normal) { [weak self] in
+                self?.changeTaskStatus(to: .upcoming)
+            },
+            DropdownItem(title: "On going", icon: "figure.walk", type: .normal) { [weak self] in
+                self?.changeTaskStatus(to: .onGoing)
+            },
+            DropdownItem(title: "Completed", icon: "checkmark.seal.fill", type: .normal) { [weak self] in
+                self?.changeTaskStatus(to: .completed)
+            },
+            DropdownItem(title: "Cancel", icon: "xmark.circle.fill", type: .destructive) { [weak self] in
+                self?.changeTaskStatus(to: .cancel)
+            }
+        ]
         // Set Status Badge
         let status = PersonalStatus(rawValue: task.status.rawValue) ?? .upcoming
         statusBadge.configure(status: status)
@@ -195,51 +193,31 @@ class TaskDetailModalViewController: UIViewController {
     }
     
     @objc private func dismissModal() {
+        self.viewModel.editingTask.send(nil)
         self.dismiss(animated: true)
     }
     
-    @objc private func didTapUpcoming() {
-        var task = self.task
-        task?.status = .upcoming
-        self.viewModel.editingTask.send(task)
+    private func changeTaskStatus(to newStatus: TaskStatus) {
+        guard var updatedTask = self.task else { return }
+        updatedTask.status = newStatus
+        
         Task {
-            await self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User")
+            let (isSuccess, message) = await self.viewModel.handSaveTask(task: updatedTask, name: AuthService.shared.currentUserName ?? "Unknown User", isChangStatus: true)
+            
+            if isSuccess {
+                self.viewModel.editingTask.send(updatedTask)
+                self.task = updatedTask
+                self.renderData()
+            } else {
+                // Gộp logic check lỗi cho gọn
+                let alertType: ConfirmActionType = message.contains("edited") ? .cancelTaskEdit : .cancelTaskDelete
+                let alert = await confirmAlert(type: alertType, title: "")
+                if alert {
+                    self.viewModel.editingTask.send(nil)
+                    self.dismiss(animated: true)
+                }
+            }
         }
-        self.task = task
-        self.renderData()
-    }
-    
-    @objc private func didTapOngoing() {
-        var task = self.task
-        task?.status = .onGoing
-        self.viewModel.editingTask.send(task)
-        Task {
-            await self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User")
-        }
-        self.task = task
-        self.renderData()
-    }
-    
-    @objc private func didTapCompleted() {
-        var task = self.task
-        task?.status = .completed
-        self.viewModel.editingTask.send(task)
-        Task {
-            await self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User")
-        }
-        self.task = task
-        self.renderData()
-    }
-    
-    @objc private func didTapCancel() {
-        var task = self.task
-        task?.status = .cancel
-        self.viewModel.editingTask.send(task)
-        Task {
-            await self.viewModel.handSaveTask(task: task!, name: AuthService.shared.currentUserName ?? "Unknown User")
-        }
-        self.task = task
-        self.renderData()
     }
 }
 

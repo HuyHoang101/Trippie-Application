@@ -31,6 +31,10 @@
 	<string>9e64a51a535cc1e2a71958654324f03b</string>
 	<key>FacebookDisplayName</key>
 	<string>Trippie</string>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>INSendMessageIntent</string>
+	</array>
 	<key>UIAppFonts</key>
 	<array>
 		<string>Montserrat-Black.ttf</string>
@@ -57,6 +61,10 @@
 			</array>
 		</dict>
 	</dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>UIDesignRequiresCompatibility</key>
 	<true/>
 </dict>

@@ -17,7 +17,7 @@ class NotificationListViewController: UIViewController { // Có thể đổi th�
     // MARK: - PAGINATION PROPERTIES
     private var isFetchingHistory = false
     private let trippieLoadingView = TrippieLoadingView2() // Con quay xịn xò của cậu
-    private var oldDataCount = 0
+    private var oldNotifications: [NotificationItem] = []
     
     private let backBtn = UIButton.customButton(image: UIImage(systemName: "arrow.left"), backgroundColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.5) ?? .systemGray.withAlphaComponent(0.5))
     
@@ -38,13 +38,15 @@ class NotificationListViewController: UIViewController { // Có thể đổi th�
     private func setupTableView() {
         tableView.delegate = self
         tableView.dataSource = self
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "NotifCell") // Thay bằng Custom Cell của cậu sau
+        tableView.bounces = false
+        tableView.register(NotificationCell.self, forCellReuseIdentifier: "NotifCell") // Thay bằng Custom Cell của cậu sau
         
-        tableView.separatorStyle = .none
+        tableView.separatorStyle = .singleLine
+        tableView.separatorInset = UIEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
         tableView.backgroundColor = .clear
         tableView.rowHeight = UITableView.automaticDimension
         tableView.estimatedRowHeight = 80
-        tableView.contentInset = UIEdgeInsets(top: 0, left: 0, bottom: 20, right: 0)
+        tableView.contentInset = UIEdgeInsets(top: 10, left: 0, bottom: 20, right: 0)
         
         view.addSubview(tableView)
         tableView.translatesAutoresizingMaskIntoConstraints = false
@@ -95,20 +97,39 @@ class NotificationListViewController: UIViewController { // Có thể đổi th�
             .sink { [weak self] newNotifications in
                 guard let self = self else { return }
                 
+                let oldDataCount = self.oldNotifications.count
                 let newDataCount = newNotifications.count
                 
-                // Nếu là load thêm (Phân trang) -> Dùng insertRows cho mượt
-                if newDataCount > self.oldDataCount && self.oldDataCount > 0 {
-                    let indexPaths = (self.oldDataCount..<newDataCount).map { IndexPath(row: $0, section: 0) }
-                    self.oldDataCount = newDataCount
+                // 1. Phân trang (Load thêm data ở dưới đáy)
+                if newDataCount > oldDataCount && oldDataCount > 0 {
+                    let indexPaths = (oldDataCount..<newDataCount).map { IndexPath(row: $0, section: 0) }
+                    self.oldNotifications = newNotifications
                     
                     UIView.performWithoutAnimation {
                         self.tableView.insertRows(at: indexPaths, with: .none)
                     }
                 }
-                // Lần đầu tiên load
+                // 2. Có sự thay đổi dữ liệu bên trong (Ví dụ: isRead đổi từ false -> true)
+                else if newDataCount == oldDataCount && newDataCount > 0 {
+                    var indexPathsToReload: [IndexPath] = []
+                    
+                    // So sánh mảng cũ và mới xem dòng nào bị thay đổi
+                    for i in 0..<newDataCount {
+                        if self.oldNotifications[i].isRead != newNotifications[i].isRead {
+                            indexPathsToReload.append(IndexPath(row: i, section: 0))
+                        }
+                    }
+                    
+                    self.oldNotifications = newNotifications
+                    
+                    // Chỉ reload đúng cái dòng bị đổi màu với hiệu ứng mượt
+                    if !indexPathsToReload.isEmpty {
+                        self.tableView.reloadRows(at: indexPathsToReload, with: .fade)
+                    }
+                }
+                // 3. Lần đầu tiên load data (Hoặc làm mới hoàn toàn)
                 else {
-                    self.oldDataCount = newDataCount
+                    self.oldNotifications = newNotifications
                     self.tableView.reloadData()
                 }
             }
@@ -135,16 +156,13 @@ extension NotificationListViewController: UITableViewDataSource, UITableViewDele
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "NotifCell", for: indexPath)
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: "NotifCell", for: indexPath) as? NotificationCell else {
+            return UITableViewCell()
+        }
+        
         let notif = viewModel.notifications[indexPath.row]
         
-        var content = cell.defaultContentConfiguration()
-        content.text = notif.title
-        content.secondaryText = notif.body
-        cell.contentConfiguration = content
-        
-        // Highlight thông báo chưa đọc
-        cell.backgroundColor = notif.isRead ? .clear : .systemBlue.withAlphaComponent(0.1)
+        cell.configure(with: notif)
         
         return cell
     }
@@ -152,6 +170,15 @@ extension NotificationListViewController: UITableViewDataSource, UITableViewDele
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         // TODO: Đánh dấu đã đọc và chuyển trang
+        let notif = viewModel.notifications[indexPath.row]
+        if let id = notif.id {
+            viewModel.markAsRead(id: id)
+        }
+        let detailVC = DetailViewController()
+        detailVC.navigationTitle = "Detail"
+        detailVC.id = notif.tripId
+        detailVC.isFeedBoard = notif.type == "status_change"
+        self.navigationController?.pushViewController(detailVC, animated: true)
     }
     
     // --- LOGIC CHẠM ĐÁY TỰ LOAD PAGINATION CỦA CẬU ---

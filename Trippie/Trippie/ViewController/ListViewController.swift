@@ -103,6 +103,9 @@ class ListViewController: FadeBaseViewController {
     }
     
     private func setupNavBar() {
+        if self.isFilter {
+            navigationTitle = "Result: \(tripViewModel2.totalResultCount.value)"
+        }
         self.title = navigationTitle
         backBtn.addTarget(self, action: #selector(handleBack), for: .touchUpInside)
         

@@ -17,12 +17,10 @@ class ChatStateManager {
     
     func startListening(tripId: String) {
         activeTripIds.insert(tripId)
-        print("🟢 Đã bật chặn thông báo rác cho trip: \(tripId)")
     }
     
     func stopListening(tripId: String) {
         activeTripIds.remove(tripId)
-        print("🔴 Đã tắt chặn thông báo cho trip: \(tripId)")
     }
     
     func isListening(to tripId: String) -> Bool {

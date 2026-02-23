@@ -1,0 +1,18 @@
+{
+  "Simulator Target Bundle": "com.hoangnguyenh101000.Trippie",
+  "aps": {
+    "alert": {
+      "title": "Hoang Nguyen (Da Nang Trip)",
+      "body": "Sent a new message."
+    },
+    "sound": "default",
+    "badge": 1,
+    "thread-id": "trip_chat_TRIP_TEST_123",
+    "mutable-content": 1
+  },
+  "type": "chat_message",
+  "tripId": "TRIP_TEST_123",
+  "senderId": "USER_123",
+  "senderName": "Hoang Nguyen",
+  "senderAvatar": "https://i.pravatar.cc/150?img=11"
+}

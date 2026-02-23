@@ -7,14 +7,40 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9CD08D172F4C4DE10001B66E /* TrippieNotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 9CD08D102F4C4DE10001B66E /* TrippieNotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F300257C90F7B30D51787826 /* Pods_Trippie.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 74E5AB9D37C362CD2DED927E /* Pods_Trippie.framework */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		9CD08D152F4C4DE10001B66E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 9C7A81782F1E1C8E0071E105 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9CD08D0F2F4C4DE10001B66E;
+			remoteInfo = TrippieNotificationService;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		9CD08D1C2F4C4DE10001B66E /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				9CD08D172F4C4DE10001B66E /* TrippieNotificationService.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		668BF0EBD0D4127D76CF0213 /* Pods-Trippie.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Trippie.release.xcconfig"; path = "Target Support Files/Pods-Trippie/Pods-Trippie.release.xcconfig"; sourceTree = "<group>"; };
 		74E5AB9D37C362CD2DED927E /* Pods_Trippie.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Trippie.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		912A2EA79C865C5BDB3ACC3D /* Pods-Trippie.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Trippie.debug.xcconfig"; path = "Target Support Files/Pods-Trippie/Pods-Trippie.debug.xcconfig"; sourceTree = "<group>"; };
 		9C7A81802F1E1C8F0071E105 /* Trippie.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Trippie.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		9CD08D102F4C4DE10001B66E /* TrippieNotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TrippieNotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -24,6 +50,13 @@
 				Info.plist,
 			);
 			target = 9C7A817F2F1E1C8F0071E105 /* Trippie */;
+		};
+		9CD08D1B2F4C4DE10001B66E /* Exceptions for "TrippieNotificationService" folder in "TrippieNotificationService" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 9CD08D0F2F4C4DE10001B66E /* TrippieNotificationService */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -36,6 +69,14 @@
 			path = Trippie;
 			sourceTree = "<group>";
 		};
+		9CD08D112F4C4DE10001B66E /* TrippieNotificationService */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				9CD08D1B2F4C4DE10001B66E /* Exceptions for "TrippieNotificationService" folder in "TrippieNotificationService" target */,
+			);
+			path = TrippieNotificationService;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +85,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				F300257C90F7B30D51787826 /* Pods_Trippie.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9CD08D0D2F4C4DE10001B66E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -71,6 +119,7 @@
 			isa = PBXGroup;
 			children = (
 				9C7A81822F1E1C8F0071E105 /* Trippie */,
+				9CD08D112F4C4DE10001B66E /* TrippieNotificationService */,
 				9C7A81812F1E1C8F0071E105 /* Products */,
 				25B438429C5A945087507DD8 /* Pods */,
 				6BF7E98B83A097288CB51780 /* Frameworks */,
@@ -81,6 +130,7 @@
 			isa = PBXGroup;
 			children = (
 				9C7A81802F1E1C8F0071E105 /* Trippie.app */,
+				9CD08D102F4C4DE10001B66E /* TrippieNotificationService.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -97,10 +147,12 @@
 				9C7A817D2F1E1C8F0071E105 /* Frameworks */,
 				9C7A817E2F1E1C8F0071E105 /* Resources */,
 				882AA046C3994B087583794B /* [CP] Embed Pods Frameworks */,
+				9CD08D1C2F4C4DE10001B66E /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				9CD08D162F4C4DE10001B66E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				9C7A81822F1E1C8F0071E105 /* Trippie */,
@@ -109,6 +161,28 @@
 			productName = Trippie;
 			productReference = 9C7A81802F1E1C8F0071E105 /* Trippie.app */;
 			productType = "com.apple.product-type.application";
+		};
+		9CD08D0F2F4C4DE10001B66E /* TrippieNotificationService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9CD08D182F4C4DE10001B66E /* Build configuration list for PBXNativeTarget "TrippieNotificationService" */;
+			buildPhases = (
+				9CD08D0C2F4C4DE10001B66E /* Sources */,
+				9CD08D0D2F4C4DE10001B66E /* Frameworks */,
+				9CD08D0E2F4C4DE10001B66E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				9CD08D112F4C4DE10001B66E /* TrippieNotificationService */,
+			);
+			name = TrippieNotificationService;
+			packageProductDependencies = (
+			);
+			productName = TrippieNotificationService;
+			productReference = 9CD08D102F4C4DE10001B66E /* TrippieNotificationService.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -121,6 +195,9 @@
 				LastUpgradeCheck = 2610;
 				TargetAttributes = {
 					9C7A817F2F1E1C8F0071E105 = {
+						CreatedOnToolsVersion = 26.1.1;
+					};
+					9CD08D0F2F4C4DE10001B66E = {
 						CreatedOnToolsVersion = 26.1.1;
 					};
 				};
@@ -140,12 +217,20 @@
 			projectRoot = "";
 			targets = (
 				9C7A817F2F1E1C8F0071E105 /* Trippie */,
+				9CD08D0F2F4C4DE10001B66E /* TrippieNotificationService */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		9C7A817E2F1E1C8F0071E105 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9CD08D0E2F4C4DE10001B66E /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -208,7 +293,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9CD08D0C2F4C4DE10001B66E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9CD08D162F4C4DE10001B66E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9CD08D0F2F4C4DE10001B66E /* TrippieNotificationService */;
+			targetProxy = 9CD08D152F4C4DE10001B66E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		9C7A81942F1E1C920071E105 /* Debug */ = {
@@ -217,6 +317,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Trippie/Trippie.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -253,6 +354,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Trippie/Trippie.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -406,6 +508,64 @@
 			};
 			name = Release;
 		};
+		9CD08D192F4C4DE10001B66E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TrippieNotificationService/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TrippieNotificationService;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hoangnguyenh101000.Trippie.TrippieNotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9CD08D1A2F4C4DE10001B66E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = TrippieNotificationService/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = TrippieNotificationService;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hoangnguyenh101000.Trippie.TrippieNotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -423,6 +583,15 @@
 			buildConfigurations = (
 				9C7A81942F1E1C920071E105 /* Debug */,
 				9C7A81952F1E1C920071E105 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9CD08D182F4C4DE10001B66E /* Build configuration list for PBXNativeTarget "TrippieNotificationService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9CD08D192F4C4DE10001B66E /* Debug */,
+				9CD08D1A2F4C4DE10001B66E /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

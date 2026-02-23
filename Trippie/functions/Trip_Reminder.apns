@@ -1,0 +1,13 @@
+{
+  "Simulator Target Bundle": "com.hoangnguyenh101000.Trippie",
+  "aps": {
+    "alert": {
+      "title": "Trip starting soon!",
+      "body": "Your trip to Da Nang is starting in 24 hours. Get your luggage ready!"
+    },
+    "sound": "default",
+    "badge": 1
+  },
+  "type": "trip_reminder",
+  "tripId": "TRIP_TEST_123"
+}

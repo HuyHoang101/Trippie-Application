@@ -71,7 +71,7 @@ class NotificationNavigator {
                 
                 topVC.navigationController?.pushViewController(chatVC, animated: true)
                 
-            case "new_request", "status_change":
+            case "status_change":
                 print("🟢 Push vào chi tiết Trip / Yêu cầu tham gia của Trip: \(tripId)")
                 let detailVC = DetailViewController()
                 detailVC.id = tripId
@@ -80,7 +80,7 @@ class NotificationNavigator {
                 
                 topVC.navigationController?.pushViewController(detailVC, animated: true)
 
-            case "trip_reminder":
+            case "trip_reminder", "new_request":
                 print("🟠 Push vào màn hình Checklist/Hành trang của Trip: \(tripId)")
                 let detailVC = DetailViewController()
                 detailVC.id = tripId

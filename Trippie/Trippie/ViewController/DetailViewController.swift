@@ -29,7 +29,7 @@ class DetailViewController: FadeBaseViewController {
     private let locationLabel = UILabel.customLabel(text: "On the sun", font: .systemFont(ofSize: 16), textColor: .systemGray)
     private let dayindex = UILabel.customLabel(text: "0 days", font: .systemFont(ofSize: 16), textColor: .authBackground1, textAligment: .right)
     private let startDateLabel = UILabel.customLabel(text: "Start: 01/01/1999", font: .systemFont(ofSize: 16), textColor: .label)
-    private let tripStyle = UILabel.boxStyle(text: "", font: .systemFont(ofSize: 12, weight: .semibold), background: UIColor.button, textColor: .white)
+    private let tripStyle = UILabel.boxStyle(text: "bubby", font: .systemFont(ofSize: 12, weight: .semibold), background: UIColor.button, textColor: .white)
     private let personalStatus = TripStatusBadge()
     private let peopleJoinedLabel = UILabel.customLabel(text: "People joined: 0", font: .systemFont(ofSize: 16), textColor: .label)
     private let pendingRequests = UILabel.customLabel(text: "Pending requests: 0", font: .systemFont(ofSize: 16), textColor: .label)
@@ -302,10 +302,7 @@ class DetailViewController: FadeBaseViewController {
     }
     
     @objc private func appliedAction() {
-        guard let id = self.id, let trip = viewModel.trips.value.first(where: {$0.id == id}) else {
-            print("Action Failed")
-            return
-        }
+        guard let trip = self.tripDetailWithStatus?.trip else { return }
         switch applyAction {
         case .join:
             viewModel.joinTrip(trip: trip)

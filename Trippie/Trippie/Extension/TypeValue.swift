@@ -92,3 +92,21 @@ extension UnicodeScalar {
         return value >= 0x1F3FB && value <= 0x1F3FF // Màu da...
     }
 }
+
+extension Date {
+    func toNotificationFormat() -> String {
+        let calendar = Calendar.current
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+        
+        if calendar.isDateInToday(self) {
+            return timeFormatter.string(from: self)
+        } else if calendar.isDateInYesterday(self) {
+            return "Yesterday \(timeFormatter.string(from: self))"
+        } else {
+            let fullFormatter = DateFormatter()
+            fullFormatter.dateFormat = "dd/MM/yyyy HH:mm"
+            return fullFormatter.string(from: self)
+        }
+    }
+}

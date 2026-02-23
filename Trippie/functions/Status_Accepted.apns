@@ -1,0 +1,14 @@
+{
+  "Simulator Target Bundle": "com.hoangnguyenh101000.Trippie",
+  "aps": {
+    "alert": {
+      "title": "Request Accepted!",
+      "body": "You have officially joined the trip to Osaka."
+    },
+    "sound": "default",
+    "badge": 1
+  },
+  "type": "status_change",
+  "tripId": "mfgHAqvjqJ1AZUzmVBXX",
+  "status": "accepted"
+}

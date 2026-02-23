@@ -1,0 +1,14 @@
+{
+  "Simulator Target Bundle": "com.hoangnguyenh101000.Trippie",
+  "aps": {
+    "alert": {
+      "title": "New Join Request",
+      "body": "Someone requested to join your trip to Osaka."
+    },
+    "sound": "default",
+    "badge": 1
+  },
+  "type": "new_request",
+  "tripId": "mfgHAqvjqJ1AZUzmVBXX",
+  "userId": "qoiuQ5l0H0gZ1N4V37mu8EC4HEJ2"
+}

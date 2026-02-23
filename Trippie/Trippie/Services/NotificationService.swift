@@ -33,4 +33,23 @@ class NotificationService {
         
         return (notifications, snapshot.documents.last)
     }
+    
+    func updateRead(id: String) async throws -> NotificationItem {
+        guard let userId = Auth.auth().currentUser?.uid else {
+            throw NSError(domain: "Auth", code: 401, userInfo: [NSLocalizedDescriptionKey: "Please login first."])
+        }
+        
+        let docRef = db.collection("users").document(userId).collection("notifications").document(id)
+        
+        // 1. Cập nhật cờ isRead trên Firebase
+        try await docRef.updateData(["isRead": true])
+        
+        // 2. Kéo data mới nhất về và trả ra ngoài
+        let snapshot = try await docRef.getDocument()
+        guard let updatedNotification = try? snapshot.data(as: NotificationItem.self) else {
+            throw NSError(domain: "Data", code: 404, userInfo: [NSLocalizedDescriptionKey: "Notification not found."])
+        }
+        
+        return updatedNotification
+    }
 }

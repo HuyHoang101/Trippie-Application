@@ -621,15 +621,23 @@ class TripService {
         
         // Kéo toàn bộ data thỏa mãn filter cơ bản
         let snapshot = try await query.getDocuments()
-        let queryText = searchText.lowercased()
-        
-        // Lọc triệt để (Status + Text) ở client
+        // 1. Gọt sạch dấu và đưa về chữ thường cho từ khoá tìm kiếm
+        let queryText = searchText.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+
+        // 2. Lọc triệt để (Status + Text) ở client
         let filteredTrips = snapshot.documents.compactMap { doc -> Trip? in
             guard let trip = try? doc.data(as: Trip.self), trip.status != .completed else { return nil }
             
-            let matchesSearch = trip.title.lowercased().contains(queryText) ||
-                                trip.location.lowercased().contains(queryText) ||
-                                trip.country.lowercased().contains(queryText)
+            // Gọt sạch dấu và đưa về chữ thường cho data lấy từ Firebase
+            let titleFormatted = trip.title.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            let locationFormatted = trip.location.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            let countryFormatted = trip.country.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            
+            // 3. So sánh
+            let matchesSearch = titleFormatted.contains(queryText) ||
+                                locationFormatted.contains(queryText) ||
+                                countryFormatted.contains(queryText)
+                                
             return matchesSearch ? trip : nil
         }
         

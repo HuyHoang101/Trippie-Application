@@ -53,6 +53,30 @@ class TaskTableViewCell: UITableViewCell {
         fatalError("init(coder:) has not been implemented")
     }
 
+    // --- Lifecycle ---
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        
+        // 1. Reset trạng thái UI (Ngắt mọi animation đang dở dang)
+        self.layer.removeAllAnimations()
+        self.contentView.layer.removeAllAnimations()
+        
+        // 2. Ép nó về mode Normal ngay lập tức, KHÔNG animation
+        self.actionButton.isHidden = true
+        self.editByLabel.isHidden = true
+        self.editByLabel.text = nil
+        
+        // 3. Xoá dữ liệu hiển thị cũ (Để tránh tình trạng ảnh/chữ của dòng cũ hiện chớp lên 1 giây)
+        self.avatarImageView.setImage(url: "", placeholderSystemName: "person.fill")
+        self.nameLabel.text = nil
+        self.dayTimeLabel.text = nil
+        self.titleLabel.text = nil
+        self.mainContainer.backgroundColor = .systemBackground
+        
+        // 4. Cắt đứt Action cũ (Cực kỳ quan trọng để không bị lỗi bấm nút nhầm dòng)
+        self.onTapAction = nil
+    }
+    
     // --- Layout ---
     private func setupLayout() {
         // 1. Tạo StackView cho Dòng 1 (Top)
@@ -133,9 +157,9 @@ class TaskTableViewCell: UITableViewCell {
         ])
     }
     
-    // Hàm cập nhật giao diện dựa theo Mode
-    func updateMode(mode: ListTaskMode) {
-        UIView.animate(withDuration: 0.3) {
+    func updateMode(mode: ListTaskMode, animated: Bool = true) {
+        // Gom các thao tác đổi UI vào 1 block
+        let changes = {
             switch mode {
             case .normal:
                 self.actionButton.isHidden = true
@@ -153,8 +177,15 @@ class TaskTableViewCell: UITableViewCell {
                 self.actionButton.configuration?.baseForegroundColor = .systemRed
             }
             
-            // Ép layout cập nhật ngay lập tức để thấy hiệu ứng trượt
+            // Ép layout cập nhật
             self.contentView.layoutIfNeeded()
+        }
+        
+        // Quyết định xem có chạy animation hay set cứng luôn
+        if animated {
+            UIView.animate(withDuration: 0.3, animations: changes)
+        } else {
+            changes()
         }
     }
     

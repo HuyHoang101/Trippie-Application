@@ -16,7 +16,29 @@ class ListTaskViewController: FadeBaseViewController {
     private var displayData: [TaskOfTrip] = []
     private var currentMode: ListTaskMode = .normal {
         didSet {
-            tableView.reloadData() // Mỗi khi đổi mode thì reload lại bảng để hiện icon
+            guard oldValue != currentMode else { return }
+            
+            // Thay vì reloadData(), ta chỉ animate những cell đang hiển thị
+            guard let indexPaths = tableView.indexPathsForVisibleRows else { return }
+            
+            let userId = AuthService.shared.currentUserId!
+            let currentUserRole = tripWithStatus?.participation?.role
+            
+            for indexPath in indexPaths {
+                guard let cell = tableView.cellForRow(at: indexPath) as? TaskTableViewCell else { continue }
+                let item = displayData[indexPath.row]
+                
+                // Logic phân quyền y chang trong cellForRowAt, nhưng bật animated = true
+                if currentMode == .edit || currentMode == .normal {
+                    cell.updateMode(mode: currentMode, animated: true)
+                } else {
+                    if currentUserRole == .owner || item.creatorId == userId {
+                        cell.updateMode(mode: currentMode, animated: true)
+                    } else {
+                        cell.updateMode(mode: .normal, animated: true)
+                    }
+                }
+            }
         }
     }
     private var cancellabel = Set<AnyCancellable>()
@@ -314,6 +336,8 @@ class ListTaskViewController: FadeBaseViewController {
         
         // 2. Tính toán sự thay đổi (Insert / Delete) dựa trên ID
         // Yêu cầu: TaskOfTrip phải có id duy nhất
+        // VD: [A,B,C] [A,C,D]
+        // change: xoá b vị trí 1, thêm d vị trí 2
         let changes = newTasks.difference(from: oldTasks) { $0.id == $1.id }
         
         // 3. Thực hiện update theo lô (Batch Updates) để mượt và giữ vị trí cuộn
@@ -343,11 +367,11 @@ class ListTaskViewController: FadeBaseViewController {
                 if let oldTask = oldTasks.first(where: { $0.id == newTask.id }) {
                     
                     // So sánh các trường quan trọng để xem có cần reload không
-                    // Ví dụ: title, time, hoặc updatedAt
-                    // Nếu TaskOfTrip của cậu đã conform Equatable thì chỉ cần: if oldTask != newTask
+                    // Ví dụ: title, time, updatedAt, hoặc status
                     if oldTask.updatedAt != newTask.updatedAt ||
                        oldTask.dayIndex != newTask.dayIndex ||
-                       oldTask.time != newTask.time {
+                       oldTask.time != newTask.time ||
+                       oldTask.status != newTask.status {
                         
                         indexPathsToReload.append(IndexPath(row: index, section: 0))
                     }
@@ -379,13 +403,15 @@ extension ListTaskViewController: UITableViewDataSource, UITableViewDelegate {
         let userId = AuthService.shared.currentUserId!
         
         cell.configure(with: item, id: userId)
+        let currentUserRole = tripWithStatus?.participation?.role
+                
         if currentMode == .edit || currentMode == .normal {
-            cell.updateMode(mode: currentMode)
+            cell.updateMode(mode: currentMode, animated: false)
         } else {
-            if item.userRole == .owner || item.creatorId == userId {
-                cell.updateMode(mode: currentMode)
+            if currentUserRole == .owner || item.creatorId == userId {
+                cell.updateMode(mode: currentMode, animated: false)
             } else {
-                cell.updateMode(mode: .normal)
+                cell.updateMode(mode: .normal, animated: false) // Giấu nút xoá đi
             }
         }
         cell.onTapAction = { [weak self] in
@@ -410,6 +436,7 @@ extension ListTaskViewController: UITableViewDataSource, UITableViewDelegate {
         let vc = TaskDetailModalViewController()
         vc.task = row
         vc.viewModel = self.taskViewModel
+        vc.participation = self.tripWithStatus?.participation
         vc.modalTransitionStyle = .crossDissolve
         vc.modalPresentationStyle = .overFullScreen
         

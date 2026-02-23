@@ -47,9 +47,6 @@ async function sendPush(userIds, title, body, dataPayload) {
     if (hasBatchOperations) {
         await batch.commit();
     }
-
-    // 4. THỰC THI LỆNH BẮN PUSH NOTIFICATION 
-    if (tokens.length === 0) return;
     
     let message; // Tạo biến message chung
 
@@ -60,7 +57,8 @@ async function sendPush(userIds, title, body, dataPayload) {
             tokens: tokens,
             apns: { payload: { aps: { 
                     sound: "default",
-                    "thread-id": dataPayload.tripId ? `trip_chat_${dataPayload.tripId}` : "trippie_general"
+                    "thread-id": dataPayload.tripId ? `trip_chat_${dataPayload.tripId}` : "trippie_general",
+                    "mutable-content": 1
                 }} 
             }
         };
@@ -76,6 +74,10 @@ async function sendPush(userIds, title, body, dataPayload) {
     // 🔴 THÊM DÒNG LOG NÀY VÀO ĐỂ SOI DATA:
     console.log("PUSH TO APPLE, DATA:", JSON.stringify(message, null, 2));
 
+
+    // 4. THỰC THI LỆNH BẮN PUSH NOTIFICATION 
+    if (tokens.length === 0) return;
+    
     // Thực thi lệnh gửi và in ra kết quả Apple trả về (thành công hay lỗi)
     try {
         const response = await admin.messaging().sendEachForMulticast(message);
@@ -91,83 +93,88 @@ async function sendPush(userIds, title, body, dataPayload) {
 // 1. NEW CHAT MESSAGE - GỘP NHÓM, GIỚI HẠN & ĐỔI TITLE
 // ============================================================================
 exports.onNewMessage = functions.firestore
-  .document("trips/{tripId}/comments/{commentId}")
-  .onCreate(async (snapshot, context) => {
-      const data = snapshot.data();
-      const tripId = context.params.tripId;
-      const senderId = data.userId;
-      
-      const db = admin.firestore();
-      const tripDoc = await db.collection("trips").doc(tripId).get();
-      if (!tripDoc.exists) return null;
-      
-      const tripData = tripDoc.data();
-      let allParticipants = [tripData.ownerId, ...(tripData.members || [])];
-      let targetIds = allParticipants.filter(id => id !== senderId);
+    .document("trips/{tripId}/comments/{commentId}")
+    .onCreate(async (snapshot, context) => {
+        const data = snapshot.data();
+        const tripId = context.params.tripId;
+        const senderId = data.userId;
+        
+        const db = admin.firestore();
+        const tripDoc = await db.collection("trips").doc(tripId).get();
+        if (!tripDoc.exists) return null;
+        
+        const tripData = tripDoc.data();
+        let allParticipants = [tripData.ownerId, ...(tripData.members || [])];
+        let targetIds = allParticipants.filter(id => id !== senderId);
 
-      // Chia làm 2 mảng gửi để khác nhau cái Title
-      const firstMessageTargets = []; // Dành cho người nhận tin đầu tiên (count = 0)
-      const subsequentTargets = [];   // Dành cho người nhận tin từ thứ 2 đến 10 (count > 0)
-      
-      const now = new Date();
-      const ONE_HOUR = 60 * 60 * 1000; 
+        const firstMessageTargets = []; 
+        const subsequentTargets = [];   
+        
+        const now = new Date();
+        const ONE_HOUR = 60 * 60 * 1000; 
 
-      for (const targetId of targetIds) {
-          const throttleRef = db.collection("users").doc(targetId).collection("chat_throttle").doc(tripId);
-          const throttleDoc = await throttleRef.get();
+        for (const targetId of targetIds) {
+            const throttleRef = db.collection("users").doc(targetId).collection("chat_throttle").doc(tripId);
+            const throttleDoc = await throttleRef.get();
 
-          let count = 0;
-          let lastSentTime = new Date(0);
+            let count = 0;
+            let lastSentTime = new Date(0);
 
-          if (throttleDoc.exists) {
-              const throttleData = throttleDoc.data();
-              count = throttleData.count || 0;
-              lastSentTime = throttleData.lastSent ? throttleData.lastSent.toDate() : new Date(0);
-          }
+            if (throttleDoc.exists) {
+                const throttleData = throttleDoc.data();
+                count = throttleData.count || 0;
+                lastSentTime = throttleData.lastSent ? throttleData.lastSent.toDate() : new Date(0);
+            }
 
-          if (now - lastSentTime > ONE_HOUR) {
-              count = 0; // Reset
-          }
+            if (now - lastSentTime > ONE_HOUR) {
+                count = 0; 
+            }
 
-          if (count < 10) {
-              // Phân loại user vào đúng mảng
-              if (count === 0) {
-                  firstMessageTargets.push(targetId);
-              } else {
-                  subsequentTargets.push(targetId);
-              }
-              
-              await throttleRef.set({
-                  count: count + 1,
-                  lastSent: admin.firestore.FieldValue.serverTimestamp()
-              }, { merge: true });
-          }
-      }
+            if (count < 10) {
+                if (count === 0) {
+                    firstMessageTargets.push(targetId);
+                } else {
+                    subsequentTargets.push(targetId);
+                }
+                
+                await throttleRef.set({
+                    count: count + 1,
+                    lastSent: admin.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+            }
+        }
 
-      const promises = [];
+        const promises = [];
 
-      // Bắn push cho nhóm tin nhắn đầu tiên (Có kèm chữ Trip)
-      if (firstMessageTargets.length > 0) {
-            promises.push(sendPush(
-                firstMessageTargets,
-                `${(data.userName || "").trim() || "Someone"} (${tripData.location || "the"} Trip)`,
+        // 🔴 QUAN TRỌNG: Đóng gói thêm senderId, senderName, senderAvatar vào dataPayload
+        const chatDataPayload = { 
+            type: "chat_message", 
+            tripId: String(tripId),
+            senderId: String(senderId),
+            senderName: String((data.userName || "").trim() || "Unknown"),
+            senderAvatar: String(data.userAvatar || "") // Truyền thêm Avatar URL nếu trong DB cậu có lưu, không có thì để rỗng
+        };
+
+        if (firstMessageTargets.length > 0) {
+                promises.push(sendPush(
+                    firstMessageTargets,
+                    `${(data.userName || "").trim() || "Someone"} (${tripData.location || "the"} Trip)`,
                     (data.message || "").trim() || "Sent a new message.",
-                { type: "chat_message", tripId: String(tripId) }
-            ));
-      }
+                    chatDataPayload
+                ));
+        }
 
-      // Bắn push cho nhóm tin nhắn tiếp theo (Chỉ có Tên)
-      if (subsequentTargets.length > 0) {
-            promises.push(sendPush(
-                subsequentTargets,
-                `${(data.userName || "").trim() || "Someone"}`,
+        if (subsequentTargets.length > 0) {
+                promises.push(sendPush(
+                    subsequentTargets,
+                    `${(data.userName || "").trim() || "Someone"}`,
                     (data.message || "").trim() || "Sent a new message.",
-                { type: "chat_message", tripId: String(tripId) }
-            ));
-      }
+                    chatDataPayload
+                ));
+        }
 
-      return Promise.all(promises);
-});
+        return Promise.all(promises);
+    });
 
 // ============================================================================
 // 2. LẮNG NGHE SỰ THAY ĐỔI CỦA TRIP (Accept, Kick, New Request, Deny)

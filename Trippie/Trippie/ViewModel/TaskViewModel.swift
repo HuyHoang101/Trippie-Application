@@ -60,7 +60,7 @@ class TaskViewModel {
     
     // MARK: - 3. CREATE / EDIT TASK (logic check conflict)
     // Thay đổi signature: Thêm async và kiểu trả về (Bool, String)
-    func handSaveTask(task: TaskOfTrip, name: String) async -> (Bool, String) {
+    func handSaveTask(task: TaskOfTrip, name: String, isChangStatus: Bool = false) async -> (Bool, String) {
         self.loading.send(true)
         let isEdit = !(editingTask.value == nil)
         // --- BƯỚC 1: KIỂM TRA ĐIỀU KIỆN (VALIDATION) ---
@@ -88,7 +88,7 @@ class TaskViewModel {
         do {
             if let tripId = editingTask.value?.tripId {
                 // --- CASE EDIT ---
-                try await taskService.updateTask(tripId: tripId, task: task, name: name, isEdit: isEdit)
+                try await taskService.updateTask(tripId: tripId, task: task, name: name, isEdit: !isChangStatus)
                 
                 self.showToast(message: "Updated Task Successfully!", isSuccess: true)
                 self.editingTask.send(nil) // Reset trạng thái edit

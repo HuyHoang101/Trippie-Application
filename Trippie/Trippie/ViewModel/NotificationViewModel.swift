@@ -54,4 +54,20 @@ class NotificationViewModel {
             }
         }
     }
+    
+    func markAsRead(id: String) {
+        Task {
+            do {
+                // Gọi Service cập nhật trên Firebase
+                let updatedItem = try await NotificationService.shared.updateRead(id: id)
+                
+                // Cập nhật mảng local để UI TableView tự động tắt highlight
+                if let index = self.notifications.firstIndex(where: { $0.id == id }) {
+                    self.notifications[index] = updatedItem
+                }
+            } catch {
+                self.errorMessage = error.localizedDescription
+            }
+        }
+    }
 }

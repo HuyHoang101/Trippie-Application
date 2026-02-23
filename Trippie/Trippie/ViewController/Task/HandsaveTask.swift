@@ -69,7 +69,6 @@ class HandsaveTask: FadeBaseViewController {
         checkEditMode()
         setupNavBar()
         bindLoading(to: viewModel.loading)
-        bindLoading(to: imagesViewModel.loading)
     }
     
     // Hủy đăng ký khi thoát màn hình (Clean memory)
@@ -318,9 +317,18 @@ class HandsaveTask: FadeBaseViewController {
         imagesViewModel.$uploadedUrls
             .dropFirst()
             .removeDuplicates()
-            .receive(on: RunLoop.main)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] imgs in
                 self?.coverImageSelected.renderImages(imgs)
+            }
+            .store(in: &cancellabel)
+        
+        imagesViewModel.loading
+            .dropFirst()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] loading in
+                self?.coverImageSelected.imageLoading(loading)
+                self?.saveButton.isEnabled = !loading
             }
             .store(in: &cancellabel)
         
