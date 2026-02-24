@@ -141,6 +141,12 @@ class MessageBubbleView: UIView {
         nameLabel.setContentCompressionResistancePriority(.required, for: .vertical)
         nameLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 14).isActive = true
         
+        // Thêm dòng này để "bảo kê" chiều ngang, cấm container bóp nhỏ tên:
+        nameLabel.setContentCompressionResistancePriority(.required, for: .horizontal)
+
+        // (Tuỳ chọn) Đề phòng tên dài quá lố tràn màn hình thì cho thêm dấu "..."
+        nameLabel.lineBreakMode = .byTruncatingTail
+        
         let hugLeftBubble = leadingAnchor.constraint(equalTo: bubbleWrapper.leadingAnchor, constant: -12)
         hugLeftBubble.priority = .init(750)
 
