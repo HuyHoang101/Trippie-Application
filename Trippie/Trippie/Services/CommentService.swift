@@ -75,15 +75,21 @@ class CommentService {
     }
     
     // MARK: - 4. EDIT COMMENT
-    func editComment(tripId: String, comment: Comment) async throws {
-        guard let commentId = comment.id else { return }
+    func editComment(tripId: String, comment: Comment) async throws -> Comment {
+        guard let commentId = comment.id else {
+            throw NSError(domain: "AppError", code: 400, userInfo: [NSLocalizedDescriptionKey: "Comment ID is missing"])
+        }
         
         var updatedComment = comment
         updatedComment.updatedAt = Date()
         
-        try db.collection("trips").document(tripId)
-            .collection("comments").document(commentId)
-            .setData(from: updatedComment, merge: true)
+        let docRef = db.collection("trips").document(tripId)
+                           .collection("comments").document(commentId)
+            
+        // Ép kiểu gọi đúng hàm async
+        try await docRef.setData(from: updatedComment, merge: true)
+        
+        return updatedComment
     }
     
     // MARK: - 5. SOFT DELETE
@@ -97,6 +103,7 @@ class CommentService {
             "imageUrls": [],
             "videoUrl": "",
             "videoThumbnail": "",
+            "isDeleted": true,
             "updatedAt": Date()
         ])
     }

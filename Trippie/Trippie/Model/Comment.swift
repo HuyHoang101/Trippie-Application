@@ -19,6 +19,7 @@ struct Comment: Codable {
     var videoUrl: String
     var videoThumbnail: String
     var message: String
+    var isDeleted: Bool?
     
     @ServerTimestamp var createdAt: Date?
     @ServerTimestamp var updatedAt: Date?

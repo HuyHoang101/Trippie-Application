@@ -7,10 +7,10 @@ target 'Trippie' do
   use_frameworks!
   # Firebase SDK 
   pod 'Firebase/Auth'
-  pod 'Firebase/Firestore'
   pod 'Firebase/Storage'
   pod 'Firebase/Messaging'
-  
+  pod 'Firebase/Firestore'
+
   # UI 
   pod 'SnapKit'               # Code layout nhanh
   pod 'IQKeyboardManagerSwift' # Tự động xử lý bàn phím che input

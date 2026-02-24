@@ -140,6 +140,23 @@ class CommentViewModel {
         Task {
             do {
                 try await commentService.softDeleteComment(tripId: tripId, commentId: commentId)
+                var updateComments = comments.value
+                let count = updateComments.count
+                
+                // Tìm vị trí tin nhắn trong mảng hiện tại
+                guard let index = updateComments.firstIndex(where: { $0.id == commentId }) else { return }
+                
+                
+                if count > 30 && (count - (index + 1) > 30) {
+                    updateComments[index].message = "This message was deleted."
+                    updateComments[index].imageUrls = []
+                    updateComments[index].videoUrl = ""
+                    updateComments[index].videoThumbnail = ""
+                    updateComments[index].isDeleted = true
+                    comments.send(updateComments)
+                } else {
+                    // Tự đông cập nhập (listener
+                }
             } catch {
                 self.errorMessage.send("Xoá thất bại: \(error.localizedDescription)")
             }
@@ -178,4 +195,26 @@ class CommentViewModel {
         }
     }
     
+    func editMessage(tripId: String, comment: Comment) {
+        Task {
+            do {
+                let result = try await commentService.editComment(tripId: tripId, comment: comment)
+                var updateComments = comments.value
+                let count = updateComments.count
+                
+                // Tìm vị trí tin nhắn trong mảng hiện tại
+                guard let index = updateComments.firstIndex(where: { $0.id == result.id }) else { return }
+                
+                
+                if count > 30 && (count - (index + 1) > 30) {
+                    updateComments[index] = result
+                    comments.send(updateComments)
+                } else {
+                    // Tự đông cập nhập (listener
+                }
+            } catch {
+                self.errorMessage.send(error.localizedDescription)
+            }
+        }
+    }
 }

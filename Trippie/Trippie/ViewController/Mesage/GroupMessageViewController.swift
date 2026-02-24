@@ -35,6 +35,10 @@ class GroupMessageViewController: FadeBaseViewController {
     private var interactionTimer: DispatchWorkItem?
     private var countToLoadHistory = 0
     private var trippieLoadingView = TrippieLoadingView2()
+    private var editingMessage: Comment?
+    private let editHolder = UIView()
+    private var isEditingMessage: Bool = false
+    private let cancelBtn = UIButton.customButton(image: UIImage(systemName: "xmark"), backgroundColor: .clear)
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -65,6 +69,11 @@ class GroupMessageViewController: FadeBaseViewController {
         tableView.separatorStyle = .none
         tableView.showsVerticalScrollIndicator = false
         
+        editHolder.isHidden = true
+        editHolder.backgroundColor = .black.withAlphaComponent(0.15)
+        editHolder.translatesAutoresizingMaskIntoConstraints = false
+        editHolder.addSubview(cancelBtn)
+        
         replyLabel.imageViewModel = self.imageViewModel
         beginLabel.numberOfLines = 0
         
@@ -72,6 +81,7 @@ class GroupMessageViewController: FadeBaseViewController {
         view.addSubview(replyLabel)
         view.addSubview(beginLabel)
         view.addSubview(trippieLoadingView)
+        view.addSubview(editHolder)
         
         replyLabel.translatesAutoresizingMaskIntoConstraints = false
         tableView.translatesAutoresizingMaskIntoConstraints = false
@@ -87,6 +97,14 @@ class GroupMessageViewController: FadeBaseViewController {
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: replyLabel.topAnchor),
+            
+            editHolder.topAnchor.constraint(equalTo: tableView.topAnchor),
+            editHolder.bottomAnchor.constraint(equalTo: tableView.bottomAnchor),
+            editHolder.leadingAnchor.constraint(equalTo: tableView.leadingAnchor),
+            editHolder.trailingAnchor.constraint(equalTo: tableView.trailingAnchor),
+            
+            cancelBtn.topAnchor.constraint(equalTo: editHolder.topAnchor, constant: 12),
+            cancelBtn.trailingAnchor.constraint(equalTo: editHolder.trailingAnchor, constant: -12),
             
             replyLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             replyLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor),
@@ -217,6 +235,8 @@ class GroupMessageViewController: FadeBaseViewController {
             guard let self = self else {return}
             self.didTapCancel()
         }
+        
+        cancelBtn.addTarget(self, action: #selector(didTap), for: .touchUpInside)
     }
     
     private func didTapAllImage(isVideo: Bool) {
@@ -311,6 +331,14 @@ class GroupMessageViewController: FadeBaseViewController {
         }
     }
     
+    @objc private func didTap() {
+        self.replyLabel.updateChat(chatText: "")
+        self.editingMessage = nil
+        self.isEditingMessage = false
+        self.editHolder.isHidden = true
+        self.replyLabel.activeVideoImage(isActive: true)
+    }
+    
     @objc private func handleBack() {
         self.navigationController?.popViewController(animated: true)
         self.commentViewModel.newMessagesCount.send(0)
@@ -333,6 +361,19 @@ class GroupMessageViewController: FadeBaseViewController {
     }
     
     private func didTapSend() {
+        if isEditingMessage {
+            isUserInteracting = true
+            guard let tripId = self.tripId, let comment = self.editingMessage else { return }
+            var updatedComment = comment
+            updatedComment.message = replyLabel.chat
+            
+            self.commentViewModel.editMessage(tripId: tripId, comment: updatedComment)
+            self.editHolder.isHidden = true
+            self.editingMessage = nil
+            self.isEditingMessage = false
+            self.replyLabel.activeVideoImage(isActive: true)
+            return
+        }
         isUserInteracting = false
         let message = replyLabel.chat
         let imageUrls = imageViewModel.uploadedUrls
@@ -411,7 +452,9 @@ class GroupMessageViewController: FadeBaseViewController {
                 
                 // NẾU MÀN HÌNH ĐỨNG IM: Vẽ luôn!
                 self.applyDataToTableView(newRawData)
-                
+                guard let tripId = self.tripId else { return }
+                self.commentViewModel.fetchAllImage(tripId: tripId)
+                self.commentViewModel.fetchAllVideo(tripId: tripId)
             }
             .store(in: &cancellable)
     }
@@ -604,8 +647,35 @@ extension GroupMessageViewController: UITableViewDataSource, UITableViewDelegate
             fullVC.modalTransitionStyle = .crossDissolve
             present(fullVC, animated: true)
         }
+        cell.onTapDelete = { [weak self] in
+            guard let self = self else { return }
+            self.deleteMessage(comment: item)
+            cell.hideAction()
+        }
         
+        cell.onTapEdit = { [weak self] in
+            guard let self = self else { return }
+            self.editMessage(chatText: item.message, message: item)
+            cell.hideAction()
+        }
         return cell
+    }
+    
+    private func editMessage(chatText: String, message: Comment) {
+        self.replyLabel.updateChat(chatText: chatText)
+        self.editingMessage = message
+        self.isEditingMessage = true
+        self.editHolder.isHidden = false
+        self.replyLabel.activeVideoImage(isActive: false)
+    }
+    
+    private func deleteMessage(comment: Comment) {
+        Task {
+            let alert = await confirmAlert(type: .deleteMessage, title: "")
+            if alert {
+                self.commentViewModel.deleteComment(comment: comment)
+            }
+        }
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
@@ -637,6 +707,7 @@ extension GroupMessageViewController: UITableViewDataSource, UITableViewDelegate
         
         return (isHideName, isHideAvatar)
     }
+
 }
 
 

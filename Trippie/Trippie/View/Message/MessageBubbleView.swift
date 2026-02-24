@@ -58,6 +58,7 @@ class MessageBubbleView: UIView {
         chatLabel.numberOfLines = 0
         chatLabel.lineBreakMode = .byWordWrapping
         chatLabel.translatesAutoresizingMaskIntoConstraints = false
+        chatLabel.setContentHuggingPriority(.required, for: .horizontal)
         
         bubbleWrapper.layer.cornerRadius = 16
         bubbleWrapper.clipsToBounds = true
@@ -98,6 +99,11 @@ class MessageBubbleView: UIView {
         mainStack.translatesAutoresizingMaskIntoConstraints = false
         video.translatesAutoresizingMaskIntoConstraints = false
         
+        let vWidth = video.widthAnchor.constraint(equalToConstant: 250)
+        vWidth.priority = .init(999) // Hạ từ 1000 xuống 999
+        let vHeight = video.heightAnchor.constraint(equalTo: video.widthAnchor, multiplier: 3/4)
+        vHeight.priority = .init(999)
+        
         // --- 1. GẮN CỐ ĐỊNH TRỤC DỌC ---
         NSLayoutConstraint.activate([
             avatar.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -2),
@@ -110,8 +116,8 @@ class MessageBubbleView: UIView {
             mainStack.bottomAnchor.constraint(equalTo: bubbleWrapper.topAnchor, constant: -1),
             bubbleWrapper.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -1),
             
-            video.widthAnchor.constraint(equalToConstant: 250),
-            video.heightAnchor.constraint(equalTo: video.widthAnchor, multiplier: 3/4)
+            vWidth,
+            vHeight
         ])
         
         // --- 2. CHUẨN BỊ DÂY KÉO TRỤC NGANG ĐỘC LẬP ---
@@ -127,11 +133,30 @@ class MessageBubbleView: UIView {
             mainStack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -12),
             
             bubbleWrapper.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 12),
-            bubbleWrapper.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -12)
+            bubbleWrapper.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -12),
+            
+            bubbleWrapper.widthAnchor.constraint(equalTo: chatLabel.widthAnchor, constant: 24)
         ])
         
         nameLabel.setContentCompressionResistancePriority(.required, for: .vertical)
         nameLabel.heightAnchor.constraint(greaterThanOrEqualToConstant: 14).isActive = true
+        
+        let hugLeftBubble = leadingAnchor.constraint(equalTo: bubbleWrapper.leadingAnchor, constant: -12)
+        hugLeftBubble.priority = .init(750)
+
+        let hugLeftStack = leadingAnchor.constraint(equalTo: mainStack.leadingAnchor, constant: -12)
+        hugLeftStack.priority = .init(750)
+
+        let hugRightBubble = trailingAnchor.constraint(equalTo: bubbleWrapper.trailingAnchor, constant: 12)
+        hugRightBubble.priority = .init(750)
+
+        let hugRightStack = trailingAnchor.constraint(equalTo: mainStack.trailingAnchor, constant: 12)
+        hugRightStack.priority = .init(750)
+
+        NSLayoutConstraint.activate([
+            hugLeftBubble, hugLeftStack,
+            hugRightBubble, hugRightStack
+        ])
     }
     
     func configure(comment: Comment, isHideAvatar: Bool, isHideName: Bool) {
@@ -205,6 +230,17 @@ class MessageBubbleView: UIView {
         nameLabel.isHidden = isHideName
         
         setupEmoji(comment.message.isPureEmoji, isOwner: isOwner)
+        
+        if let isDeleted = comment.isDeleted, isDeleted {
+            bubbleWrapper.backgroundColor = .clear
+            chatLabel.textColor = .systemGray
+            
+            bubbleWrapper.layer.borderWidth = 0.7
+            bubbleWrapper.layer.borderColor = UIColor.systemGray4.cgColor
+        } else {
+            bubbleWrapper.layer.borderWidth = 0.0
+            bubbleWrapper.layer.borderColor = UIColor.clear.cgColor
+        }
     }
     
     private func setupEmoji(_ isemo: Bool, isOwner: Bool) {

@@ -15,12 +15,18 @@ class MessageTableViewCell: UITableViewCell {
     // MARK: - 1. CALLBACKS (Truyền từ Cell ra ViewController)
     var onPlayVideoCallback: (() -> Void)?
     var onPreviewImagesCallback: (() -> Void)?
+    var onTapDelete: (() -> Void)?
+    var onTapEdit: (() -> Void)?
     
     // MARK: - UI COMPONENTS
     // Nhúng cái View custom của cậu vào đây
     private let bubbleView = MessageBubbleView()
     private let dateLabel = UILabel.customLabel(text: "Mon, when 12:00", font: .systemFont(ofSize: 15), textColor: .secondaryLabel)
     private let dateStack = UIStackView.customStack(axis: .horizontal, alignment: .center, distribution: .fill)
+    
+    private let actionStack = UIStackView.customStack(axis: .horizontal, alignment: .fill, distribution: .fill)
+    private let editBtn = UIButton.customButton(image: UIImage(systemName: "pencil.line"), backgroundColor: .clear,tintColor: .darkGray, padding: 5)
+    private let deleteBtn = UIButton.customButton(image: UIImage(systemName: "trash.fill"), backgroundColor: .clear, tintColor: .darkGray, padding: 5)
     
     private var bubbleLeadingConstraint: NSLayoutConstraint!
     private var bubbleTrailingConstraint: NSLayoutConstraint!
@@ -30,10 +36,15 @@ class MessageTableViewCell: UITableViewCell {
     private var dateTopConstraint: NSLayoutConstraint!
     private var dateBottomConstraint: NSLayoutConstraint!
     
+    private var isOwnerMessage: Bool = false
+    private var isDelete: Bool = false
+    
+    
     // MARK: - INIT
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
         setupCell()
+        setupAction()
     }
     
     required init?(coder: NSCoder) {
@@ -51,8 +62,13 @@ class MessageTableViewCell: UITableViewCell {
         spacer1.backgroundColor = .secondaryLabel
         spacer2.backgroundColor = .secondaryLabel
         
+        actionStack.addArrangedSubview(editBtn)
+        actionStack.addArrangedSubview(deleteBtn)
+        actionStack.isHidden = true
+        
         contentView.addSubview(bubbleView)
         contentView.addSubview(dateStack)
+        contentView.addSubview(actionStack)
         dateStack.addArrangedSubview(spacer1)
         dateStack.addArrangedSubview(dateLabel)
         dateStack.addArrangedSubview(spacer2)
@@ -65,6 +81,7 @@ class MessageTableViewCell: UITableViewCell {
                 
         dateTopConstraint = dateStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 6)
         dateBottomConstraint = dateStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -6)
+        
         NSLayoutConstraint.activate([
             
             bubbleView.widthAnchor.constraint(lessThanOrEqualTo: contentView.widthAnchor, multiplier: 0.75),
@@ -75,6 +92,9 @@ class MessageTableViewCell: UITableViewCell {
             spacer1.widthAnchor.constraint(equalTo: spacer2.widthAnchor),
             spacer1.heightAnchor.constraint(equalToConstant: 0.5),
             spacer2.heightAnchor.constraint(equalToConstant: 0.5),
+            
+            actionStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            actionStack.trailingAnchor.constraint(equalTo: bubbleView.leadingAnchor),
         ])
         
         // MARK: - 2. ACTION BINDING (Quan trọng nhất)
@@ -87,6 +107,17 @@ class MessageTableViewCell: UITableViewCell {
         bubbleView.onImageTapped = { [weak self] in
             self?.onPreviewImagesCallback?()
         }
+        
+        // 1. Khai báo Nhấn giữ (Long Press) để HIỆN menu
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        longPress.minimumPressDuration = 0.5
+        longPress.cancelsTouchesInView = false // Không nuốt sự kiện của nút Play/Ảnh
+        contentView.addGestureRecognizer(longPress)
+        
+        // 2. Khai báo Nhấn nhả (Tap) để ẨN menu
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
+        tap.cancelsTouchesInView = false // Cực kỳ quan trọng để không chặn các nút bên dưới
+        contentView.addGestureRecognizer(tap)
     }
     
     // MARK: - CONFIGURE
@@ -95,7 +126,11 @@ class MessageTableViewCell: UITableViewCell {
             return
         }
         let isOwner = id == comment.userId
+        if let isDeleted = comment.isDeleted {
+            self.isDelete = isDeleted
+        }
         let hideName = isOwner ? true : isHideName
+        self.isOwnerMessage = isOwner
         bubbleView.configure(comment: comment, isHideAvatar: isHideAvatar, isHideName: hideName)
         
         NSLayoutConstraint.deactivate([
@@ -163,7 +198,47 @@ class MessageTableViewCell: UITableViewCell {
         onPreviewImagesCallback = nil
         bubbleView.isHidden = false
         dateStack.isHidden = true
-        
+        actionStack.isHidden = true
         bubbleView.resetState()
+    }
+    
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        // Chỉ hiện menu nếu người dùng đang giữ tay VÀ đây là tin nhắn của họ
+        if gesture.state == .began && self.isOwnerMessage && !isDelete {
+            actionStack.isHidden = false
+            let generator = UIImpactFeedbackGenerator(style: .medium)
+            generator.impactOccurred()
+        }
+    }
+
+    @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
+        // 1. Lấy vị trí ngón tay chạm vào màn hình
+        let location = gesture.location(in: contentView)
+        
+        // 2. Nếu Menu đang hiện VÀ ngón tay KHÔNG chạm trúng vùng của actionStack
+        // (Phải check vùng chạm để không lỡ "nuốt" mất cú bấm vào nút Edit/Delete)
+        if !actionStack.isHidden && !actionStack.frame.contains(location) {
+            actionStack.isHidden = true
+        }
+    }
+    
+    private func setupAction() {
+        editBtn.addTarget(self, action: #selector(onTappedEdit), for: .touchUpInside)
+        deleteBtn.addTarget(self, action: #selector(onTappedDelete), for: .touchUpInside)
+    }
+    
+    @objc private func onTappedEdit() {
+        self.onTapEdit?()
+        actionStack.isHidden = true
+    }
+    
+    @objc private func onTappedDelete() {
+        self.onTapDelete?()
+        actionStack.isHidden = true
+    }
+    
+    //Using out side
+    func hideAction() {
+        actionStack.isHidden = true
     }
 }

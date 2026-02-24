@@ -272,4 +272,14 @@ class RepplyComponentView: UIView {
             }
             .store(in: &cancellable)
     }
+    
+    func updateChat(chatText: String) {
+        self.chatBox.text = chatText
+    }
+    
+    func activeVideoImage(isActive: Bool) {
+        self.attackmentImageBtn.isEnabled = isActive
+        self.attackmentVideoBtn.isEnabled = isActive
+        self.attackmentTakePhoto.isEnabled = isActive
+    }
 }

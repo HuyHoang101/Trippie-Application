@@ -212,15 +212,14 @@ class MyTripViewController: FadeBaseViewController {
             return isActive && isRoleMatch
         })
         let myTrips = Array(viewModel.myTrips.value.filter {
-            $0.participation?.personalStatus == PersonalStatus.cancel &&
-            $0.participation?.personalStatus == PersonalStatus.completed &&
-            $0.participation?.role == UserRole.owner &&
+            ($0.participation?.personalStatus == .cancel || $0.participation?.personalStatus == .completed) &&
+            $0.participation?.role == .owner &&
             $0.trip.status == .completed
         })
+
         let joinTrips = Array(viewModel.myTrips.value.filter {
-            $0.participation?.personalStatus == PersonalStatus.cancel &&
-            $0.participation?.personalStatus == PersonalStatus.completed &&
-            $0.participation?.role == UserRole.member
+            ($0.participation?.personalStatus == .cancel || $0.participation?.personalStatus == .completed) &&
+            $0.participation?.role == .member
         })
         
         hstack.arrangedSubviews.forEach{ $0.removeFromSuperview() }
@@ -282,15 +281,78 @@ class MyTripViewController: FadeBaseViewController {
                 card.didTapCard = { [weak self] in
                     self?.pushToDetail(tripId: t.id)
                 }
+                
+                card.didTapStatus = { [weak self] in
+                    guard let part = t.participation else { return }
+                    self?.openUpdateStatus(part)
+                }
             }
         }
         
-        var count = 0
         
-        if myTrips.count == 0 {
-            viewAllButton2.isHidden = true
-            label2.isHidden = true
-            hstack2.isHidden = true
+        let hasMyTrips = !myTrips.isEmpty
+        let hasJoinTrips = !joinTrips.isEmpty
+        
+        // --- XỬ LÝ MY TRIPS ---
+        if hasMyTrips {
+            hstack5.isHidden = false     // Hiện thanh tiêu đề "My Trips"
+            subscroll2.isHidden = false  // Hiện thanh cuộn
+            
+            let trip = myTrips.prefix(5)
+            trip.forEach { t in
+                let card = TripCardView()
+                card.configure(mytrip: t)
+                hstack2.addArrangedSubview(card)
+                card.translatesAutoresizingMaskIntoConstraints = false
+                card.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.6).isActive = true
+                card.heightAnchor.constraint(equalTo: card.widthAnchor, multiplier: 0.8).isActive = true
+                
+                card.didTapCard = { [weak self] in
+                    self?.pushToDetail(tripId: t.id)
+                }
+                card.didTapStatus = { [weak self] in
+                    guard let part = t.participation else { return }
+                    self?.openUpdateStatus(part)
+                }
+            }
+        } else {
+            // Ẩn toàn bộ để UIStackView (maincontent) tự động thu gọn khoảng trống
+            hstack5.isHidden = true
+            subscroll2.isHidden = true
+        }
+        
+        // --- XỬ LÝ JOINED TRIPS ---
+        if hasJoinTrips {
+            hstack6.isHidden = false     // Hiện thanh tiêu đề "Joined Trips"
+            subscroll3.isHidden = false  // Hiện thanh cuộn
+            
+            let trip = joinTrips.prefix(5)
+            trip.forEach { t in
+                let card = TripCardView()
+                card.configure(mytrip: t)
+                hstack3.addArrangedSubview(card)
+                card.translatesAutoresizingMaskIntoConstraints = false
+                card.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.6).isActive = true
+                card.heightAnchor.constraint(equalTo: card.widthAnchor, multiplier: 0.8).isActive = true
+                
+                card.didTapCard = { [weak self] in
+                    self?.pushToDetail(tripId: t.id)
+                }
+                card.didTapStatus = { [weak self] in
+                    guard let part = t.participation else { return }
+                    self?.openUpdateStatus(part)
+                }
+            }
+        } else {
+            // Ẩn toàn bộ
+            hstack6.isHidden = true
+            subscroll3.isHidden = true
+        }
+        
+        // --- XỬ LÝ EMPTY STATE (Cả My Trips và Joined Trips đều rỗng) ---
+        if !hasMyTrips && !hasJoinTrips {
+            subscroll2.isHidden = false // Mở lại subscroll2 để chứa empty card
+            
             let emptyCard = UIView()
             hstack2.addArrangedSubview(emptyCard)
             emptyCard.layer.cornerRadius = 12
@@ -308,54 +370,7 @@ class MyTripViewController: FadeBaseViewController {
             
             self.view.layoutIfNeeded()
             emptyCard.addDashedBorder()
-        } else {
-            count += 1
-            label2.isHidden = false
-            hstack2.isHidden = false
-            viewAllButton2.isHidden = false
-            let trip = myTrips.prefix(5)
-            trip.forEach { t in
-                let card = TripCardView()
-                card.configure(mytrip: t)
-                hstack2.addArrangedSubview(card)
-                card.translatesAutoresizingMaskIntoConstraints = false
-                card.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.6).isActive = true
-                card.heightAnchor.constraint(equalTo: card.widthAnchor, multiplier: 0.8).isActive = true
-                
-                card.didTapCard = { [weak self] in
-                    self?.pushToDetail(tripId: t.id)
-                }
-            }
         }
-        
-        if joinTrips.count == 0 {
-            hstack3.isHidden = true
-            label3.isHidden = true
-            viewAllButton3.isHidden = true
-        } else {
-            count += 1
-            label3.isHidden = false
-            hstack3.isHidden = false
-            viewAllButton3.isHidden = false
-            let trip = joinTrips.prefix(5)
-            trip.forEach { t in
-                let card = TripCardView()
-                card.configure(mytrip: t)
-                hstack3.addArrangedSubview(card)
-                card.translatesAutoresizingMaskIntoConstraints = false
-                card.widthAnchor.constraint(equalTo: view.widthAnchor, multiplier: 0.6).isActive = true
-                card.heightAnchor.constraint(equalTo: card.widthAnchor, multiplier: 0.8).isActive = true
-                
-                card.didTapCard = { [weak self] in
-                    self?.pushToDetail(tripId: t.id)
-                }
-            }
-        }
-        
-        if count == 0 {
-            hstack2.isHidden = false
-        }
-        
     }
     
     private func setupNavBar() {
@@ -418,16 +433,15 @@ class MyTripViewController: FadeBaseViewController {
         case viewAllButton2:
             listVC.navigationTitle = "My Trips"
             listVC.myTrip = viewModel.myTrips.value.filter {
-                $0.participation?.personalStatus == .completed &&
-                $0.participation?.personalStatus == .cancel &&
+                ($0.participation?.personalStatus == .completed || $0.participation?.personalStatus == .cancel) &&
                 $0.participation?.role == .owner &&
                 $0.trip.status == .completed
             }
         case viewAllButton3:
             listVC.navigationTitle = "Joined Trips"
+            // Sửa lại cho đồng bộ với logic ở render()
             listVC.myTrip = viewModel.myTrips.value.filter {
-                $0.participation?.personalStatus != .completed &&
-                $0.participation?.personalStatus != .cancel &&
+                ($0.participation?.personalStatus == .completed || $0.participation?.personalStatus == .cancel) &&
                 $0.participation?.role == .member
             }
         default:
@@ -440,6 +454,16 @@ class MyTripViewController: FadeBaseViewController {
         }
         navigationController?.pushViewController(listVC, animated: true)
     }
+    
+    private func openUpdateStatus(_ currentUserParticipation: Participation) {
+        let modalVC = StatusModalViewController()
+        modalVC.participation = currentUserParticipation // Chuyền cái struct Participation vào đây
+        modalVC.modalPresentationStyle = .overFullScreen // Cực kỳ quan trọng để nền đen mờ hiển thị đúng
+        modalVC.modalTransitionStyle = .crossDissolve
+
+        self.present(modalVC, animated: false)
+    }
+    
     
     @objc private func handleAdd() {
         let formVC = HandSaveTrip()

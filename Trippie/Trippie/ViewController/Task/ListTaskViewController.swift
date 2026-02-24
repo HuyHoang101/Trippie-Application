@@ -59,6 +59,9 @@ class ListTaskViewController: FadeBaseViewController {
         return v
     }()
     
+    private let messageBtn = UIButton.customButton(image: UIImage(systemName: "message.fill"), backgroundColor: (UIColor.authBackground2.withAlphaComponent(0.5)))
+    private let messageWrapper = UIView()
+    
     private let ruleLabel = UILabel.customLabel(text: "Rule: Wellcome to our communication! Please be courteous with everyone. I will kick the spammers. Also this is place we will go :)", font: .systemFont(ofSize: 13), textColor: .label)
     private let ruleAuthor = UILabel.customLabel(text: "By Unknown User", font: .systemFont(ofSize: 12), textColor: .label)
     
@@ -67,7 +70,7 @@ class ListTaskViewController: FadeBaseViewController {
     private let backBtn = UIButton.customButton(image: UIImage(systemName: "arrow.left"), backgroundColor: UIColor(named: "AuthBackground2")?.withAlphaComponent(0.5) ?? .systemGray.withAlphaComponent(0.5))
     private let multipleChoice = UIButton.customButton(image: UIImage(systemName: "ellipsis"), backgroundColor: (UIColor.authBackground2.withAlphaComponent(0.5)))
     
-    private let countLabel = UILabel.customLabel(text: "0", font: .systemFont(ofSize: 13), textColor: .white)
+    private let countLabel = UILabel.customLabel(text: "0", font: .systemFont(ofSize: 9, weight: .medium), textColor: .white)
     private let containerUI = UIView()
     private let commentViewModel = CommentViewModel()
     
@@ -113,7 +116,8 @@ class ListTaskViewController: FadeBaseViewController {
         view.addSubview(tableView)
         ruleContainer.addSubview(ruleLabel)
         ruleContainer.addSubview(ruleAuthor)
-        ruleContainer.addSubview(containerUI)
+        messageWrapper.addSubview(messageBtn)
+        messageWrapper.addSubview(containerUI)
         containerUI.translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
@@ -122,10 +126,21 @@ class ListTaskViewController: FadeBaseViewController {
             ruleContainer.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
             ruleContainer.bottomAnchor.constraint(equalTo: tableView.topAnchor, constant: -10),
             
-            containerUI.centerXAnchor.constraint(equalTo: ruleContainer.trailingAnchor),
-            containerUI.centerYAnchor.constraint(equalTo: ruleContainer.topAnchor),
-            containerUI.widthAnchor.constraint(equalToConstant: 32),
-            containerUI.heightAnchor.constraint(equalToConstant: 32),
+            // ✅ 1. Ép cứng kích thước Wrapper an toàn tuyệt đối với Navigation Bar
+            messageWrapper.widthAnchor.constraint(equalToConstant: 43),
+            messageWrapper.heightAnchor.constraint(equalToConstant: 43),
+
+            // ✅ 2. Neo nút xanh vào góc Dưới-Trái của Wrapper
+            messageBtn.leadingAnchor.constraint(equalTo: messageWrapper.leadingAnchor, constant: 3),
+            messageBtn.bottomAnchor.constraint(equalTo: messageWrapper.bottomAnchor, constant: -3),
+            messageBtn.widthAnchor.constraint(equalToConstant: 36), // Nhỏ lại xíu để nhường chỗ
+            messageBtn.heightAnchor.constraint(equalToConstant: 36),
+
+            // ✅ 3. Neo cục đỏ vào góc Trên-Phải của Wrapper
+            containerUI.trailingAnchor.constraint(equalTo: messageWrapper.trailingAnchor),
+            containerUI.topAnchor.constraint(equalTo: messageWrapper.topAnchor),
+            containerUI.widthAnchor.constraint(equalToConstant: 18),
+            containerUI.heightAnchor.constraint(equalToConstant: 18),
             
             countLabel.centerXAnchor.constraint(equalTo: containerUI.centerXAnchor),
             countLabel.centerYAnchor.constraint(equalTo: containerUI.centerYAnchor),
@@ -176,9 +191,10 @@ class ListTaskViewController: FadeBaseViewController {
         
         let leftItem = UIBarButtonItem(customView: backBtn)
         let rightItem = UIBarButtonItem(customView: menuBtn)
+        let rightItem2 = UIBarButtonItem(customView: messageWrapper)
         
         self.navigationItem.leftBarButtonItem = leftItem
-        self.navigationItem.rightBarButtonItem = rightItem
+        self.navigationItem.rightBarButtonItems = [rightItem, rightItem2]
         
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
@@ -202,7 +218,7 @@ class ListTaskViewController: FadeBaseViewController {
         ChatStateManager.shared.startListening(tripId: id)
         containerUI.isHidden = true
         containerUI.backgroundColor = .systemRed
-        containerUI.layer.cornerRadius = 16
+        containerUI.layer.cornerRadius = 9
         self.tripWithStatus = trip
         
         ruleAuthor.text = "By \(trip.trip.ownerName)"
@@ -241,9 +257,7 @@ class ListTaskViewController: FadeBaseViewController {
     
     //MARK: - SETUP ACTION
     private func setupAction() {
-        let tap = UITapGestureRecognizer(target: self, action: #selector(didTapView))
-        ruleContainer.addGestureRecognizer(tap)
-        ruleContainer.isUserInteractionEnabled = true
+        messageBtn.addTarget(self, action: #selector(didTapView), for: .touchUpInside)
     }
     
     @objc private func handleBack() {

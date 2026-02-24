@@ -10,6 +10,7 @@ import UIKit
 class TripCardView: UIView {
     
     var didTapCard: (() -> Void)?
+    var didTapStatus: (() -> Void)?
     
     // MARK: - Components
     
@@ -121,10 +122,20 @@ class TripCardView: UIView {
         let tap = UITapGestureRecognizer(target: self, action: #selector(handleTap))
         self.addGestureRecognizer(tap)
         self.isUserInteractionEnabled = true
+        
+        let tap2 = UITapGestureRecognizer(target: self, action: #selector(handleTap2))
+        statusBadge.addGestureRecognizer(tap2)
+        statusBadge.isUserInteractionEnabled = true
+        
+        tap.require(toFail: tap2)
     }
     
     @objc private func handleTap() {
         didTapCard?() // Khi chạm vào thì gọi closure
+    }
+    
+    @objc private func handleTap2() {
+        didTapStatus?() // Khi chạm vào thì gọi closure
     }
     
     // MARK: - Data Configuration

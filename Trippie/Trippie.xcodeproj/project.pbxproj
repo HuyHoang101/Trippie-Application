@@ -178,8 +178,6 @@
 				9CD08D112F4C4DE10001B66E /* TrippieNotificationService */,
 			);
 			name = TrippieNotificationService;
-			packageProductDependencies = (
-			);
 			productName = TrippieNotificationService;
 			productReference = 9CD08D102F4C4DE10001B66E /* TrippieNotificationService.appex */;
 			productType = "com.apple.product-type.app-extension";

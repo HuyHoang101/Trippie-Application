@@ -9,11 +9,20 @@ enum UserRole: String, Codable {
     case member, owner
 }
 
-enum PersonalStatus: String, Codable {
+enum PersonalStatus: String, Codable, CaseIterable {
     case upcoming
     case onGoing = "on_going"
     case completed
     case cancel
+    
+    var displayName: String {
+        switch self {
+        case .upcoming: return "Upcoming"
+        case .onGoing: return "On Going"
+        case .completed: return "Completed"
+        case .cancel: return "Cancel"
+        }
+    }
 }
 
 enum TripType: String, Codable {

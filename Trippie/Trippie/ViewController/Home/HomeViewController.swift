@@ -364,7 +364,7 @@ class HomeViewController: FadeBaseViewController {
         switch sender {
         case viewAllButton:
             listVC.navigationTitle = titleLabel1.text
-            listVC.trip = viewModel.tripForFilter
+            listVC.trip = Array(viewModel.tripForFilter.prefix(6))
         default:
             listVC.navigationTitle = "All Trips"
             listVC.trip = viewModel.trips.value

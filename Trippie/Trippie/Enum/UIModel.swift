@@ -27,6 +27,7 @@ enum InputStyle {
 enum ConfirmActionType {
     case deleteTrip
     case delete
+    case deleteMessage
     case cancel
     case cancelTaskEdit
     case cancelTaskDelete
@@ -44,7 +45,7 @@ enum ConfirmActionType {
         case .leave, .deleteTrip, .delete, .kick, .deny, .unfollow, .remove : return #colorLiteral(red: 0.9254902005, green: 0.2352941185, blue: 0.1019607857, alpha: 1)
         case .cancel, .cancelTaskEdit, .cancelTaskDelete: return #colorLiteral(red: 0.9529411793, green: 0.5595523814, blue: 0.2865278571, alpha: 1)
         case .add: return UIColor.button
-        case .follow: return UIColor.authBackground2
+        case .deleteMessage, .follow: return UIColor.authBackground2
         case .clear: return #colorLiteral(red: 0.4666666687, green: 0.7647058964, blue: 0.2666666806, alpha: 1)
         }
     }
@@ -52,6 +53,7 @@ enum ConfirmActionType {
     var iconName: String {
         switch self {
         case .deleteTrip: return "trash.fill"
+        case .deleteMessage: return "arrow.down.message"
         case .delete: return "trash.fill"
         case .cancel: return "xmark.circle.fill"
         case .cancelTaskDelete: return "arrow.uturn.backward"
@@ -69,6 +71,7 @@ enum ConfirmActionType {
     
     var verb: String {
         switch self {
+        case .deleteMessage: return "recall a message for both sides?"
         case .deleteTrip: return "delete this Trip?"
         case .delete: return "delete"
         case .cancel: return "cancel"

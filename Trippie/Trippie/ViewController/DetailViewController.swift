@@ -223,47 +223,43 @@ class DetailViewController: FadeBaseViewController {
             }
         }
         var dropDownMenus: [DropdownItem] = []
-        
-        if id == trip.ownerId  && !(isFeedBoard ?? true){
-            dropDownMenus.append(DropdownItem(title: "All images", icon: "photo.on.rectangle.angled", type: .normal) { [weak self] in
-                guard let self = self else { return }
-                self.pushToAllImage(isOwner: true)
-            })
+
+        let isOwnerMode = (id == trip.ownerId) && (isFeedBoard == false)
+        let isNotFeed = (isFeedBoard == false)
+
+        if isOwnerMode {
+            dropDownMenus.append(DropdownItem(title: "All images", icon: "photo.on.rectangle.angled", type: .normal) { [weak self] in self?.pushToAllImage(isOwner: true) })
+            
             if trip.status != .completed {
-                dropDownMenus.append(DropdownItem(title: "Remove from Feed", icon: "arrow.down.document", type: .normal) { [weak self] in
-                    guard let self = self else { return }
-                    Task {
-                        await self.didTapRemoveFormFeed()
-                    }
+                dropDownMenus.append(DropdownItem(title: "Remove from Feed", icon: "arrow.down.document", type: .normal) { [weak self] in Task { await self?.didTapRemoveFormFeed() } })
+            }
+            
+            dropDownMenus.append(DropdownItem(title: "Edit Trip", icon: "pencil.line", type: .normal) { [weak self] in self?.pushToHandSaveTrip() })
+            dropDownMenus.append(DropdownItem(title: "Members Joined", icon: "person.2.badge.gearshape", type: .normal) { [weak self] in self?.pushToMembers(isOwner: true) })
+            dropDownMenus.append(DropdownItem(title: "Pending Requests", icon: "person.checkmark.and.xmark", type: .normal) { [weak self] in self?.pushToPendingRequests() })
+            dropDownMenus.append(DropdownItem(title: "Delete the trip", icon: "trash", type: .destructive) { [weak self] in Task { await self?.didTapDeleteTheTrip() } })
+            
+            if trip.status == .completed {
+                dropDownMenus.append(DropdownItem(title: "Update trip status", icon: "person.fill.questionmark", type: .normal) { [weak self] in
+                    guard let self, let part = self.participation else { return }
+                    self.openUpdateStatus(part)
                 })
             }
-            dropDownMenus.append(DropdownItem(title: "Edit Trip", icon: "pencil.line", type: .normal) { [weak self] in
-                guard let self = self else { return }
-                self.pushToHandSaveTrip()
-            })
-            dropDownMenus.append(DropdownItem(title: "Members Joined", icon: "person.2.badge.gearshape", type: .normal) { [weak self] in
-                guard let self = self else { return }
-                self.pushToMembers(isOwner: true)
-            })
-            dropDownMenus.append(DropdownItem(title: "Pending Requests", icon: "person.checkmark.and.xmark", type: .normal) { [weak self] in
-                guard let self = self else { return }
-                self.pushToPendingRequests()
-            })
-            dropDownMenus.append(DropdownItem(title: "Delete the trip", icon: "trash", type: .destructive) { [weak self] in
-                guard let self = self else { return }
-                Task {
-                    await self.didTapDeleteTheTrip()
-                }
-            })
         } else {
-            dropDownMenus.append(DropdownItem(title: "All images", icon: "photo.on.rectangle.angled", type: .normal) { [weak self] in
-                guard let self = self else { return }
-                self.pushToAllImage(isOwner: false)
-            })
-            dropDownMenus.append(DropdownItem(title: "Members Joined", icon: "person.3.sequence", type: .normal) { [weak self] in
-                guard let self = self else { return }
-                self.pushToMembers(isOwner: false)
-            })
+            dropDownMenus.append(DropdownItem(title: "All images", icon: "photo.on.rectangle.angled", type: .normal) { [weak self] in self?.pushToAllImage(isOwner: false) })
+            dropDownMenus.append(DropdownItem(title: "Members Joined", icon: "person.3.sequence", type: .normal) { [weak self] in self?.pushToMembers(isOwner: false) })
+            
+            if isNotFeed {
+                dropDownMenus.append(DropdownItem(title: "Leave Trips", icon: "figure.walk.departure", type: .destructive) { [weak self] in
+                    guard let self, let trip = self.tripDetailWithStatus?.trip else { return }
+                    Task { await self.doLeaveTrip(trip: trip) }
+                })
+                
+                dropDownMenus.append(DropdownItem(title: "Update trip status", icon: "person.fill.questionmark", type: .normal) { [weak self] in
+                    guard let self, let part = self.participation else { return }
+                    self.openUpdateStatus(part)
+                })
+            }
         }
         self.menuBtn.items = dropDownMenus
     }
@@ -294,6 +290,16 @@ class DetailViewController: FadeBaseViewController {
         planBtn.addTarget(self, action: #selector(pushToTask), for: .touchUpInside)
         applyButton.addTarget(self, action: #selector(appliedAction), for: .touchUpInside)
     }
+    
+    private func openUpdateStatus(_ currentUserParticipation: Participation) {
+        let modalVC = StatusModalViewController()
+        modalVC.participation = currentUserParticipation // Chuyền cái struct Participation vào đây
+        modalVC.modalPresentationStyle = .overFullScreen // Cực kỳ quan trọng để nền đen mờ hiển thị đúng
+        modalVC.modalTransitionStyle = .crossDissolve
+
+        self.present(modalVC, animated: false)
+    }
+    
     
     @objc private func handleBack() {
         navigationController?.popViewController(animated: true)
