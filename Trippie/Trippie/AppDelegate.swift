@@ -10,6 +10,7 @@ import FirebaseCore
 import FirebaseMessaging
 import FacebookCore
 import FBSDKCoreKit
+import IQKeyboardManagerSwift
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate, MessagingDelegate {
@@ -21,6 +22,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         
         UNUserNotificationCenter.current().delegate = self
         Messaging.messaging().delegate = self
+        
+        // 2. Bật IQKeyboardManager cho toàn bộ app
+        IQKeyboardManager.shared.isEnabled = true
+        
+        // 3. Tự động đóng bàn phím khi chạm ra ngoài UI (đây chính là cái cậu cần :v)
+        IQKeyboardManager.shared.resignOnTouchOutside = true
         
         return true
     }

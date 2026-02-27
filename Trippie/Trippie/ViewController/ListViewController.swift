@@ -147,9 +147,11 @@ class ListViewController: FadeBaseViewController {
             tripViewModel2.normalTrips
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] newTrips in
-                    let searchText = self?.tripViewModel2.searchText.value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    guard let self = self else { return }
+                    let searchText = self.tripViewModel2.searchText.value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                     if searchText.isEmpty {
-                        self?.appendFeedData(newRawTrips: newTrips)
+                        self.appendFeedData(newRawTrips: newTrips)
+                        self.title = "Result: \(self.tripViewModel2.totalResultCount.value)"
                     }
                 }
                 .store(in: &cancellable)
@@ -157,9 +159,11 @@ class ListViewController: FadeBaseViewController {
             tripViewModel2.searchTrips
                 .receive(on: DispatchQueue.main)
                 .sink { [weak self] newTrips in
-                    let searchText = self?.tripViewModel2.searchText.value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    guard let self = self else { return }
+                    let searchText = self.tripViewModel2.searchText.value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                     if !searchText.isEmpty {
-                        self?.appendFeedData(newRawTrips: newTrips)
+                        self.appendFeedData(newRawTrips: newTrips)
+                        self.title = "Result: \(self.tripViewModel2.totalResultCount.value)"
                     }
                 }
                 .store(in: &cancellable)
