@@ -20,8 +20,14 @@
 * **Post-Trip Reviews:** Rate your teammates after completing a journey together.
 
 ## 🛠 Tech Stack (Upcoming)
-* **Platform:** iOS (Swift/UIKit)       (Completed 1 month 7 days)
-                android (React Native)  (In Process)
+### 📱 Platforms
+
+* **iOS** ![Swift](https://img.shields.io/badge/Swift-F05138?style=flat&logo=swift&logoColor=white) ![UIKit](https://img.shields.io/badge/UIKit-007AFF?style=flat&logo=apple&logoColor=white)
+    * **Status:** `✅ Completed`
+    * **Duration:** `1 Month 7 Days`
+* **Android** ![React Native](https://img.shields.io/badge/React_Native-61DAFB?style=flat&logo=react&logoColor=black)
+    * **Status:** `🏗️ In Progress`
+    
 * **Backend:** Firebase (Real-time updates & Authentication)
 
 ---
