@@ -78,13 +78,14 @@
   <img src="https://github.com/user-attachments/assets/1533023a-a508-48b4-9573-d02e78f201e0" width="22%" />
 </p>
 
-* **Chat (Private group message):** <p float="left">
+* **Chat (Private group message):** 
+<p float="left">
   <img src="https://github.com/user-attachments/assets/699aea0e-9087-4ed1-aa19-5303441caadd" width="22%" />
   <img src="https://github.com/user-attachments/assets/08cb061f-bb5a-4142-ad37-5323e5df2b68" width="22%" />
   <img src="https://github.com/user-attachments/assets/059d6591-89c1-4a43-ac31-024d95b627b7" width="22%" />
-<img src="https://github.com/user-attachments/assets/90524813-b6bd-47c1-a0b4-263c933fcfdc" width="22%" />
-
+  <img src="https://github.com/user-attachments/assets/90524813-b6bd-47c1-a0b4-263c933fcfdc" width="22%" />
 </p>
+
 <p float="left">
   <img src="https://github.com/user-attachments/assets/9a2606ec-377a-4b14-ad76-54271714f478" width="22%" />
 </p>
