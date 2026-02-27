@@ -20,8 +20,74 @@
 * **Post-Trip Reviews:** Rate your teammates after completing a journey together.
 
 ## 🛠 Tech Stack (Upcoming)
-* **Platform:** iOS (Swift/UIKit) & android (React Native) 
+* **Platform:** iOS (Swift/UIKit)       (Completed 1 month 7 days)
+                android (React Native)  (In Process)
 * **Backend:** Firebase (Real-time updates & Authentication)
 
 ---
-*Note: This project is under active development. Photos and Demo Videos are coming soon!*
+# Feature (iOS)
+
+* **Authentication:** Users can sign in using Google, Facebook, or a standard Email and Password.
+
+<p float="left">
+  <img src="https://github.com/user-attachments/assets/baef9f9f-ca01-456d-b94e-cf563f57249a" width="22%" />
+  <img src="https://github.com/user-attachments/assets/3fec9804-db7b-4061-a652-eacb08954a8a" width="22%" />
+  <img src="https://github.com/user-attachments/assets/d5df0f4b-7228-4faa-a60f-ac0c42f65747" width="22%" />
+</p>
+
+* **FeedBoard (Explore):** "Feed board" where everyone can see and ask to join. Paired with Search and Filter tools, it is super easy for users to reach the perfect trip they need.
+
+<p float="left">
+  <img src="https://github.com/user-attachments/assets/71edad79-f2dc-4912-8869-6e9532a2acde" width="22%" />
+  <img src="https://github.com/user-attachments/assets/26106654-e1cc-4214-9493-eb4ace5cec7e" width="22%" />
+  <img src="https://github.com/user-attachments/assets/bd085934-72b1-4a38-859e-bbe6ca65217d" width="22%" />
+  <img src="https://github.com/user-attachments/assets/0d1eb1ec-653f-405a-99d9-441d96173969" width="22%" />
+</p>
+
+* **Trip Management (with Image Management):** control to easily create, edit, delete, or update the status of any our own trip.
+
+<p float="left">
+  <img src="https://github.com/user-attachments/assets/c3005763-e5e9-4ae1-a786-9175dab7a59b" width="22%" />
+  <img src="https://github.com/user-attachments/assets/e7cdc3b3-2162-44a9-8176-bb160c3b03af" width="22%" />
+  <img src="https://github.com/user-attachments/assets/11fb0ecc-6bfa-4896-a820-a8fce6609574" width="22%" />
+  <img src="https://github.com/user-attachments/assets/ca0bb585-e141-40b3-a52d-53eff3cabbda" width="22%" />
+</p>
+<p float="left">
+  <img src="https://github.com/user-attachments/assets/87551702-575a-4d5c-ae17-369ef8b60080" width="22%" />
+  <img src="https://github.com/user-attachments/assets/93135911-1e29-4590-a204-52c0d4d8d964" width="22%" />
+  <img src="https://github.com/user-attachments/assets/3f6eaf3e-13e9-4deb-b6e0-05ff09e42d6e" width="22%" />
+  <img src="https://github.com/user-attachments/assets/ea485658-1087-4e8e-8eb1-87750fe6e2f6" width="22%" />
+</p>
+<p float="left">
+  <img src="https://github.com/user-attachments/assets/17367281-7462-4f3b-b911-39aeebf5d700" width="22%" />
+  <img src="https://github.com/user-attachments/assets/9e8e31cb-0e46-475f-b65f-e4554dd38426" width="22%" />
+</p>
+
+* **Plan (Schedule Tasks):** build task lists and schedules in a clean pop-up view. Everything syncs in real-time, so if someone changes a plan, everyone else sees it instantly.
+
+<p float="left">
+  <img src="https://github.com/user-attachments/assets/0d608d10-5a42-4d39-a7b7-f5a38f6fe630" width="22%" />
+  <img src="https://github.com/user-attachments/assets/147fb811-2dcf-4f85-9818-3a4ff790c789" width="22%" />
+  <img src="https://github.com/user-attachments/assets/94aa75cd-03a9-4e53-a1f9-197605468f41" width="22%" />
+  <img src="https://github.com/user-attachments/assets/1533023a-a508-48b4-9573-d02e78f201e0" width="22%" />
+</p>
+
+* **Chat (Private group message):** <p float="left">
+  <img src="https://github.com/user-attachments/assets/699aea0e-9087-4ed1-aa19-5303441caadd" width="22%" />
+  <img src="https://github.com/user-attachments/assets/08cb061f-bb5a-4142-ad37-5323e5df2b68" width="22%" />
+  <img src="https://github.com/user-attachments/assets/059d6591-89c1-4a43-ac31-024d95b627b7" width="22%" />
+  <img src="https://github.com/user-attachments/assets/774059ca-9087-497a-99d9-441d96173969" width="22%" />
+</p>
+<p float="left">
+  <img src="https://github.com/user-attachments/assets/9a2606ec-377a-4b14-ad76-54271714f478" width="22%" />
+</p>
+
+* **Profile:** <p float="left">
+  <img src="https://github.com/user-attachments/assets/f7557d6d-f67b-4487-a75b-34a247b478e9" width="22%" />
+  <img src="https://github.com/user-attachments/assets/f7808f17-f0af-4065-a700-8f4aabbed685" width="22%" />
+  <img src="https://github.com/user-attachments/assets/53ae363d-0eb1-46b9-bf93-1fb5a6de5049" width="22%" />
+</p>
+
+
+
+
