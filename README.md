@@ -31,6 +31,48 @@
 * **Backend:** Firebase (Real-time updates & Authentication)
 
 ---
+
+
+## Demo Videos
+Below is a series of short demo videos showcasing the core features and functionalities of the app.
+
+**1. Authentication** Secure login utilizing standard Email, Google, or Facebook accounts.  
+▶️ [Watch Video 1](https://drive.google.com/file/d/1MtxYKCbdbX1U_7bK4S8JZjEC7JnvM6Cq/view?usp=sharing)
+
+**2. Public Feed Board** Explore shared trips via a paginated public list.  
+▶️ [Watch Video 2](https://drive.google.com/file/d/1-Jm46fdClWG4Xwiv4SoFHzIItoLo_JWC/view?usp=sharing)
+
+**3. Search & Filter** Intuitive tools to easily discover and sort specific trips.  
+▶️ [Watch Video 3](https://drive.google.com/file/d/1rxoehByP1uBvk182n-tuikc_9B2vCuzW/view?usp=sharing)
+
+**4. Trip Creation** Create and publish trips to the feed, with the flexibility to remove them from public view at any time.  
+▶️ [Watch Video 4](https://drive.google.com/file/d/11WTdP9mXBsQ_0Ht-pVMvqCBAUv0SgjhW/view?usp=sharing)
+
+**5. Trip Management** Edit trip information and manage image galleries (add or delete photos).  
+▶️ [Watch Video 5](https://drive.google.com/file/d/1IiXQVGIOqNWhxuupNnkI5zVd4A4fsE3f/view?usp=sharing)
+
+**6. Personal Status** Update your individual status for easy schedule management without affecting other trip members.  
+▶️ [Watch Video 6](https://drive.google.com/file/d/190lp1_yWkWikaqNcNPr97-a-gWG8JmSC/view?usp=sharing)
+
+**7. Member Management & Notifications** Accept, deny, or kick members, with system notifications securely saved to the database.  
+▶️ [Watch Video 7](https://drive.google.com/file/d/1z7HeKDDDhEFNd9TdYe-78KwnZa5KxoPh/view?usp=sharing)
+
+**8. Real-time Tasks** Plan together seamlessly with real-time syncing for adding, editing, and deleting tasks.  
+▶️ [Watch Video 8](https://drive.google.com/file/d/1UbB7gO5Wyjikt7vnrEu-6WDYtVeIXfUf/view?usp=sharing)
+
+**9. Conflict Resolution** Automated data conflict handling when multiple members edit tasks simultaneously.  
+▶️ [Watch Video 9](https://drive.google.com/file/d/1yMAFrcR9bsrTI4EASilD-S3gBVmqcDOx/view?usp=sharing)
+
+**10. Group Chat** Built-in messaging to keep trip members connected and communicating smoothly.  
+▶️ [Watch Video 10](https://drive.google.com/file/d/18fwtoWJem25qbozlM7sld1zV8axkweEm/view?usp=sharing)
+
+**11. Community Features** Follow other users and rate members to build a trusted community profile.  
+▶️ [Watch Video 11](https://drive.google.com/file/d/1_4Ha1PGRF3wGnThdHmrCiBF9CV8vnu0_/view?usp=sharing)
+
+
+---
+
+
 # Feature (iOS)
 
 * **Authentication:** Users can sign in using Google, Facebook, or a standard Email and Password.
